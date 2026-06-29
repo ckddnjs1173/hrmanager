@@ -214,6 +214,10 @@
   .he-card b{font-size:13.5px;font-weight:700;color:var(--ink-900)}
   .he-card i{font-size:11.5px;font-style:normal;color:var(--ink-400);line-height:1.45}
   @media(max-width:860px){ .home-entry{grid-template-columns:1fr 1fr;max-width:420px} }
+  /* 베타 출시알림 CTA (대기자 수집) */
+  .beta-cta{display:inline-flex;align-items:center;gap:7px;margin-top:14px;padding:10px 16px;border:1px dashed var(--accent);background:var(--accent-soft);color:var(--accent-ink);border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;transition:background .15s var(--ease)}
+  .beta-cta:hover{background:#fff}
+  .beta-cta b{font-weight:800}
 
   .composer{flex-shrink:0;padding-top:10px}
   .hero-input{display:flex;gap:8px;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);
@@ -1059,6 +1063,9 @@
               <button class="he-card" onclick="nav('nomu')"><span class="he-ic" data-icon="nomu"></span><b>노무사 찾기</b><i>지역별 노무사 정보 제공</i></button>
               <button class="he-card" onclick="nav('solve')"><span class="he-ic" data-icon="solve"></span><b>상황별 해결</b><i>진단→계산→문서→연결</i></button>
             </div>
+            <button class="beta-cta" onclick="openLead('beta','출시 알림 받기','정식 AI 상담이 열리면 이메일로 가장 먼저 알려드릴게요.')">
+              <span class="tic" data-icon="bell"></span> 정식 AI 상담, 출시되면 알려드릴게요 — <b>알림 받기</b>
+            </button>
           </div>
           <div class="prog" id="prog" style="display:none"></div>
           <div id="chatBody" aria-live="polite" aria-busy="false"></div>
@@ -1408,6 +1415,7 @@ const ICON={
   flag:_svg('<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>'),
   send:_svg('<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>'),
   star:_svg('<path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.6 6.8 19.2l1-5.8L3.5 9.2l5.9-.9z"/>'),
+  bell:_svg('<path d="M6 9.5a6 6 0 0 1 12 0c0 4.5 2 6 2 6H4s2-1.5 2-6z"/><path d="M10 20a2 2 0 0 0 4 0"/>'),
 };
 // 이모지 → 아이콘 키 매핑 (콘텐츠 데이터의 icon 필드를 SVG로 치환)
 const EMOJI_ICON={
@@ -2191,7 +2199,7 @@ function mdLite(s){ return s
 function showActions(){ if(actionsShown)return; actionsShown=true;
   const b=document.getElementById('chatBody');
   const w=document.createElement('div'); w.className='opts';
-  [['file','상담요약서',()=>nav('summary')],['calc','계산기',()=>nav('calc')],['nomu','노무사 찾기',()=>nav('nomu')],['report','노동청 절차',()=>nav('report')],['flag','답변 신고',()=>reportAnswer()]]
+  [['bell','출시 알림 받기',()=>openLead('beta','출시 알림 받기','정식 AI 상담이 열리면 이메일로 가장 먼저 알려드릴게요.')],['file','상담요약서',()=>nav('summary')],['calc','계산기',()=>nav('calc')],['nomu','노무사 찾기',()=>nav('nomu')],['report','노동청 절차',()=>nav('report')],['flag','답변 신고',()=>reportAnswer()]]
    .forEach(([ic,label,fn])=>{ const o=document.createElement('button'); o.className='opt'; o.innerHTML=`<span class="tic">${ICON[ic]}</span> ${label}`; o.onclick=fn; w.appendChild(o); });
   b.appendChild(w); scrollChat();
 }
@@ -2207,7 +2215,7 @@ function reportAnswer(){
 function fallbackMock(){
   const r=RESULTS[current.key]||RESULTS.wage; const c=CASES[current.key];
   typing(()=>{
-    addMsg('ai',`(데모 모드 · ANTHROPIC_API_KEY 미설정)\n\n[가능성] ${c?c.title:'노무'} 사안으로 보입니다.\n\n[핵심 쟁점] ${r.issue}\n\n[추가 확인 필요]\n· ${r.check.join('\n· ')}\n\n[추정 금액] ${r.money} (${r.moneyLabel}) — 추정치\n[상담 필요도] ${r.need}\n\n※ 판단마다 [확정]/[가능성]/[추가 확인 필요] 라벨이 붙습니다. 서버 .env에 API 키를 넣으면 실제 AI 상담이 활성화됩니다.`);
+    addMsg('ai',`🔔 지금은 베타예요. 아래는 실제 AI가 어떻게 답하는지 보여주는 예시입니다.\n\n[가능성] ${c?c.title:'노무'} 사안으로 보입니다.\n\n[핵심 쟁점] ${r.issue}\n\n[추가 확인 필요]\n· ${r.check.join('\n· ')}\n\n[추정 금액] ${r.money} (${r.moneyLabel}) — 추정치\n[상담 필요도] ${r.need}\n\n※ 판단마다 [확정]/[가능성]/[추가 확인 필요] 라벨이 붙습니다. 정식 AI 상담이 곧 열려요 — 아래 ‘출시 알림 받기’를 누르면 이메일로 가장 먼저 알려드릴게요. (이 안내는 일반 정보 제공이며 법률·노무 자문이 아닙니다.)`);
     convo.push({role:'assistant', content:'(demo)'}); showActions();
   });
 }
