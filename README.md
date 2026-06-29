@@ -1,5 +1,9 @@
 # 노무AI — 인사·노무 AI 상담 플랫폼 (MVP)
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ckddnjs1173/hrmanager)
+
+> 위 버튼을 누르면 Render에 로그인 후 `render.yaml` 설정이 자동으로 적용됩니다.
+
 근로자·사업주가 노무 문제를 AI로 먼저 진단받고, 계산기·노무사 검색·상담요약서로 이어지는 플랫폼.
 
 ## 빠른 시작
