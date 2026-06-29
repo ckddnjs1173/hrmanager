@@ -1,0 +1,31 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# 사용법: GitHub에 올린 뒤 Render에서 "New + → Blueprint"로 이 저장소를 선택하면 자동 구성됩니다.
+services:
+  - type: web
+    name: nomu-ai
+    runtime: node
+    plan: free                 # 무료 플랜(일정 시간 미사용 시 절전 → 첫 접속 시 콜드스타트)
+    buildCommand: npm install && npm run build   # 의존성 설치 + 정적 SEO 페이지 생성
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "24"            # node:sqlite는 22.13+/24에서 플래그 없이 동작 (22.5~22.12은 크래시)
+      - key: ANTHROPIC_API_KEY
+        sync: false            # 대시보드에서 직접 입력. 비워두면 AI 상담은 데모 모드로 동작
+      - key: ANTHROPIC_MODEL
+        value: claude-opus-4-8
+      - key: ADMIN_TOKEN
+        generateValue: true    # 운영자 대시보드 토큰 자동 생성(대시보드에서 확인)
+      - key: SESSION_SECRET
+        generateValue: true    # 세션 쿠키 서명 키 자동 생성
+      - key: SITE_URL
+        sync: false            # 비워두면 빌드 시 RENDER_EXTERNAL_URL 자동 사용
+
+# 참고: 무료 플랜은 디스크가 비영구적이라 예약·리드(data/*.json)가 재배포·절전 시 초기화됩니다.
+# 데이터를 영구 보관하려면 유료 인스턴스로 올리고 아래 disk를 활성화하세요.
+#    disk:
+#      name: data
+#      mountPath: /opt/render/project/src/data
+#      sizeGB: 1

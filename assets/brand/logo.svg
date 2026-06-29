@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="32" viewBox="0 0 150 32" fill="none" role="img" aria-label="노무AI">
+  <rect x="0" y="4" width="24" height="24" rx="7" fill="#2F6DF6"/>
+  <path d="M6.5 11.5h11a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5h-5.2L8.8 22.5v-2.5H6.5A1.5 1.5 0 0 1 5 18.5v-5.5A1.5 1.5 0 0 1 6.5 11.5Z" fill="#fff"/>
+  <circle cx="9.2" cy="15.7" r="1" fill="#2F6DF6"/><circle cx="12.2" cy="15.7" r="1" fill="#2F6DF6"/><circle cx="15.2" cy="15.7" r="1" fill="#2F6DF6"/>
+  <text x="33" y="23" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" font-size="20" font-weight="800" letter-spacing="-0.5">
+    <tspan fill="#16181D">노무</tspan><tspan fill="#2F6DF6">AI</tspan>
+  </text>
+</svg>

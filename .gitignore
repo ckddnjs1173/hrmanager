@@ -1,0 +1,25 @@
+# 의존성
+node_modules/
+
+# 환경변수 (키 포함 — 절대 커밋 금지)
+.env
+.env.local
+
+# 런타임 생성 데이터 (예약·리드 — 개인정보 포함)
+data/bookings.json
+data/leads.json
+data/app.db
+data/app.db-shm
+data/app.db-wal
+
+# 로그·OS
+*.log
+.DS_Store
+Thumbs.db
+
+# 임시 파일
+_chk.js
+.shots/
+
+# 원본 공공데이터 CSV (가공된 data/nomusa.json만 커밋)
+*.csv

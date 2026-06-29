@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex" />
+<title>운영자 대시보드 · 노무AI</title>
+<link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg" />
+<link rel="stylesheet" href="assets/brand/app.css" />
+<style>
+  /* 대시보드 전용 보강 */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .login{width:100%;max-width:380px}
+  .login .h1{margin-bottom:.3rem}
+  .flow{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem}
+  .flow .step{flex:1;min-width:120px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);padding:.7rem .8rem;font-size:.82rem}
+  .flow .step b{display:block;color:var(--ink-900);font-size:.9rem;margin-bottom:.15rem}
+  .flow .arr{align-self:center;color:var(--ink-300)}
+  .bk-sum{margin-top:.5rem;background:var(--panel);border-radius:var(--r-sm);padding:.6rem .7rem;font-size:.82rem;white-space:pre-wrap;color:var(--ink-600);max-height:120px;overflow:auto}
+  .inline-in{border:1px solid var(--line);border-radius:var(--r-sm);padding:.35rem .5rem;font-family:inherit;font-size:.82rem;outline:none;background:#fff}
+  .inline-in:focus{border-color:var(--accent)}
+  .sec-title{font-size:.78rem;font-weight:800;color:var(--ink-400);margin:var(--sp-6) 0 var(--sp-3);text-transform:none}
+  .toolbar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:var(--sp-4)}
+  .toolbar .search{flex:1;min-width:200px}
+  .tg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-pill);overflow:hidden}
+  .tg button{border:none;background:#fff;padding:.34rem .7rem;font-size:.78rem;font-weight:700;color:var(--ink-500);cursor:pointer}
+  .tg button.on{background:var(--accent);color:#fff}
+  .copyok{color:var(--ok-ink);font-weight:700;font-size:.78rem}
+  .bk-hist{margin-top:.7rem;padding-top:.7rem;border-top:1px dashed var(--line);font-size:.84rem}
+  .bk-hist .hist-h{font-weight:800;color:var(--ink-600);font-size:.78rem;margin-bottom:.3rem}
+  .bk-hist .hrow{padding:.18rem 0}
+  .bk-hist .ht{color:var(--ink-400);font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<div id="login" class="login-wrap">
+  <div class="card login">
+    <div class="h1">운영자 로그인</div>
+    <p class="muted small" style="margin:.2rem 0 1rem">노무AI 운영자 대시보드입니다. 관리자 토큰을 입력하세요. <span class="muted">(서버 환경변수 <code>ADMIN_TOKEN</code>)</span></p>
+    <label class="label" for="tok">관리자 토큰</label>
+    <input id="tok" class="input" type="password" placeholder="ADMIN_TOKEN" onkeydown="if(event.key==='Enter')login()"/>
+    <div id="loginErr" class="small" style="color:var(--danger-ink);margin-top:.5rem"></div>
+    <button class="btn primary" style="width:100%;margin-top:.9rem" onclick="login()">로그인</button>
+  </div>
+</div>
+
+<!-- 앱 -->
+<div id="app" class="app-shell" style="display:none">
+  <aside class="app-side">
+    <div class="brand"><span class="b">●</span> 노무AI 운영</div>
+    <button class="navitem on" data-tab="home" onclick="setTab('home')"><span class="ic">📊</span> 대시보드</button>
+    <button class="navitem" data-tab="bk" onclick="setTab('bk')"><span class="ic">📥</span> 상담 예약 <span id="navBkCount" class="badge" style="margin-left:auto"></span></button>
+    <button class="navitem" data-tab="ld" onclick="setTab('ld')"><span class="ic">✉️</span> 리드</button>
+    <button class="navitem" data-tab="nm" onclick="setTab('nm')"><span class="ic">👩‍⚖️</span> 노무사 관리</button>
+    <div class="spacer"></div>
+    <button class="navitem" onclick="load()"><span class="ic">🔄</span> 새로고침</button>
+    <button class="navitem" onclick="logout()"><span class="ic">↩️</span> 로그아웃</button>
+  </aside>
+  <main class="app-main">
+    <div class="app-top">
+      <div class="h2" id="topTitle">대시보드</div>
+      <div class="grow"></div>
+      <span class="muted small" id="lastSync"></span>
+    </div>
+    <div class="app-body" id="view"></div>
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const STAT=[['received','접수','info'],['reviewed','검토완료','info'],['sent','전달됨','ok'],['in_progress','상담진행','info'],['done','완료','ok'],['canceled','취소','danger']];
+const statLabel=s=>(STAT.find(x=>x[0]===s)||['',s])[1];
+const statTone=s=>(STAT.find(x=>x[0]===s)||['','','']).at(2)||'';
+let CSRF='';
+let DATA={bookings:[],leads:[],origin:location.origin}, NOMU=[], STATS=null, FB=[], TAB='home';
+let bkFilter='all', bkQ='', ldKind='all', nmQ='';
+
+// 세션 쿠키 기반 — 쓰기 요청엔 CSRF 헤더 동봉
+async function api(path,opt={}){
+  const headers={'Content-Type':'application/json',...(opt.headers||{})};
+  if(opt.method && opt.method!=='GET') headers['x-csrf-token']=CSRF;
+  return fetch(path,{credentials:'same-origin',...opt,headers});
+}
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(d){ return (d||'').slice(0,16).replace('T',' '); }
+
+async function login(){
+  const token=document.getElementById('tok').value.trim();
+  try{
+    const r=await fetch('/api/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+    if(r.status===401){ document.getElementById('loginErr').textContent='토큰이 올바르지 않습니다.'; return; }
+    if(r.status===429){ document.getElementById('loginErr').textContent='시도가 너무 많습니다. 잠시 후 다시 시도하세요.'; return; }
+    if(!r.ok) throw 0;
+    CSRF=(await r.json()).csrf; await load();
+  }catch(e){ document.getElementById('loginErr').textContent='서버 연결 오류. 잠시 후 다시 시도하세요.'; }
+}
+async function logout(){ try{ await api('/api/admin/logout',{method:'POST'}); }catch(e){} location.reload(); }
+
+async function load(){
+  try{
+    const r=await api('/api/admin/data');
+    if(r.status===401){ showLogin(); return; }
+    if(!r.ok) throw 0;
+    DATA=await r.json();
+    try{ const rn=await api('/api/admin/nomu'); if(rn.ok) NOMU=await rn.json(); }catch(e){}
+    try{ const rs=await api('/api/admin/summary'); if(rs.ok) STATS=await rs.json(); }catch(e){}
+    try{ const rf=await api('/api/admin/feedback'); if(rf.ok) FB=await rf.json(); }catch(e){}
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='flex';
+    document.getElementById('lastSync').textContent='업데이트 '+new Date().toLocaleTimeString('ko-KR');
+    render();
+  }catch(e){ document.getElementById('loginErr').textContent='서버 연결 오류. 잠시 후 다시 시도하세요.'; }
+}
+function showLogin(){ document.getElementById('app').style.display='none'; document.getElementById('login').style.display='flex'; document.getElementById('tok').focus?.(); }
+// 새로고침 시 기존 세션 복구
+async function boot(){
+  try{ const r=await fetch('/api/admin/session',{credentials:'same-origin'}); if(r.ok){ CSRF=(await r.json()).csrf; await load(); return; } }catch(e){}
+  showLogin();
+}
+
+const TAB_TITLE={home:'대시보드',bk:'상담 예약',ld:'리드',nm:'노무사 관리'};
+function setTab(t){ TAB=t;
+  document.querySelectorAll('.app-side .navitem[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  document.getElementById('topTitle').textContent=TAB_TITLE[t]||'';
+  render();
+}
+function render(){
+  const bk=DATA.bookings||[];
+  const open=bk.filter(b=>!['done','canceled'].includes(b.status)).length;
+  document.getElementById('navBkCount').textContent=open||'';
+  const v=document.getElementById('view');
+  if(TAB==='home') v.innerHTML=viewHome();
+  else if(TAB==='bk') v.innerHTML=viewBookings();
+  else if(TAB==='ld') v.innerHTML=viewLeads();
+  else if(TAB==='nm') v.innerHTML=viewNomu();
+}
+
+/* ===== 대시보드 ===== */
+function viewHome(){
+  const bk=DATA.bookings||[], ld=DATA.leads||[];
+  const cnt=s=>bk.filter(b=>b.status===s).length;
+  const open=bk.filter(b=>!['done','canceled'].includes(b.status)).length;
+  const done=cnt('done'); const total=bk.length;
+  const conv=total? Math.round(done/total*100):0;
+  const visible=NOMU.filter(n=>!n.opted_out).length;
+  const recent=bk.slice().reverse().slice(0,5);
+  return `
+    <div class="stats">
+      <div class="stat accent"><div class="v">${total}</div><div class="k">전체 예약</div></div>
+      <div class="stat warn"><div class="v">${open}</div><div class="k">처리 중</div></div>
+      <div class="stat ok"><div class="v">${done}</div><div class="k">완료</div></div>
+      <div class="stat"><div class="v">${conv}%</div><div class="k">완료 전환율</div></div>
+      <div class="stat"><div class="v">${ld.length}</div><div class="k">리드</div></div>
+      <div class="stat"><div class="v">${visible}</div><div class="k">노출 노무사</div></div>
+    </div>
+    <div class="sec-title">운영 흐름</div>
+    <div class="card">
+      <div class="flow">
+        <div class="step"><b>① 접수</b>사용자가 상담 신청(동의·요약서 동봉)</div><span class="arr">→</span>
+        <div class="step"><b>② 검토</b>요약 확인·마스킹 점검</div><span class="arr">→</span>
+        <div class="step"><b>③ 전달</b>보안 링크를 노무사에게 전달</div><span class="arr">→</span>
+        <div class="step"><b>④ 완료</b>상담 진행 후 종료</div>
+      </div>
+    </div>
+    ${homeActivity()}
+    <div class="sec-title">최근 접수</div>
+    ${recent.length? `<div class="card" style="padding:0"><table class="table"><thead><tr><th>신청자</th><th>희망 노무사</th><th>상태</th><th>접수일</th></tr></thead><tbody>${
+      recent.map(b=>`<tr><td><b>${esc(b.name)||'(미입력)'}</b><div class="muted small">${esc(b.contact)}</div></td><td>${esc(b.nomu)||'-'}</td><td><span class="badge ${statTone(b.status)} dot">${statLabel(b.status)}</span></td><td class="muted small">${fmt(b.at)}</td></tr>`).join('')
+    }</tbody></table></div>` : emptyBox('아직 접수된 상담이 없어요.','상황별 해결·노무사 찾기에서 상담 신청이 들어오면 여기에 표시됩니다.')}
+  `;
+}
+const EV_LABEL={view:'방문',calc:'계산기',doc:'문서',pack:'문서팩',booking_start:'상담시작',booking:'상담접수',lead:'리드',nomu_view:'노무사조회'};
+function homeActivity(){
+  if(!STATS) return '';
+  const ev=STATS.events||{}; const keys=Object.keys(EV_LABEL).filter(k=>ev[k]);
+  const ch=(STATS.notifyChannels&&STATS.notifyChannels.length)?STATS.notifyChannels.join(', '):'콘솔(수동 전달)';
+  return `
+    <div class="sec-title">활동 · 유입 (최근 30일)</div>
+    <div class="card">
+      ${keys.length? `<div class="row" style="gap:18px">${keys.map(k=>`<div><div class="muted small">${EV_LABEL[k]}</div><div style="font-size:1.3rem;font-weight:800">${ev[k]}</div></div>`).join('')}</div>`
+        : '<div class="muted small">아직 집계된 활동이 없어요. 사용자가 방문·계산·신청하면 여기에 쌓입니다.</div>'}
+      <div class="muted small" style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px">
+        🔔 알림 채널: <b>${ch}</b> · 발송함 대기 <b>${STATS.notifyPending||0}</b>건 · 🚩 답변 신고 <b>${STATS.feedbackNew||0}</b>건
+        ${(!STATS.notifyChannels||!STATS.notifyChannels.length)?' <span class="muted">(이메일·카카오 키 연결 시 자동 발송)</span>':''}
+      </div>
+    </div>
+    ${FB.length?`<div class="sec-title">답변 신고 (최근)</div><div class="card" style="padding:0"><table class="table"><thead><tr><th>일시</th><th>맥락</th><th>내용</th></tr></thead><tbody>${
+      FB.slice(0,10).map(f=>`<tr><td class="muted small">${fmt(f.at)}</td><td class="small">${esc(f.ref)||'-'}</td><td class="small">${esc(f.message)||'-'}</td></tr>`).join('')
+    }</tbody></table></div>`:''}`;
+}
+
+/* ===== 예약 ===== */
+function bkList(){
+  let arr=(DATA.bookings||[]).slice().reverse();
+  if(bkFilter==='open') arr=arr.filter(b=>!['done','canceled'].includes(b.status));
+  else if(bkFilter!=='all') arr=arr.filter(b=>b.status===bkFilter);
+  if(bkQ){ const q=bkQ.toLowerCase(); arr=arr.filter(b=>((b.name||'')+(b.contact||'')+(b.nomu||'')).toLowerCase().includes(q)); }
+  return arr;
+}
+function viewBookings(){
+  const arr=bkList();
+  const filters=[['all','전체'],['open','처리 중'],['received','접수'],['sent','전달됨'],['done','완료'],['canceled','취소']];
+  return `
+    <div class="toolbar">
+      <input class="input search" placeholder="이름·연락처·노무사 검색" value="${esc(bkQ)}" oninput="bkQ=this.value;repaintBk()"/>
+      <div class="tabs">${filters.map(f=>`<button class="${bkFilter===f[0]?'on':''}" onclick="bkFilter='${f[0]}';render()">${f[1]}</button>`).join('')}</div>
+    </div>
+    <div id="bkList">${arr.length? arr.map(bkCard).join('') : emptyBox('조건에 맞는 예약이 없어요.','검색어·필터를 바꿔 보세요.')}</div>
+  `;
+}
+function repaintBk(){ document.getElementById('bkList').innerHTML=(()=>{const a=bkList();return a.length?a.map(bkCard).join(''):emptyBox('조건에 맞는 예약이 없어요.','검색어·필터를 바꿔 보세요.');})(); }
+function bkCard(b){
+  const link=DATA.origin+'/r/'+b.token;
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div class="row" style="gap:.5rem"><b style="font-size:1.02rem">${esc(b.name)||'(이름 미입력)'}</b><span class="muted small">${esc(b.contact)}</span>
+        <span class="badge ${statTone(b.status)} dot">${statLabel(b.status)}</span></div>
+      <span class="muted small">${fmt(b.at)}</span>
+    </div>
+    <div class="muted small" style="margin-top:.35rem">희망 노무사: ${esc(b.nomu)||'-'}${b.message?(' · '+esc(b.message)):''}</div>
+    ${b.summary?`<div class="bk-sum">${esc(b.summary)}</div>`:''}
+    <div class="row" style="margin-top:.7rem">
+      <select class="inline-in" onchange="upd('${b.id}','status',this.value)">${STAT.map(s=>`<option value="${s[0]}" ${b.status===s[0]?'selected':''}>${s[1]}</option>`).join('')}</select>
+      <select class="inline-in" style="max-width:160px" onchange="upd('${b.id}','assigned_nomusa_id',this.value)" title="노무사 배정">
+        <option value="">미배정</option>
+        ${NOMU.map(n=>`<option value="${n.id}" ${b.assigned_nomusa_id===n.id?'selected':''}>${esc(n.n)}</option>`).join('')}
+      </select>
+      <input class="inline-in" placeholder="메모" value="${esc(b.memo)}" style="flex:1;min-width:120px" onchange="upd('${b.id}','memo',this.value)"/>
+      <button class="btn xs" onclick="copy('${link}',this)">🔗 보안 링크</button>
+      <a class="btn xs ghost" href="${link}" target="_blank">열람 ↗</a>
+      <button class="btn xs ghost" onclick="showHistory('${b.id}',this)">🧾 이력</button>
+    </div>
+    <div class="bk-hist" id="hist-${b.id}" style="display:none"></div>
+  </div>`;
+}
+async function upd(id,field,val){
+  try{ await api('/api/admin/booking/'+id,{method:'POST',body:JSON.stringify({[field]:val})});
+    const b=DATA.bookings.find(x=>x.id===id); if(b)b[field]=val; toast('저장됨');
+    if(field==='status'){ if(TAB==='home')render(); else repaintBk(); }
+  }catch(e){ toast('저장 실패'); }
+}
+
+/* ===== 리드 ===== */
+function viewLeads(){
+  let arr=(DATA.leads||[]).slice().reverse();
+  const kinds=['all',...new Set((DATA.leads||[]).map(l=>l.kind||'general'))];
+  if(ldKind!=='all') arr=arr.filter(l=>(l.kind||'general')===ldKind);
+  return `
+    <div class="toolbar"><div class="tabs">${kinds.map(k=>`<button class="${ldKind===k?'on':''}" onclick="ldKind='${k}';render()">${k==='all'?'전체':esc(k)}</button>`).join('')}</div></div>
+    ${arr.length? `<div class="card" style="padding:0"><table class="table"><thead><tr><th>이름</th><th>연락처</th><th>유형</th><th>메시지</th><th>접수일</th></tr></thead><tbody>${
+      arr.map(l=>`<tr><td><b>${esc(l.name)||'(미입력)'}</b></td><td>${esc(l.contact)}</td><td><span class="badge">${esc(l.kind)||'general'}</span></td><td class="muted small">${esc(l.message)||'-'}</td><td class="muted small">${fmt(l.at)}</td></tr>`).join('')
+    }</tbody></table></div>` : emptyBox('아직 리드가 없어요.','요금제·노무사 입점 신청이 들어오면 여기에 표시됩니다.')}
+  `;
+}
+
+/* ===== 노무사 관리 ===== */
+function viewNomu(){
+  let arr=NOMU.slice();
+  if(nmQ){ const q=nmQ.toLowerCase(); arr=arr.filter(n=>((n.n||'')+(n.o||'')+(n.loc||'')).toLowerCase().includes(q)); }
+  return `
+    <div class="toolbar">
+      <input class="input search" placeholder="이름·사무소·지역 검색" value="${esc(nmQ)}" oninput="nmQ=this.value;repaintNm()"/>
+      <span class="muted small">총 ${NOMU.length}명 · 노출 ${NOMU.filter(n=>!n.opted_out).length}</span>
+    </div>
+    <div id="nmList">${arr.length? nmTable(arr) : emptyBox('노무사 데이터가 없어요.','data/nomusa.json 또는 공공데이터 수집으로 채워집니다.')}</div>
+  `;
+}
+function repaintNm(){ let arr=NOMU.slice(); if(nmQ){const q=nmQ.toLowerCase();arr=arr.filter(n=>((n.n||'')+(n.o||'')+(n.loc||'')).toLowerCase().includes(q));}
+  document.getElementById('nmList').innerHTML=arr.length?nmTable(arr):emptyBox('조건에 맞는 노무사가 없어요.','검색어를 바꿔 보세요.'); }
+function nmTable(arr){
+  return `<div class="card" style="padding:0"><table class="table"><thead><tr><th>노무사</th><th>지역·분야</th><th>노출</th><th>추천</th><th>대시보드</th></tr></thead><tbody>${
+    arr.slice(0,200).map(n=>`<tr>
+      <td><b>${esc(n.n)}</b> ${n.v?'<span class="badge ok">✓</span>':''}<div class="muted small">${esc(n.o)||''}</div></td>
+      <td class="small">${esc(n.loc)||'-'}<div class="muted">${(n.tags||[]).map(esc).join(', ')}</div></td>
+      <td><button class="btn xs ${n.opted_out?'danger':'ghost'}" onclick="nmTog('${n.id}','opted_out',${!n.opted_out?'true':'false'})">${n.opted_out?'노출중지됨':'노출중'}</button></td>
+      <td><button class="btn xs ${n.featured?'primary':'ghost'}" onclick="nmTog('${n.id}','featured',${!n.featured?'true':'false'})">${n.featured?'★ 추천':'추천'}</button></td>
+      <td><button class="btn xs ghost" onclick="nmToken('${n.id}','${esc(n.n)}',this)">🔑 접속 링크</button></td>
+    </tr>`).join('')
+  }</tbody></table>${arr.length>200?`<div class="muted small" style="padding:.6rem .75rem">상위 200명 표시 (검색으로 좁혀보세요)</div>`:''}</div>`;
+}
+async function nmTog(id,field,val){
+  try{ await api('/api/admin/nomu/'+id,{method:'POST',body:JSON.stringify({[field]:val})});
+    const n=NOMU.find(x=>x.id===id); if(n)n[field]=val; repaintNm(); toast('저장됨');
+  }catch(e){ toast('저장 실패'); }
+}
+async function nmToken(id,name,btn){
+  if(!confirm(`'${name}' 노무사의 대시보드 접속 링크를 발급할까요?\\n기존 링크가 있으면 폐기되고 새로 만들어집니다.`)) return;
+  try{ const r=await api('/api/admin/nomu/'+id+'/token',{method:'POST'}); if(!r.ok)throw 0; const d=await r.json();
+    if(navigator.clipboard) navigator.clipboard.writeText(d.link);
+    prompt('접속 링크가 복사되었습니다. 이 노무사에게 전달하세요 (1회 표시):', d.link);
+    toast('접속 링크 발급·복사됨');
+  }catch(e){ toast('발급 실패'); }
+}
+
+/* ===== 공통 ===== */
+function emptyBox(t,d){ return `<div class="empty"><span class="ic">📭</span><div class="t">${t}</div><div class="small">${d||''}</div></div>`; }
+function copy(text,btn){ navigator.clipboard&&navigator.clipboard.writeText(text); const o=btn.innerHTML; btn.innerHTML='✓ 복사됨'; setTimeout(()=>btn.innerHTML=o,1400); toast('보안 링크 복사됨'); }
+const EVLABEL={created:'접수',update:'수정','status:received':'상태→접수','status:reviewed':'상태→검토완료','status:sent':'상태→전달됨','status:in_progress':'상태→상담진행','status:done':'상태→완료','status:canceled':'상태→취소','deleted:user':'본인 삭제','deleted:request':'삭제요청'};
+async function showHistory(id,btn){
+  const box=document.getElementById('hist-'+id);
+  if(box.style.display==='block'){ box.style.display='none'; return; }
+  box.style.display='block'; box.innerHTML='<div class="muted small">불러오는 중…</div>';
+  try{ const r=await api('/api/admin/booking/'+id+'/events'); if(!r.ok)throw 0; const d=await r.json();
+    const ev=(d.events||[]).map(e=>`<div class="hrow"><span class="ht">${fmt(e.at)}</span> ${EVLABEL[e.type]||esc(e.type)} ${e.actor?`<span class="muted">· ${esc(e.actor)}</span>`:''}</div>`).join('');
+    const views=(d.views||[]).map(v=>`<div class="hrow muted"><span class="ht">${fmt(v.at)}</span> 🔗 보안링크 열람 (IP ${esc(v.ip_hash)})</div>`).join('');
+    box.innerHTML=`<div class="hist-h">동의·전달 이력</div>
+      <div class="hrow"><b>제3자 제공 동의:</b> ${d.consent?'✅ 동의함':'❌'} <span class="muted">(${fmt(d.consentAt)})</span></div>
+      ${ev||'<div class="muted small">상태 이력 없음</div>'}
+      <div class="hist-h" style="margin-top:8px">노무사 열람 기록 (${(d.views||[]).length})</div>
+      ${views||'<div class="muted small">아직 열람 없음</div>'}`;
+  }catch(e){ box.innerHTML='<div class="muted small" style="color:var(--danger-ink)">이력을 불러오지 못했어요.</div>'; }
+}
+
+boot();
+</script>
+</body>
+</html>

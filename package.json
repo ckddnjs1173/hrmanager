@@ -1,0 +1,20 @@
+{
+  "name": "nomu-ai",
+  "version": "0.1.0",
+  "description": "인사·노무 AI 상담 플랫폼 (MVP)",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "build": "node scripts/build-site.mjs",
+    "migrate": "node scripts/migrate-json-to-db.mjs",
+    "ingest": "node scripts/ingest-nomusa.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.69.0",
+    "express": "^5.1.0"
+  }
+}
