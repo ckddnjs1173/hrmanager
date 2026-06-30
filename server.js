@@ -7,7 +7,7 @@ import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { AI_ENABLED, AI_INFO, streamChat, createSummary, geminiSelftest } from "./lib/ai.js";
+import { AI_ENABLED, AI_INFO, streamChat, createSummary } from "./lib/ai.js";
 import { knowledgeForMessages } from "./lib/knowledge.js";
 import { SYSTEM_PROMPT, SUMMARY_SCHEMA, SUMMARY_INSTRUCTION } from "./lib/prompt.js";
 import { listDocs, renderDoc, listPacks, renderPack } from "./lib/docs.js";
@@ -405,9 +405,6 @@ function rPage(title, inner) {
 
 // 서버 상태(프론트가 데모/실모드 판단용)
 app.get("/api/health", (req, res) => res.json({ ai: AI_ENABLED, provider: AI_INFO?.provider || null, model: AI_INFO?.model || null }));
-
-// 임시 진단(문제 해결 후 제거): Gemini 실제 호출 상태/에러 확인. ?model=로 특정 모델 탐침.
-app.get("/api/ai-selftest", async (req, res) => { res.json(await geminiSelftest((req.query.model || "").toString().trim() || undefined)); });
 
 // 정적 파일 (프론트 + 생성된 정적 글/sitemap). extensions로 /articles/wage 도 동작.
 app.use(express.static(__dirname, {
