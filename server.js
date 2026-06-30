@@ -121,7 +121,7 @@ app.post("/api/chat", async (req, res) => {
     res.end();
   } catch (err) {
     console.error("chat error:", err?.message || err);
-    if (!res.headersSent) res.status(500).json({ error: "ai_error", detail: String(err?.message || err).slice(0, 400) });
+    if (!res.headersSent) res.status(500).json({ error: "ai_error", detail: String(err?.message || err).slice(0, 1200) });
     else res.end("\n\n(일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.)");
   }
 });
