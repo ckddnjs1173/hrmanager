@@ -7,8 +7,8 @@ import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { AI_ENABLED, AI_INFO, streamChat, createSummary } from "./lib/ai.js";
-import { knowledgeForMessages } from "./lib/knowledge.js";
+import { AI_ENABLED, AI_INFO, streamChat, createSummary, classifyTopicsAI } from "./lib/ai.js";
+import { knowledgeForMessages, buildKnowledgeFromIds, classifyTopics } from "./lib/knowledge.js";
 import { SYSTEM_PROMPT, SUMMARY_SCHEMA, SUMMARY_INSTRUCTION } from "./lib/prompt.js";
 import { listDocs, renderDoc, listPacks, renderPack } from "./lib/docs.js";
 import { bookings, leads, nomusa, accessLogs, adminStats, privacy, retentionSweep, events, EVENT_TYPES, partners, feedback } from "./lib/repo.js";
@@ -80,6 +80,17 @@ if (!AI_ENABLED) {
   console.warn("⚠️  AI 키 미설정(ANTHROPIC_API_KEY/GEMINI_API_KEY) → 데모 모드로 동작합니다(프론트가 목업 응답 사용).");
 }
 
+// 사안 분류 → 노무 지식 주입 문자열 결정.
+// AI 분류(의미 기반) + 키워드 분류(즉시·무료)를 병합. AI 실패 시 키워드로 폴백 → 항상 동작.
+async function resolveKnowledge(messages) {
+  const users = messages.filter((m) => m.role === "user").map((m) => m.content);
+  const text = (users.slice(-1)[0] || "") + " " + users.join(" ");
+  const aiIds = await classifyTopicsAI(text); // 실패 시 null
+  if (aiIds === null) return knowledgeForMessages(messages); // 폴백: 키워드 전용
+  const merged = Array.from(new Set([...aiIds, ...classifyTopics(text)])).slice(0, 4);
+  return buildKnowledgeFromIds(merged);
+}
+
 // 대화 메시지 정규화 (안전): role/content만 통과
 function sanitizeMessages(messages) {
   if (!Array.isArray(messages)) return [];
@@ -99,8 +110,8 @@ app.post("/api/chat", async (req, res) => {
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache");
   try {
-    // 사안 분류 → 2026 노무 지식을 시스템 프롬프트에 주입
-    const system = SYSTEM_PROMPT + knowledgeForMessages(messages);
+    // 사안 분류(AI+키워드) → 2026 노무 지식을 시스템 프롬프트에 주입
+    const system = SYSTEM_PROMPT + await resolveKnowledge(messages);
     await streamChat({
       system,
       messages,
@@ -121,7 +132,7 @@ app.post("/api/summary", async (req, res) => {
   const messages = sanitizeMessages(req.body?.messages);
   if (!messages.length) return res.status(400).json({ error: "no_messages" });
   try {
-    const system = SYSTEM_PROMPT + knowledgeForMessages(messages);
+    const system = SYSTEM_PROMPT + await resolveKnowledge(messages);
     const summary = await createSummary({
       system,
       messages,
