@@ -1,19 +1,18 @@
 // 노무 AI 상담 — 백엔드 (Express + Anthropic SDK)
 // 실행: npm install && npm start  (ANTHROPIC_API_KEY 필요. 없으면 데모 모드로 동작)
 
+import "./lib/env.js"; // ⚠️ 반드시 첫 import — 이후 모듈들이 process.env를 읽기 전에 .env 로드
 import express from "express";
 import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
-import Anthropic from "@anthropic-ai/sdk";
+import { AI_ENABLED, AI_INFO, streamChat, createSummary } from "./lib/ai.js";
+import { knowledgeForMessages } from "./lib/knowledge.js";
 import { SYSTEM_PROMPT, SUMMARY_SCHEMA, SUMMARY_INSTRUCTION } from "./lib/prompt.js";
 import { listDocs, renderDoc, listPacks, renderPack } from "./lib/docs.js";
 import { bookings, leads, nomusa, accessLogs, adminStats, privacy, retentionSweep, events, EVENT_TYPES, partners, feedback } from "./lib/repo.js";
 import { notify, notifications, availableChannels } from "./lib/notify.js";
-
-// .env 로드 (Node 20.6+ 내장. dotenv 의존성 불필요)
-try { process.loadEnvFile?.(".env"); } catch { /* .env 없으면 무시 */ }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -76,16 +75,9 @@ function rateLimit({ windowMs = 60000, max = 30 } = {}) {
 // 주기적 정리(메모리 누수 방지)
 setInterval(() => { const now = Date.now(); for (const [k, e] of rlStore) if (e.reset < now) rlStore.delete(k); }, 300000).unref?.();
 
-// 모델: 기본은 가장 강력한 Opus 4.8. 비용이 부담되면 .env에서 교체 가능.
-//   - claude-opus-4-8   $5 / $25 per 1M tokens (기본)
-//   - claude-sonnet-4-6 $3 / $15  (균형)
-//   - claude-haiku-4-5  $1 / $5   (가장 저렴, 분류·간단 상담용)
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-8";
-
-const apiKey = process.env.ANTHROPIC_API_KEY;
-const client = apiKey ? new Anthropic({ apiKey }) : null;
-if (!client) {
-  console.warn("⚠️  ANTHROPIC_API_KEY 미설정 → 데모 모드로 동작합니다(프론트가 목업 응답 사용).");
+// AI provider는 lib/ai.js가 결정 (ANTHROPIC_API_KEY → Claude / GEMINI_API_KEY → Gemini / 없으면 데모).
+if (!AI_ENABLED) {
+  console.warn("⚠️  AI 키 미설정(ANTHROPIC_API_KEY/GEMINI_API_KEY) → 데모 모드로 동작합니다(프론트가 목업 응답 사용).");
 }
 
 // 대화 메시지 정규화 (안전): role/content만 통과
@@ -99,7 +91,7 @@ function sanitizeMessages(messages) {
 
 // ===== AI 상담 (스트리밍) =====
 app.post("/api/chat", async (req, res) => {
-  if (!client) return res.status(503).json({ error: "no_api_key" });
+  if (!AI_ENABLED) return res.status(503).json({ error: "no_api_key" });
   const messages = sanitizeMessages(req.body?.messages);
   if (!messages.length || messages[0].role !== "user") {
     return res.status(400).json({ error: "first message must be user" });
@@ -107,14 +99,14 @@ app.post("/api/chat", async (req, res) => {
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache");
   try {
-    const stream = client.messages.stream({
-      model: MODEL,
-      max_tokens: 1200, // 상담 답변 길이 상한 (비용 통제)
-      system: SYSTEM_PROMPT,
+    // 사안 분류 → 2026 노무 지식을 시스템 프롬프트에 주입
+    const system = SYSTEM_PROMPT + knowledgeForMessages(messages);
+    await streamChat({
+      system,
       messages,
+      maxTokens: 1200, // 상담 답변 길이 상한 (비용 통제)
+      onText: (delta) => res.write(delta),
     });
-    stream.on("text", (delta) => res.write(delta));
-    await stream.finalMessage();
     res.end();
   } catch (err) {
     console.error("chat error:", err?.message || err);
@@ -125,19 +117,19 @@ app.post("/api/chat", async (req, res) => {
 
 // ===== 상담 요약서 (구조화 출력) =====
 app.post("/api/summary", async (req, res) => {
-  if (!client) return res.status(503).json({ error: "no_api_key" });
+  if (!AI_ENABLED) return res.status(503).json({ error: "no_api_key" });
   const messages = sanitizeMessages(req.body?.messages);
   if (!messages.length) return res.status(400).json({ error: "no_messages" });
   try {
-    const r = await client.messages.create({
-      model: MODEL,
-      max_tokens: 1500,
-      system: SYSTEM_PROMPT,
-      messages: [...messages, { role: "user", content: SUMMARY_INSTRUCTION }],
-      output_config: { format: { type: "json_schema", schema: SUMMARY_SCHEMA } },
+    const system = SYSTEM_PROMPT + knowledgeForMessages(messages);
+    const summary = await createSummary({
+      system,
+      messages,
+      instruction: SUMMARY_INSTRUCTION,
+      schema: SUMMARY_SCHEMA,
+      maxTokens: 1500,
     });
-    const text = r.content.find((b) => b.type === "text")?.text || "{}";
-    res.json(JSON.parse(text));
+    res.json(summary);
   } catch (err) {
     console.error("summary error:", err?.message || err);
     res.status(500).json({ error: "ai_error" });
@@ -412,7 +404,7 @@ function rPage(title, inner) {
 }
 
 // 서버 상태(프론트가 데모/실모드 판단용)
-app.get("/api/health", (req, res) => res.json({ ai: !!client, model: client ? MODEL : null }));
+app.get("/api/health", (req, res) => res.json({ ai: AI_ENABLED, provider: AI_INFO?.provider || null, model: AI_INFO?.model || null }));
 
 // 정적 파일 (프론트 + 생성된 정적 글/sitemap). extensions로 /articles/wage 도 동작.
 app.use(express.static(__dirname, {
@@ -439,5 +431,5 @@ const PORT = process.env.PORT || 3000;
 // 0.0.0.0 바인딩: 클라우드 호스트(Render/Railway/Fly 등)에서 외부 접속 허용에 필요
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`\n✅ 노무 AI 서버 실행: http://localhost:${PORT}`);
-  console.log(`   모델: ${client ? MODEL : "데모 모드(키 없음)"}\n`);
+  console.log(`   모델: ${AI_ENABLED ? `${AI_INFO.provider} · ${AI_INFO.model}` : "데모 모드(키 없음)"}\n`);
 });

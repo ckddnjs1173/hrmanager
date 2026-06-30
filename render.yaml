@@ -12,10 +12,15 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "24"            # node:sqlite는 22.13+/24에서 플래그 없이 동작 (22.5~22.12은 크래시)
+      # AI provider 자동 선택: ANTHROPIC_API_KEY 있으면 Claude, 없고 GEMINI_API_KEY 있으면 Gemini, 둘 다 없으면 데모.
       - key: ANTHROPIC_API_KEY
-        sync: false            # 대시보드에서 직접 입력. 비워두면 AI 상담은 데모 모드로 동작
+        sync: false            # (선택) Claude 사용 시. 비우면 아래 Gemini로 폴백
       - key: ANTHROPIC_MODEL
         value: claude-opus-4-8
+      - key: GEMINI_API_KEY
+        sync: false            # (무료) Google AI Studio 키. 대시보드에서 입력 → Gemini로 AI 동작
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash  # 무료 등급 모델. 필요시 gemini-2.5-flash 등으로 교체
       - key: ADMIN_TOKEN
         generateValue: true    # 운영자 대시보드 토큰 자동 생성(대시보드에서 확인)
       - key: SESSION_SECRET
