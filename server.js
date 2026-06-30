@@ -7,7 +7,7 @@ import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { AI_ENABLED, AI_INFO, streamChat, createSummary, classifyTopicsAI } from "./lib/ai.js";
+import { AI_ENABLED, AI_INFO, streamChat, createSummary, classifyTopicsAI, geminiSelftest } from "./lib/ai.js";
 import { knowledgeForMessages, buildKnowledgeFromIds, classifyTopics } from "./lib/knowledge.js";
 import { SYSTEM_PROMPT, SUMMARY_SCHEMA, SUMMARY_INSTRUCTION } from "./lib/prompt.js";
 import { listDocs, renderDoc, listPacks, renderPack } from "./lib/docs.js";
@@ -416,6 +416,7 @@ function rPage(title, inner) {
 
 // 서버 상태(프론트가 데모/실모드 판단용)
 app.get("/api/health", (req, res) => res.json({ ai: AI_ENABLED, provider: AI_INFO?.provider || null, model: AI_INFO?.model || null }));
+app.get("/api/ai-selftest", async (req, res) => { res.json(await geminiSelftest()); }); // 임시 진단
 
 // 정적 파일 (프론트 + 생성된 정적 글/sitemap). extensions로 /articles/wage 도 동작.
 app.use(express.static(__dirname, {
