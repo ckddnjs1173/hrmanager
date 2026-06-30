@@ -2,7 +2,7 @@
 # 사용법: GitHub에 올린 뒤 Render에서 "New + → Blueprint"로 이 저장소를 선택하면 자동 구성됩니다.
 services:
   - type: web
-    name: nomu-ai
+    name: insaya
     runtime: node
     plan: free                 # 무료 플랜(일정 시간 미사용 시 절전 → 첫 접속 시 콜드스타트)
     buildCommand: npm install && npm run build   # 의존성 설치 + 정적 SEO 페이지 생성

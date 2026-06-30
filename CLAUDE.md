@@ -14,9 +14,10 @@ npm run dev        # node --watch server.js (auto-restart on change)
 npm run build      # generate static SEO pages from index.html → articles/*.html, sitemap.xml, robots.txt
 npm run migrate    # one-time import of legacy data/*.json into the SQLite DB
 npm run ingest <csv>   # 근로복지공단 CSV → data/nomusa.json (filters to labor-relevant agencies)
+node scripts/seed-nomusa.mjs   # regenerate data/nomusa.json with deterministic demo data (no npm alias)
 ```
 
-There is **no test suite, linter, or build step for the server** — it runs Node source directly. Requires **Node ≥ 22.5** (uses the built-in `node:sqlite`).
+There is **no test suite, linter, or build step for the server** — it runs Node source directly. Requires **Node ≥ 22.13** (`package.json` engines; uses the built-in `node:sqlite`).
 
 `npm run build` for deployment with a real domain:
 ```bash
@@ -31,6 +32,8 @@ SITE_URL=https://your-domain npm run build   # bakes domain into canonical/OG/si
 - `server.js` — the entire HTTP API and all routing in one file (Express 5). Static file serving, AI endpoints, admin/partner auth, the `/r/:token` summary-viewer page (server-rendered HTML), retention sweeps.
 - `lib/repo.js` — the **only** module routes touch for persistence. Domain repositories (`bookings`, `leads`, `nomusa`, `partners`, `privacy`, `events`, `feedback`, `accessLogs`) encapsulate SQLite. Keep this boundary: routes call repo methods, never raw SQL.
 - `lib/db.js` — SQLite connection, schema (`CREATE TABLE IF NOT EXISTS`), and inline migrations (e.g. `ALTER TABLE … ADD COLUMN` guarded by a `PRAGMA table_info` check). Add schema changes here as idempotent migrations.
+- `lib/docs.js` — the **AI-free document center**: 22 표준 서식 templates (`DOC_TEMPLATES`) + 7 상황별 document packs (`DOC_PACKS`), rendered to `{title, html, text}` by pure string interpolation (no AI, no tokens). Exposed via `GET /api/docs`, `POST /api/doc`, `GET /api/docpacks`, `POST /api/docpack`. Keep these template-only — do not route document generation through the model.
+- `lib/notify.js` — notification abstraction. `notify({channel, recipient, subject, body, template})` writes every send to the `notifications` outbox table and dispatches via a pluggable adapter. Only `console` is active by default; `email` (`SMTP_URL`) and `kakao` (`KAKAO_API_KEY`) adapters are stubs that activate when their env key is set. Fired on new bookings; the outbox + pending count surface in the admin dashboard (`/api/admin/notifications`, `/api/admin/summary`).
 
 **AI integration** (`lib/prompt.js` + `server.js`):
 - `POST /api/chat` streams a consultation reply; `POST /api/summary` returns a structured JSON 상담요약서 via `output_config.json_schema` (`SUMMARY_SCHEMA`).
