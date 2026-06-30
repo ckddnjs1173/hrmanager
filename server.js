@@ -104,7 +104,7 @@ app.post("/api/chat", async (req, res) => {
     await streamChat({
       system,
       messages,
-      maxTokens: 1200, // 상담 답변 길이 상한 (비용 통제)
+      maxTokens: 1600, // 상담 답변 길이 상한 (비용 통제). thinking off라 전량 답변에 사용
       onText: (delta) => res.write(delta),
     });
     res.end();
