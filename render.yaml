@@ -20,7 +20,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false            # (무료) Google AI Studio 키. 대시보드에서 입력 → Gemini로 AI 동작
       - key: GEMINI_MODEL
-        value: gemini-2.0-flash  # 무료 등급 모델. 필요시 gemini-2.5-flash 등으로 교체
+        value: gemini-2.5-flash  # 이 키로 무료 호출 가능 확인됨(2.0-flash는 무료 할당 0)
       - key: ADMIN_TOKEN
         generateValue: true    # 운영자 대시보드 토큰 자동 생성(대시보드에서 확인)
       - key: SESSION_SECRET
