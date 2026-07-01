@@ -88,10 +88,10 @@ function ogSvg(a, accent, accentSoft) {
   <rect width="14" height="630" fill="${accent}"/>
   <g transform="translate(80,70)"><rect width="40" height="40" rx="12" fill="${accent}"/>
     <path d="M10 17h20a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H20l-6 5v-5h-4a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3Z" fill="#fff"/>
-    <text x="52" y="29" font-family="Pretendard,'Apple SD Gothic Neo',sans-serif" font-size="27" font-weight="800"><tspan fill="#16181D">노무</tspan><tspan fill="${accent}">AI</tspan></text></g>
+    <text x="52" y="29" font-family="Pretendard,'Apple SD Gothic Neo',sans-serif" font-size="27" font-weight="800"><tspan fill="#16181D">인사</tspan><tspan fill="${accent}">야</tspan></text></g>
   <text x="80" y="170" font-family="Pretendard,'Apple SD Gothic Neo',sans-serif" font-size="26" font-weight="700" fill="${accent}">${xml(a.cat)}</text>
   ${titleTspans}
-  <text x="80" y="560" font-family="Pretendard,'Apple SD Gothic Neo',sans-serif" font-size="24" font-weight="700" fill="${accent}">⚖ 공인노무사 감수 · 정보 제공</text>
+  <text x="80" y="560" font-family="Pretendard,'Apple SD Gothic Neo',sans-serif" font-size="24" font-weight="700" fill="${accent}">⚖ 2026 법령 기준 · 정보 제공</text>
 </svg>`;
 }
 
@@ -130,7 +130,7 @@ function page(key, a) {
     "@context": "https://schema.org", "@type": "Article",
     headline: a.title, description: desc,
     datePublished: updated, dateModified: updated,
-    author: { "@type": "Person", name: `${AUTHOR.name} (${AUTHOR.org})` },
+    author: { "@type": "Organization", name: "인사야" },
     publisher: { "@type": "Organization", name: "인사야" },
     mainEntityOfPage: url,
   };
@@ -213,7 +213,7 @@ ${faqLd ? `<script type="application/ld+json">${JSON.stringify(faqLd)}</script>`
   <div class="wrap">
     <div class="crumb"><a href="/">홈</a> › ${a.cat} › ${a.title}</div>
     <h1>${a.title}</h1>
-    <div class="meta"><span class="au">${AUTHOR.name} 감수 <span class="v">✓</span></span> · <span>${AUTHOR.org}</span> · <span>최종 수정 ${updated}</span> · <span>약 ${x.read || 4}분</span></div>
+    <div class="meta"><span class="au">${AUTHOR.name} · 법령 기준 정리</span> · <span>최종 수정 ${updated}</span> · <span>약 ${x.read || 4}분</span></div>
     <div class="lead">${a.lead}</div>
     ${x.topCallout ? callout(x.topCallout) : ""}
     <nav class="toc"><div class="t">목차</div><ol>${toc}</ol></nav>
@@ -226,7 +226,7 @@ ${faqLd ? `<script type="application/ld+json">${JSON.stringify(faqLd)}</script>`
     </div>
     ${faq ? `<h2 id="faq">자주 묻는 질문</h2>${faq}` : ""}
     ${rel ? `<h2>이런 글도 도움이 돼요</h2><div class="related">${rel}</div>` : ""}
-    <div class="notice"><b>안내</b> · 본 글은 ${AUTHOR.name} 감수를 거친 일반 정보 제공이며 법률·노무 자문이 아닙니다. 구체적 사안은 공인노무사 상담을 권장합니다.${a.note ? "<br/>" + a.note : ""}</div>
+    <div class="notice"><b>안내</b> · 본 글은 공개된 법령·정부 자료를 바탕으로 정리한 일반 정보 제공이며(공인노무사 감수를 받지 않았습니다), 법률·노무 자문이 아닙니다. 구체적 사안은 공인노무사 상담을 권장합니다.${a.note ? "<br/>" + a.note : ""}</div>
   </div>
 </body>
 </html>`;

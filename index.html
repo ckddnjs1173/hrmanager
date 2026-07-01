@@ -2361,7 +2361,7 @@ function mockNomu(){ return `<div class="mock">
   <div class="mock-bar"><i></i><i></i><i></i><span class="u">자문 노무사</span></div>
   <div class="mock-body">
     <div style="display:flex;gap:11px;align-items:center"><div style="width:40px;height:40px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800">김</div>
-      <div><b style="font-size:13px">김노무 노무사</b><div style="font-size:11px;color:var(--sub)">한울 노무법인 · 기업자문</div></div></div>
+      <div><b style="font-size:13px">노무사 상담</b><div style="font-size:11px;color:var(--sub)">제휴 노무법인 · 예시</div></div></div>
     <div style="margin-top:4px"><span class="mk-chip">오늘 상담가능</span> <span class="mk-chip">기업자문</span></div>
   </div></div>`; }
 function fxShot(site, mockHtml, floatTxt){ return `<div class="fx-shot">${mockHtml}
@@ -2378,7 +2378,7 @@ function workerLanding(){ return `
         <button class="btn-xl btn-fill" onclick="nav('home')">무료로 진단받기</button>
         <button class="btn-xl btn-ghost" onclick="openCategory('worker','wage')">가이드 둘러보기</button>
       </div>
-      <div class="fx-trust"><span><span class="tic">${ICON.nomu}</span> <b>공인노무사 감수</b></span><span><span class="tic">${ICON.lock}</span> <b>익명·무료</b></span><span><span class="tic">${ICON.calc}</span> 계산기 <b>5종</b></span></div>
+      <div class="fx-trust"><span><span class="tic">${ICON.rule}</span> <b>2026 법령 기준</b></span><span><span class="tic">${ICON.lock}</span> <b>익명·무료</b></span><span><span class="tic">${ICON.calc}</span> 계산기 <b>5종</b></span></div>
     </div>
     ${fxShot('worker', mockChat(), `<span class="tic">${ICON.file}</span> 노무사 전달용 요약서 생성`)}
   </div></div>
@@ -2469,7 +2469,7 @@ function employerLanding(){ return `
 
   <div class="fx-section alt"><div class="fx-wrap">
     <span class="fx-eyebrow fx-eyebrow-c">인사야가 하는 일</span>
-    <h2 class="fx-h2">진단 → 문서 → 자문, 한곳에서</h2>
+    <h2 class="fx-h2">진단 → 문서 → 노무사 연결, 한곳에서</h2>
     <p class="fx-h2sub">예방에 필요한 모든 걸 사업주 눈높이로 정리했습니다.</p>
     <div class="fr">
       <div class="fr-text">
@@ -2667,7 +2667,7 @@ const ARTICLES={
     note:'연령 증명·동의서 미비치, 근로시간 위반은 모두 처벌 대상입니다.'},
 };
 /* 운영사이트용 부가 데이터: 감수·수정일·FAQ·관련글·콜아웃·장문 섹션 */
-const AUTHOR={name:'김노무 노무사', org:'한울 노무법인'};
+const AUTHOR={name:'인사야 편집팀', org:'인사야'};
 const ART_EXTRA={
   wage:{updated:'2026-06-10', read:6,
     topCallout:{type:'law', text:'<b>임금채권 소멸시효는 3년</b>입니다. 너무 늦으면 청구할 수 없으니, 받지 못한 임금이 있다면 미루지 말고 증거부터 모으세요.'},
@@ -3298,7 +3298,7 @@ function openRichGuide(k, fromHash){
     <div class="crumb"><a onclick="nav('home')">홈</a> › <a onclick="nav('${a.from}')">${a.cat}</a> › ${a.title}</div>
     <h1>${a.title}</h1>
     <div class="art-meta">
-      <span class="author"><span class="av">${AUTHOR.name[0]}</span>${AUTHOR.name} 감수 <span class="verified">✓</span></span>
+      <span class="author"><span class="av">${AUTHOR.name[0]}</span>${AUTHOR.name} · 법령 기준 정리</span>
       <span class="dot">·</span><span>최종 수정 ${x.updated||'2026-06'}</span><span class="dot">·</span><span>약 ${x.read||5}분</span>
     </div>
     ${summary}
@@ -3310,7 +3310,7 @@ function openRichGuide(k, fromHash){
       <button class="btn primary" onclick="startCase('${k}')"><span class="tic">${ICON.ai}</span> 내 상황 AI로 진단하기</button>
     </div>
     ${rel?`<h2 class="rg-h2"><span class="em">${ICON.book}</span>이런 글도 도움이 돼요</h2><div class="lp-guides">${rel}</div>`:''}
-    <div class="art-foot"><div class="notice" style="margin-top:0"><b>안내</b> · 본 글은 ${AUTHOR.name} 감수를 거친 일반 정보 제공이며 법률·노무 자문이 아닙니다. 구체적 사안은 공인노무사 상담을 권장합니다.</div></div>`;
+    <div class="art-foot"><div class="notice" style="margin-top:0"><b>안내</b> · 본 글은 공개된 법령·정부 자료를 바탕으로 정리한 일반 정보 제공이며(공인노무사 감수를 받지 않았습니다), 법률·노무 자문이 아닙니다. 구체적 사안은 공인노무사 상담을 권장합니다.</div></div>`;
   nav('article'); setSite(a.from);
   document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('on', b.dataset.nav===a.from));
   document.title=`${a.title} | 인사야`;
@@ -3332,7 +3332,7 @@ function openArticle(k, fromHash){
     <div class="crumb"><a onclick="nav('home')">홈</a> › <a onclick="nav('${a.from}')">${a.cat}</a> › ${a.title}</div>
     <h1>${a.title}</h1>
     <div class="art-meta">
-      <span class="author"><span class="av">${AUTHOR.name[0]}</span>${AUTHOR.name} 감수 <span class="verified">✓</span></span>
+      <span class="author"><span class="av">${AUTHOR.name[0]}</span>${AUTHOR.name} · 법령 기준 정리</span>
       <span class="dot">·</span><span>${AUTHOR.org}</span>
       <span class="dot">·</span><span>최종 수정 ${x.updated||'2026-06'}</span>
       <span class="dot">·</span><span>약 ${x.read||4}분</span>
@@ -3355,7 +3355,7 @@ function openArticle(k, fromHash){
       <button onclick="sharePage(this)"><span class="tic">${ICON.send}</span> 공유</button>
     </div>
     <div class="art-foot">
-      <div class="notice" style="margin-top:0"><b>안내</b> · 본 글은 ${AUTHOR.name} 감수를 거친 <b>일반 정보 제공</b>이며 법률·노무 자문이 아닙니다. 구체적 사안은 공인노무사 상담을 권장합니다.${a.note?'<br/>'+a.note:''}</div>
+      <div class="notice" style="margin-top:0"><b>안내</b> · 본 글은 공개된 법령·정부 자료를 바탕으로 정리한 <b>일반 정보 제공</b>이며(공인노무사 감수를 받지 않았습니다), 법률·노무 자문이 아닙니다. 구체적 사안은 공인노무사 상담을 권장합니다.${a.note?'<br/>'+a.note:''}</div>
     </div>`;
   nav('article');
   setSite(a.from);
@@ -3514,7 +3514,7 @@ function calcMinwage(){
 }
 function calcUnemploy(){
   const avg=val('cu1'), age=val('cu2'), yrIdx=val('cu3');
-  const lowerRaw=Math.round(C26.minHour*0.8*8/10)*10;  // 하한 = 최저시급×80%×8h
+  const lowerRaw=Math.round(C26.minHour*0.8*8);  // 하한 = 최저시급×80%×8h (2026: 66,048원, 10원 반올림 안 함)
   const lower=Math.min(lowerRaw, C26.uiUpper);
   const daily=Math.round(avg*0.6/10)*10;               // 평균임금×60%
   const dailyPay=Math.min(Math.max(daily, lower), C26.uiUpper); // 하한~상한 사이로 보정
@@ -3531,12 +3531,8 @@ function calcUnemploy(){
 }
 
 /* =================== 노무사 =================== */
-const NOMU=[
-  {n:'김노무 노무사',o:'한울 노무법인',loc:'서울 강남구 테헤란로',tags:['임금체불','부당해고'],src:'직접등록',v:true,today:true},
-  {n:'이상담 노무사',o:'노무법인 바른',loc:'서울 강남구 역삼동',tags:['직장내괴롭힘','기업자문'],src:'직접등록',v:true,today:false},
-  {n:'박공정 노무사',o:'공정노무사사무소',loc:'서울 강남구 논현동',tags:['퇴직금','임금체불'],src:'공공데이터',v:false,today:false},
-  {n:'정해결 노무사',o:'정해결 노무사사무소',loc:'서울 서초구 서초동',tags:['부당해고'],src:'공공데이터',v:false,today:false},
-];
+// 노무사 목록은 서버(/api/nomu, 공공데이터 1,166건)에서 로드. 로드 실패 시엔 빈 목록(가짜 데이터 금지).
+const NOMU=[];
 let NOMU_LIST=[], _nomuField='', _nomuShown=12, _nomuInit=false;
 const NOMU_FIELDS=['임금체불','부당해고','퇴직금','직장내괴롭힘','기업자문','산재','주휴수당'];
 async function renderNomu(){

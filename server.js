@@ -35,7 +35,12 @@ app.use((req, res, next) => {
 });
 
 // ===== 쿠키 파서 + 서명 세션 (무의존) =====
-const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.ADMIN_TOKEN || "admin") + "::nomu-session";
+// 운영(NODE_ENV=production)에서 시크릿 미설정 시 추측가능한 "admin" 대신 무작위값으로 fail-closed.
+// (관리자 로그인은 사실상 비활성 → 반드시 환경변수 설정. 로컬 개발은 편의상 "admin" 유지)
+const IS_PROD = process.env.NODE_ENV === "production";
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || (IS_PROD ? crypto.randomBytes(24).toString("hex") : "admin");
+if (IS_PROD && !process.env.ADMIN_TOKEN) console.warn("⚠️  운영 모드 + ADMIN_TOKEN 미설정 → 관리자 로그인 비활성(무작위 토큰). 환경변수를 설정하세요.");
+const SESSION_SECRET = process.env.SESSION_SECRET || ADMIN_TOKEN + "::nomu-session";
 const SESSION_TTL = 12 * 3600 * 1000; // 12시간
 function parseCookies(req) {
   const out = {}; const h = req.headers.cookie; if (!h) return out;
@@ -102,7 +107,8 @@ function sanitizeMessages(messages) {
 }
 
 // ===== AI 상담 (스트리밍) =====
-app.post("/api/chat", async (req, res) => {
+// rateLimit: AI 호출은 비용/쿼터가 걸려 있어 반드시 제한(루프 남용·쿼터 소진 방지)
+app.post("/api/chat", rateLimit({ windowMs: 60000, max: 12 }), async (req, res) => {
   if (!AI_ENABLED) return res.status(503).json({ error: "no_api_key" });
   const messages = sanitizeMessages(req.body?.messages);
   if (!messages.length || messages[0].role !== "user") {
@@ -130,7 +136,7 @@ app.post("/api/chat", async (req, res) => {
 });
 
 // ===== 상담 요약서 (구조화 출력) =====
-app.post("/api/summary", async (req, res) => {
+app.post("/api/summary", rateLimit({ windowMs: 60000, max: 10 }), async (req, res) => {
   if (!AI_ENABLED) return res.status(503).json({ error: "no_api_key" });
   const messages = sanitizeMessages(req.body?.messages);
   if (!messages.length) return res.status(400).json({ error: "no_messages" });
@@ -238,7 +244,7 @@ app.post("/api/privacy/delete", rateLimit({ max: 10 }), (req, res) => {
 });
 
 // ===== 운영자(관리자) 인증 — 서명 세션 쿠키 + CSRF (헤더 토큰도 호환) =====
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "admin";
+// ADMIN_TOKEN은 상단에서 fail-closed로 정의됨
 const STAT = ["received", "reviewed", "sent", "in_progress", "done", "canceled"];
 function tokenOk(t) {
   if (!t || t.length !== ADMIN_TOKEN.length) return false;
@@ -274,7 +280,7 @@ app.get("/api/admin/summary", adminAuth, (req, res) => res.json({ ...adminStats(
 app.get("/api/admin/notifications", adminAuth, (req, res) => res.json(notifications.recent(30)));
 app.get("/api/admin/feedback", adminAuth, (req, res) => res.json(feedback.recent(50)));
 app.get("/api/admin/bookings", adminAuth, (req, res) => {
-  res.json(bookings.list({ status: req.query.status, q: clean(req.query.q), page: +req.query.page || 1, size: +req.query.size || 50 }));
+  res.json(bookings.list({ status: req.query.status, q: clean(req.query.q), page: +req.query.page || 1, size: Math.min(200, +req.query.size || 50) }));
 });
 app.post("/api/admin/booking/:id", adminAuth, (req, res) => {
   const fields = {};
@@ -349,7 +355,7 @@ app.post("/api/partner/booking/:id", partnerAuth, (req, res) => {
 });
 
 // ===== 요약서 보안 열람 페이지 (노무사 전달용 링크) =====
-const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 const telHref = (s) => { const d = String(s || "").replace(/[^\d+]/g, ""); return d.length >= 9 ? d : ""; };
 app.get("/r/:token", (req, res) => {
   const r = bookings.byToken(req.params.token);
@@ -357,7 +363,7 @@ app.get("/r/:token", (req, res) => {
   if (!r) return res.status(404).send(rPage("링크를 찾을 수 없습니다", rState("🔍", "유효하지 않은 링크예요", "주소가 정확한지 확인하거나, 운영자에게 링크 재발급을 요청해 주세요.")));
   if (r.expires && new Date(r.expires) < new Date()) return res.status(410).send(rPage("만료된 링크", rState("⏰", "만료된 열람 링크예요", "보안을 위해 링크는 발급 후 일정 기간만 유효합니다. 운영자에게 재발급을 요청해 주세요.")));
   // 열람 로그(분쟁 대비) — IP는 해시로만
-  accessLogs.add({ booking_id: r.id, token: r.token, ip_hash: crypto.createHash("sha256").update((req.ip || "") + ADMIN_TOKEN).digest("hex").slice(0, 16), ua: req.get("user-agent") });
+  accessLogs.add({ booking_id: r.id, token: r.token, ip_hash: crypto.createHash("sha256").update((req.ip || "") + SESSION_SECRET).digest("hex").slice(0, 16), ua: req.get("user-agent") });
   const tel = telHref(r.contact);
   const body = `
     <div class="rv-head">
