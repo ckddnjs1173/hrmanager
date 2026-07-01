@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="robots" content="noindex" />
-<title>운영자 대시보드 · 노무AI</title>
+<title>운영자 대시보드 · 인사야</title>
 <link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg" />
 <link rel="stylesheet" href="assets/brand/app.css" />
 <style>
@@ -38,7 +38,7 @@
 <div id="login" class="login-wrap">
   <div class="card login">
     <div class="h1">운영자 로그인</div>
-    <p class="muted small" style="margin:.2rem 0 1rem">노무AI 운영자 대시보드입니다. 관리자 토큰을 입력하세요. <span class="muted">(서버 환경변수 <code>ADMIN_TOKEN</code>)</span></p>
+    <p class="muted small" style="margin:.2rem 0 1rem">인사야 운영자 대시보드입니다. 관리자 토큰을 입력하세요. <span class="muted">(서버 환경변수 <code>ADMIN_TOKEN</code>)</span></p>
     <label class="label" for="tok">관리자 토큰</label>
     <input id="tok" class="input" type="password" placeholder="ADMIN_TOKEN" onkeydown="if(event.key==='Enter')login()"/>
     <div id="loginErr" class="small" style="color:var(--danger-ink);margin-top:.5rem"></div>
@@ -49,7 +49,7 @@
 <!-- 앱 -->
 <div id="app" class="app-shell" style="display:none">
   <aside class="app-side">
-    <div class="brand"><span class="b">●</span> 노무AI 운영</div>
+    <div class="brand"><span class="b">●</span> 인사야 운영</div>
     <button class="navitem on" data-tab="home" onclick="setTab('home')"><span class="ic">📊</span> 대시보드</button>
     <button class="navitem" data-tab="bk" onclick="setTab('bk')"><span class="ic">📥</span> 상담 예약 <span id="navBkCount" class="badge" style="margin-left:auto"></span></button>
     <button class="navitem" data-tab="ld" onclick="setTab('ld')"><span class="ic">✉️</span> 리드</button>

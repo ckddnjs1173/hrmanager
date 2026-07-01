@@ -1,4 +1,4 @@
-# LAUNCH.md — insaya 노무AI 런치·홍보 기획
+# LAUNCH.md — 인사야(insaya) 런치·홍보 기획
 
 > 무자본 런치 실행 계획. 배포: **https://insaya.onrender.com** (Render free, autoDeploy).
 

@@ -1,4 +1,4 @@
-# 노무AI — 인사·노무 AI 상담 플랫폼 (MVP)
+# 인사야 — 인사·노무 AI 상담 플랫폼 (MVP)
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ckddnjs1173/hrmanager)
 

@@ -385,7 +385,7 @@ function rState(icon, title, desc) {
 }
 function rPage(title, inner) {
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <meta name="robots" content="noindex"/><title>${title} · 노무AI</title>
+  <meta name="robots" content="noindex"/><title>${title} · 인사야</title>
   <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg"/>
   <link rel="stylesheet" href="/assets/brand/app.css"/>
   <style>
@@ -412,7 +412,7 @@ function rPage(title, inner) {
     @media print{.no-print{display:none!important}.rv-top{border:none}.rv-card{box-shadow:none;border:none}body{background:#fff}}
   </style></head>
   <body>
-    <div class="rv-top no-print"><span class="b">●</span> 노무AI</div>
+    <div class="rv-top no-print"><span class="b">●</span> 인사야</div>
     <div class="rv-wrap"><div class="rv-card">${inner}</div></div>
   </body></html>`;
 }
@@ -430,7 +430,7 @@ app.use(express.static(__dirname, {
 app.use((req, res) => {
   if (req.path.startsWith("/api/")) return res.status(404).json({ error: "not_found" });
   res.status(404).set("Content-Type", "text/html; charset=utf-8")
-    .send(rPage("페이지를 찾을 수 없습니다", rState("🧭", "페이지를 찾을 수 없어요", `요청하신 주소가 없습니다. <a href="/">노무AI 홈으로</a> 돌아가 상담·계산·문서를 이용해 보세요.`)));
+    .send(rPage("페이지를 찾을 수 없습니다", rState("🧭", "페이지를 찾을 수 없어요", `요청하신 주소가 없습니다. <a href="/">인사야 홈으로</a> 돌아가 상담·계산·문서를 이용해 보세요.`)));
 });
 
 // 개인정보 보존 자동 파기: 기동 시 1회 + 24시간 주기

@@ -101,7 +101,7 @@ function page(key, a) {
   const secs = (a.secs || []).concat(x.add || []);
   const url = `${SITE_URL}/articles/${key}.html`;
   const desc = strip(a.lead).slice(0, 155);
-  const descA = attr(desc), titleA = attr(`${a.title} | 노무AI`);
+  const descA = attr(desc), titleA = attr(`${a.title} | 인사야`);
   const updated = x.updated || "2026-06-01";
   const accent = a.from === "employer" ? "#0f766e" : "#2f6df6";
   const accentSoft = a.from === "employer" ? "#e7f3f0" : "#eef3ff";
@@ -131,7 +131,7 @@ function page(key, a) {
     headline: a.title, description: desc,
     datePublished: updated, dateModified: updated,
     author: { "@type": "Person", name: `${AUTHOR.name} (${AUTHOR.org})` },
-    publisher: { "@type": "Organization", name: "노무AI" },
+    publisher: { "@type": "Organization", name: "인사야" },
     mainEntityOfPage: url,
   };
   const faqLd = x.faq && x.faq.length ? {
@@ -151,7 +151,7 @@ function page(key, a) {
 <meta property="og:title" content="${titleA}"/>
 <meta property="og:description" content="${descA}"/>
 <meta property="og:url" content="${url}"/>
-<meta property="og:site_name" content="노무AI"/>
+<meta property="og:site_name" content="인사야"/>
 <meta property="og:image" content="${ogImage}"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="${titleA}"/>
