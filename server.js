@@ -445,5 +445,5 @@ const PORT = process.env.PORT || 3000;
 // 0.0.0.0 바인딩: 클라우드 호스트(Render/Railway/Fly 등)에서 외부 접속 허용에 필요
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`\n✅ 노무 AI 서버 실행: http://localhost:${PORT}`);
-  console.log(`   모델: ${AI_ENABLED ? `${AI_INFO.provider} · ${AI_INFO.model}` : "데모 모드(키 없음)"}\n`);
+  console.log(`   모델: ${AI_ENABLED ? `${AI_INFO.provider} · ${AI_INFO.model}${AI_INFO.fallbacks?.length ? `  (폴백: ${AI_INFO.fallbacks.join(", ")})` : ""}` : "데모 모드(키 없음)"}\n`);
 });

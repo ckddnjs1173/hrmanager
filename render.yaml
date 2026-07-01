@@ -21,6 +21,10 @@ services:
         sync: false            # (무료) Google AI Studio 키. 대시보드에서 입력 → Gemini로 AI 동작
       - key: GEMINI_MODEL
         value: gemini-2.5-flash  # 이 키로 무료 호출 가능 확인됨(2.0-flash는 무료 할당 0)
+      - key: GROQ_API_KEY
+        sync: false            # (무료·폴백) Groq 키. 있으면 Gemini 한도 초과 시 자동 폴백(분당30·일일1000)
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
       - key: ADMIN_TOKEN
         generateValue: true    # 운영자 대시보드 토큰 자동 생성(대시보드에서 확인)
       - key: SESSION_SECRET

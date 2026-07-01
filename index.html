@@ -2179,6 +2179,7 @@ async function streamReply(){
   try{
     const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:convo})});
     if(res.status===503){ t.remove(); b.setAttribute('aria-busy','false'); return fallbackMock(); }
+    if(res.status===429){ t.remove(); b.setAttribute('aria-busy','false'); addMsg('ai','지금 이용자가 많아 잠시 후 다시 시도해 주세요. 🙏 (무료 이용 한도)'); return; }
     if(!res.ok) throw new Error('http '+res.status);
     t.remove();
     bubble=document.createElement('div'); bubble.className='msg ai'; b.appendChild(bubble);
