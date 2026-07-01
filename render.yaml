@@ -24,7 +24,7 @@ services:
       - key: GROQ_API_KEY
         sync: false            # (무료·폴백) Groq 키. 있으면 Gemini 한도 초과 시 자동 폴백(분당30·일일1000)
       - key: GROQ_MODEL
-        value: llama-3.3-70b-versatile
+        value: qwen/qwen3-32b   # 한국어 품질↑(다국어). 문제 시 llama-3.3-70b-versatile로 교체
       - key: ADMIN_TOKEN
         generateValue: true    # 운영자 대시보드 토큰 자동 생성(대시보드에서 확인)
       - key: SESSION_SECRET
