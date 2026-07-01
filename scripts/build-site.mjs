@@ -106,16 +106,13 @@ function page(key, a) {
   const accent = a.from === "employer" ? "#0f766e" : "#2f6df6";
   const accentSoft = a.from === "employer" ? "#e7f3f0" : "#eef3ff";
   const accentInk = a.from === "employer" ? "#0B5A53" : "#1F54C9";
-  // OG 이미지: 사용자가 넣은 PNG 우선, 없으면 브랜드 OG SVG 자동 생성
+  // OG 이미지: 글별 PNG가 있으면 그것, 없으면 브랜드 기본 PNG(og-default.png).
+  // ⚠️ 소셜(카톡·트위터·페북)은 SVG를 렌더하지 않으므로 반드시 PNG 사용.
   const ogDir = path.join(ROOT, "assets", "og");
   fs.mkdirSync(ogDir, { recursive: true });
-  let ogImage;
-  if (fs.existsSync(path.join(ogDir, `${key}.png`))) {
-    ogImage = `${SITE_URL}/assets/og/${key}.png`;
-  } else {
-    fs.writeFileSync(path.join(ogDir, `${key}.svg`), ogSvg(a, accent, accentSoft), "utf-8");
-    ogImage = `${SITE_URL}/assets/og/${key}.svg`;
-  }
+  const ogImage = fs.existsSync(path.join(ogDir, `${key}.png`))
+    ? `${SITE_URL}/assets/og/${key}.png`
+    : `${SITE_URL}/assets/brand/og-default.png`;
 
   const toc = secs.map((s, i) => `<li><a href="#sec${i}">${s.h}</a></li>`).join("") +
     (x.faq ? `<li><a href="#faq">자주 묻는 질문</a></li>` : "");
