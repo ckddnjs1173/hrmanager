@@ -7,8 +7,8 @@ import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { AI_ENABLED, AI_INFO, streamChat, createSummary, classifyTopicsAI, geminiSelftest } from "./lib/ai.js";
-import { knowledgeForMessages, buildKnowledgeFromIds, classifyTopics } from "./lib/knowledge.js";
+import { AI_ENABLED, AI_INFO, streamChat, createSummary, classifyTopicsAI } from "./lib/ai.js";
+import { buildKnowledgeFromIds, classifyTopics } from "./lib/knowledge.js";
 import { SYSTEM_PROMPT, SUMMARY_SCHEMA, SUMMARY_INSTRUCTION } from "./lib/prompt.js";
 import { listDocs, renderDoc, listPacks, renderPack } from "./lib/docs.js";
 import { bookings, leads, nomusa, accessLogs, adminStats, privacy, retentionSweep, events, EVENT_TYPES, partners, feedback } from "./lib/repo.js";
@@ -81,14 +81,15 @@ if (!AI_ENABLED) {
 }
 
 // 사안 분류 → 노무 지식 주입 문자열 결정.
-// AI 분류(의미 기반) + 키워드 분류(즉시·무료)를 병합. AI 실패 시 키워드로 폴백 → 항상 동작.
+// 쿼터 절약: 키워드로 먼저 분류하고, 키워드가 잡으면 AI 호출을 생략한다(상담 1건당 AI 1회 유지).
+// 키워드가 비었을 때(돌려 말한 질문 등)만 AI 의미 분류를 호출. AI 실패 시 일반 안내로 폴백.
 async function resolveKnowledge(messages) {
   const users = messages.filter((m) => m.role === "user").map((m) => m.content);
   const text = (users.slice(-1)[0] || "") + " " + users.join(" ");
-  const aiIds = await classifyTopicsAI(text); // 실패 시 null
-  if (aiIds === null) return knowledgeForMessages(messages); // 폴백: 키워드 전용
-  const merged = Array.from(new Set([...aiIds, ...classifyTopics(text)])).slice(0, 4);
-  return buildKnowledgeFromIds(merged);
+  const kwIds = classifyTopics(text);
+  if (kwIds.length) return buildKnowledgeFromIds(kwIds); // 키워드 적중 → AI 분류 생략(쿼터 절약)
+  const aiIds = await classifyTopicsAI(text); // 키워드 미적중 시에만 AI 의미 분류
+  return buildKnowledgeFromIds(aiIds || []); // null/[] → GENERIC
 }
 
 // 대화 메시지 정규화 (안전): role/content만 통과
@@ -121,8 +122,10 @@ app.post("/api/chat", async (req, res) => {
     res.end();
   } catch (err) {
     console.error("chat error:", err?.message || err);
-    if (!res.headersSent) res.status(500).json({ error: "ai_error", detail: String(err?.message || err).slice(0, 1200) });
-    else res.end("\n\n(일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.)");
+    // 무료 등급 분당 한도(429)는 사용자에게 친절한 안내로 구분
+    const rateLimited = /\b429\b|quota|rate/i.test(String(err?.message || ""));
+    if (!res.headersSent) res.status(rateLimited ? 429 : 500).json({ error: rateLimited ? "rate_limited" : "ai_error" });
+    else res.end(rateLimited ? "\n\n(지금 이용자가 많아 잠시 후 다시 시도해 주세요.)" : "\n\n(일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.)");
   }
 });
 
@@ -416,7 +419,6 @@ function rPage(title, inner) {
 
 // 서버 상태(프론트가 데모/실모드 판단용)
 app.get("/api/health", (req, res) => res.json({ ai: AI_ENABLED, provider: AI_INFO?.provider || null, model: AI_INFO?.model || null }));
-app.get("/api/ai-selftest", async (req, res) => { res.json(await geminiSelftest()); }); // 임시 진단
 
 // 정적 파일 (프론트 + 생성된 정적 글/sitemap). extensions로 /articles/wage 도 동작.
 app.use(express.static(__dirname, {
