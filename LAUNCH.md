@@ -83,6 +83,12 @@
 
 ---
 
+## 7. 운영 팁 (홍보 전 권장)
+
+- **콜드스타트 방지 (중요)**: Render 무료는 15분 미사용 시 절전 → 커뮤니티 링크 첫 클릭 시 ~30초 대기(이탈 유발). **무료 업타임 모니터**(UptimeRobot·cron-job.org 등)로 `https://insaya.onrender.com/api/health`를 **10분마다 핑**하면 항상 깨어있음. 홍보 시작 전에 설정 권장.
+- **소셜 미리보기**: OG 이미지는 PNG(`assets/brand/og-default.png`)로 카톡·트위터·페북에서 정상 표시. 링크 공유 전 [카톡 디버거/OG 확인] 한 번 테스트 권장. 이미지 수정은 `scripts/make-og.ps1` 재실행.
+- **AI 한도**: Gemini 무료 분당 20 → 초과 시 Groq 자동 폴백. 트래픽 커지면 Gemini Tier 1(개인카드) + 지출상한 5만원.
+
 ## 참고
 - 기술/아키텍처: `CLAUDE.md`. 제품/디자인 의도: `MASTERPLAN.md`·`PRODUCT.md`·`PAGES.md`·`DESIGN.md`.
-- 환경변수: `.env.example`. 배포: `render.yaml`.
+- 환경변수: `.env.example`. 배포: `render.yaml`. OG 이미지 생성: `scripts/make-og.ps1`.
