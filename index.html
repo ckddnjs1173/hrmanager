@@ -162,6 +162,16 @@
     border:1px solid var(--line);border-radius:18px;box-shadow:0 26px 60px -18px rgba(20,30,60,.34),0 4px 12px rgba(20,30,60,.06);
     padding:8px;display:flex;flex-direction:column;gap:2px;opacity:0;visibility:hidden;transform:translateY(-8px);transition:.18s var(--ease);z-index:40}
   .navdrop.open .navdrop-panel{opacity:1;visibility:visible;transform:none}
+  /* 메가메뉴(근로자·사업주): 카테고리로 묶은 2단 패널 */
+  .navdrop-panel.mega{min-width:480px}
+  .navdrop-panel.mega .mega-cols{display:flex;gap:14px}
+  .navdrop-panel.mega .mega-col{display:flex;flex-direction:column;gap:1px;flex:1;min-width:186px}
+  .navdrop-panel.mega .navdrop-cat{font-size:.7rem;font-weight:800;color:var(--ink-400);letter-spacing:.01em;padding:9px 10px 3px}
+  .navdrop-panel.mega a{display:block;padding:7px 10px;font-size:.9rem;font-weight:600;color:var(--ink-800);border-radius:10px;text-decoration:none;cursor:pointer}
+  .navdrop-panel.mega a:hover{background:var(--accent-soft);color:var(--accent-ink)}
+  .navdrop-panel.mega .mega-foot{border-top:1px solid var(--line);margin-top:6px;padding-top:5px}
+  .navdrop-panel.mega .mega-foot a{font-weight:700;color:var(--accent-ink);font-size:.86rem}
+  @media(max-width:560px){ .navdrop-panel.mega .mega-cols{flex-direction:column;gap:2px} }
   .navdrop-panel a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;cursor:pointer;text-decoration:none}
   .navdrop-panel a:hover{background:var(--accent-soft)}
   .navdrop-panel .ndi{width:38px;height:38px;border-radius:11px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -1039,8 +1049,58 @@
         <span class="logo-beta">베타</span>
       </a>
       <button class="tab on" data-nav="home" onclick="nav('home')">AI 상담</button>
-      <button class="tab" data-nav="worker" onclick="nav('worker')">근로자</button>
-      <button class="tab" data-nav="employer" onclick="nav('employer')">사업주</button>
+      <div class="navdrop" id="workerDrop">
+        <button class="tab navdrop-btn" data-nav="worker" onclick="toggleDrop('workerDrop',event)" aria-haspopup="true" aria-expanded="false">근로자 <span class="caret">▾</span></button>
+        <div class="navdrop-panel mega" role="menu">
+          <div class="mega-cols">
+            <div class="mega-col">
+              <div class="navdrop-cat">임금·수당</div>
+              <a role="menuitem" onclick="navArticle('wage')">임금체불</a>
+              <a role="menuitem" onclick="navArticle('holiday')">주휴수당</a>
+              <a role="menuitem" onclick="navArticle('payslip')">임금명세서</a>
+              <div class="navdrop-cat">해고·징계</div>
+              <a role="menuitem" onclick="navArticle('fire')">부당해고</a>
+              <a role="menuitem" onclick="navArticle('probation')">수습기간 해고</a>
+            </div>
+            <div class="mega-col">
+              <div class="navdrop-cat">퇴직·실업</div>
+              <a role="menuitem" onclick="navArticle('severance')">퇴직금</a>
+              <a role="menuitem" onclick="navArticle('unemployment')">실업급여</a>
+              <div class="navdrop-cat">괴롭힘·차별</div>
+              <a role="menuitem" onclick="navArticle('harass')">직장 내 괴롭힘</a>
+              <div class="navdrop-cat">계약·근로조건</div>
+              <a role="menuitem" onclick="navArticle('contract')">근로계약서 미작성</a>
+              <a role="menuitem" onclick="navArticle('smallbiz')">5인 미만 사업장</a>
+            </div>
+          </div>
+          <div class="mega-foot"><a onclick="navTool('worker')">근로자 홈 전체 보기 →</a></div>
+        </div>
+      </div>
+      <div class="navdrop" id="employerDrop">
+        <button class="tab navdrop-btn" data-nav="employer" onclick="toggleDrop('employerDrop',event)" aria-haspopup="true" aria-expanded="false">사업주 <span class="caret">▾</span></button>
+        <div class="navdrop-panel mega" role="menu">
+          <div class="mega-cols">
+            <div class="mega-col">
+              <div class="navdrop-cat">노무 리스크</div>
+              <a role="menuitem" onclick="navArticle('emp_risk')">노무 리스크 진단</a>
+              <div class="navdrop-cat">채용·계약</div>
+              <a role="menuitem" onclick="navArticle('emp_contract')">근로계약서 작성</a>
+              <a role="menuitem" onclick="navArticle('emp_minor')">청소년 고용</a>
+              <div class="navdrop-cat">해고·징계</div>
+              <a role="menuitem" onclick="navArticle('emp_fire')">해고 전 체크</a>
+            </div>
+            <div class="mega-col">
+              <div class="navdrop-cat">임금·근태</div>
+              <a role="menuitem" onclick="navArticle('emp_pay')">급여·수당 계산</a>
+              <a role="menuitem" onclick="navArticle('emp_annual')">연차휴가 관리</a>
+              <div class="navdrop-cat">규정·문서</div>
+              <a role="menuitem" onclick="navArticle('emp_rule')">취업규칙</a>
+              <a role="menuitem" onclick="navArticle('emp_doc')">인사문서 관리</a>
+            </div>
+          </div>
+          <div class="mega-foot"><a onclick="navTool('employer')">사업주 홈 전체 보기 →</a></div>
+        </div>
+      </div>
       <div class="navdrop" id="toolsDrop">
         <button class="tab navdrop-btn" onclick="toggleTools(event)" aria-haspopup="true" aria-expanded="false">도구 <span class="caret">▾</span></button>
         <div class="navdrop-panel" id="toolsPanel" role="menu">
@@ -1498,18 +1558,20 @@ function nav(id){
 const NAV_ROUTES=['worker','employer','nomu','calc','docs','solve','report','official','pricing','summary'];
 
 /* =================== 도구 드롭다운 =================== */
-function toggleTools(e){ if(e)e.stopPropagation(); document.getElementById('toolsDrop').classList.toggle('open'); syncToolsAria(); }
-function closeTools(){ const d=document.getElementById('toolsDrop'); if(d)d.classList.remove('open'); syncToolsAria(); }
-function syncToolsAria(){ const d=document.getElementById('toolsDrop'); const b=d&&d.querySelector('.navdrop-btn'); if(b)b.setAttribute('aria-expanded', d.classList.contains('open')?'true':'false'); }
-function navTool(id){ closeTools(); nav(id); }
+// 드롭다운(도구·근로자·사업주) 공통 제어 — 하나 열면 나머지는 닫힘
+function toggleDrop(id,e){ if(e)e.stopPropagation(); const d=document.getElementById(id); if(!d)return; const willOpen=!d.classList.contains('open'); closeAllDrops(); if(willOpen)d.classList.add('open'); syncDropAria(); }
+function closeAllDrops(){ document.querySelectorAll('.navdrop.open').forEach(x=>x.classList.remove('open')); syncDropAria(); }
+function syncDropAria(){ document.querySelectorAll('.navdrop').forEach(d=>{ const b=d.querySelector('.navdrop-btn'); if(b)b.setAttribute('aria-expanded', d.classList.contains('open')?'true':'false'); }); }
+function toggleTools(e){ toggleDrop('toolsDrop',e); }   // 하위호환
+function closeTools(){ closeAllDrops(); }               // 하위호환
+function navTool(id){ closeAllDrops(); nav(id); }
+function navArticle(k){ closeAllDrops(); openArticle(k); }  // 메가메뉴에서 글 열기
 document.addEventListener('click',(e)=>{
-  const d=document.getElementById('toolsDrop'); if(!d||!d.classList.contains('open')) return;
-  const panel=document.getElementById('toolsPanel');
-  if(panel&&panel.contains(e.target)) return;                 // 항목 클릭은 navTool이 처리
-  if(e.target.closest&&(e.target.closest('.navdrop-btn')||e.target.closest('#btTools'))) return; // 토글 버튼 자체
-  closeTools();
+  if(!document.querySelector('.navdrop.open')) return;
+  if(e.target.closest&&(e.target.closest('.navdrop-panel')||e.target.closest('.navdrop-btn'))) return; // 패널/토글 내부 클릭은 유지
+  closeAllDrops();
 });
-document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') closeTools(); });
+document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') closeAllDrops(); });
 
 /* =================== 두 사이트 셸 (서브내비·카테고리) =================== */
 const SITES={
