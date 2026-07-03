@@ -206,7 +206,7 @@ ${faqLd ? `<script type="application/ld+json">${JSON.stringify(faqLd)}</script>`
 </style>
 </head>
 <body>
-  <div class="top"><a href="/">노무<b>AI</b></a></div>
+  <div class="top"><a href="/">인사<b>야</b> <span style="font-size:12px;font-weight:700;color:var(--sub)">노무 AI</span></a></div>
   <div class="wrap">
     <div class="crumb"><a href="/">홈</a> › ${a.cat} › ${a.title}</div>
     <h1>${a.title}</h1>
