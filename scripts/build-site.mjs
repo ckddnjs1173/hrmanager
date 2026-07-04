@@ -118,10 +118,13 @@ function renderRich(rich) {
   const faqItems = [];
   const tldr = `<div class="tldr"><div class="tldr-t">한 장 요약</div><div class="tldr-grid">${rich.summary.map((s) => `<div class="tldr-card"><div class="tc-ic">${s.icon}</div><div class="tc-t">${s.title}</div><div class="tc-d">${s.desc}</div></div>`).join("")}</div></div>`;
   const secHtml = rich.sections.map((sec, i) => {
-    const inner = sec.blocks.map((b) => { if (b.type === "faq") { faqItems.push(...b.items); return ""; } return richBlock(b); }).join("");
+    sec.blocks.forEach((b) => { if (b.type === "faq") faqItems.push(...b.items); });
+    const nonFaq = sec.blocks.filter((b) => b.type !== "faq");
+    if (!nonFaq.length) return ""; // FAQ 전용 섹션은 하단 FAQ로 통합(중복 방지)
+    const inner = nonFaq.map(richBlock).join("");
     return `<section class="rg-sec" id="sec${i}"><h2>${sec.icon ? `<span class="s-ic">${sec.icon}</span> ` : ""}${sec.label}</h2>${inner}</section>`;
   }).join("");
-  const toc = rich.sections.map((s, i) => `<li><a href="#sec${i}">${s.label}</a></li>`).join("") + (faqItems.length ? `<li><a href="#faq">자주 묻는 질문</a></li>` : "");
+  const toc = rich.sections.map((s, i) => s.blocks.every((b) => b.type === "faq") ? "" : `<li><a href="#sec${i}">${s.label}</a></li>`).join("") + (faqItems.length ? `<li><a href="#faq">자주 묻는 질문</a></li>` : "");
   return { body: tldr + secHtml, toc, faqItems };
 }
 
