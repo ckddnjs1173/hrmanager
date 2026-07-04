@@ -34,8 +34,8 @@ const ctx = {
 };
 ctx.window = ctx; ctx.globalThis = ctx; ctx.addEventListener = () => {};
 vm.createContext(ctx);
-vm.runInContext(scriptSrc + "\n;globalThis.__DATA__={ARTICLES,ART_EXTRA,AUTHOR};", ctx);
-const { ARTICLES, ART_EXTRA, AUTHOR } = ctx.__DATA__;
+vm.runInContext(scriptSrc + "\n;globalThis.__DATA__={ARTICLES,ART_EXTRA,AUTHOR,RICH_GUIDES:(typeof RICH_GUIDES!=='undefined'?RICH_GUIDES:{})};", ctx);
+const { ARTICLES, ART_EXTRA, AUTHOR, RICH_GUIDES } = ctx.__DATA__;
 
 // ---- 2) 콘텐츠 렌더러 (클라이언트 renderSec/callout/table와 동일 형태) ----
 // 단색 SVG 라인 아이콘 (정적 페이지용 · SPA의 ICON 세트와 동일 형태)
@@ -95,6 +95,36 @@ function ogSvg(a, accent, accentSoft) {
 </svg>`;
 }
 
+// ---- 2b) RICH_GUIDES 블록 → 정적 HTML (in-app 리치가이드와 동일 톤) ----
+function richBlock(b) {
+  switch (b.type) {
+    case "lead": return `<p class="lead">${b.text}</p>`;
+    case "h2": return `<h3 class="rb-h2">${b.em ? `<span class="rb-em">${b.em}</span> ` : ""}${b.text}</h3>`;
+    case "numbers": return `<div class="bignums">${b.items.map((n) => `<div class="bignum"><div class="n">${n.big}</div><div class="l">${n.label}</div></div>`).join("")}</div>`;
+    case "steps": return `<ol class="steps2">${b.items.map((s, i) => `<li><span class="sn">${i + 1}</span><span class="st"><b>${s.t}</b>${s.d ? `<i>${s.d}</i>` : ""}</span></li>`).join("")}</ol>`;
+    case "diagram": return `<div class="flow">${b.nodes.map((n, i) => `<div class="node"><div class="nic">${n.ic || ""}</div><div class="nt">${n.t}</div>${n.d ? `<div class="nd">${n.d}</div>` : ""}</div>${i < b.nodes.length - 1 ? '<div class="arr">→</div>' : ""}`).join("")}</div>`;
+    case "timeline": return `<div class="tline">${b.items.map((it) => `<div class="tl-item"><div class="tl-when">${it.when}</div><div class="tl-what">${it.what}</div></div>`).join("")}</div>`;
+    case "compare":
+    case "table": return `<table class="art-table"><thead><tr>${b.cols.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>${b.rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+    case "callout": return callout(b.callout);
+    case "checklist": return `<ul class="checklist">${b.items.map((c) => `<li>${c}</li>`).join("")}</ul>`;
+    case "selfcheck": return `<div class="selfcheck"><div class="sc-q">${b.q}</div><div class="sc-opt"><b>예</b> ${b.yes}</div><div class="sc-opt no"><b>아니오</b> ${b.no}</div></div>`;
+    case "embed": return `<a class="embedbox" href="${SITE_URL}/"><span class="eb-ic">🧮</span><span class="eb-tx"><b>${b.title}</b>${b.desc ? `<i>${b.desc}</i>` : ""}</span><span class="eb-cta">${b.cta || "열기"} ›</span></a>`;
+    default: return "";
+  }
+}
+// rich guide → {body, toc, faqItems}
+function renderRich(rich) {
+  const faqItems = [];
+  const tldr = `<div class="tldr"><div class="tldr-t">한 장 요약</div><div class="tldr-grid">${rich.summary.map((s) => `<div class="tldr-card"><div class="tc-ic">${s.icon}</div><div class="tc-t">${s.title}</div><div class="tc-d">${s.desc}</div></div>`).join("")}</div></div>`;
+  const secHtml = rich.sections.map((sec, i) => {
+    const inner = sec.blocks.map((b) => { if (b.type === "faq") { faqItems.push(...b.items); return ""; } return richBlock(b); }).join("");
+    return `<section class="rg-sec" id="sec${i}"><h2>${sec.icon ? `<span class="s-ic">${sec.icon}</span> ` : ""}${sec.label}</h2>${inner}</section>`;
+  }).join("");
+  const toc = rich.sections.map((s, i) => `<li><a href="#sec${i}">${s.label}</a></li>`).join("") + (faqItems.length ? `<li><a href="#faq">자주 묻는 질문</a></li>` : "");
+  return { body: tldr + secHtml, toc, faqItems };
+}
+
 // ---- 3) 정적 페이지 템플릿 ----
 function page(key, a) {
   const x = ART_EXTRA[key] || {};
@@ -114,11 +144,18 @@ function page(key, a) {
     ? `${SITE_URL}/assets/og/${key}.png`
     : `${SITE_URL}/assets/brand/og-default.png`;
 
-  const toc = secs.map((s, i) => `<li><a href="#sec${i}">${s.h}</a></li>`).join("") +
-    (x.faq ? `<li><a href="#faq">자주 묻는 질문</a></li>` : "");
-  const body = secs.map(sec).join("");
-  const check = `<h2 id="check">준비 / 체크리스트</h2><ul class="checklist">${(a.checklist || []).map((c) => `<li>${c}</li>`).join("")}</ul>`;
-  const faq = (x.faq || []).map((f) => `<details><summary>${f.q}</summary><div class="ans">${f.a}</div></details>`).join("");
+  const rich = RICH_GUIDES[key];
+  let toc, body, check = "", faqSrc;
+  if (rich) {
+    const r = renderRich(rich);
+    body = r.body; toc = r.toc; faqSrc = r.faqItems; // 리치가이드: 체크리스트는 섹션 블록에 포함
+  } else {
+    toc = secs.map((s, i) => `<li><a href="#sec${i}">${s.h}</a></li>`).join("") + (x.faq ? `<li><a href="#faq">자주 묻는 질문</a></li>` : "");
+    body = secs.map(sec).join("");
+    check = `<h2 id="check">준비 / 체크리스트</h2><ul class="checklist">${(a.checklist || []).map((c) => `<li>${c}</li>`).join("")}</ul>`;
+    faqSrc = x.faq || [];
+  }
+  const faq = (faqSrc || []).map((f) => `<details><summary>${f.q}</summary><div class="ans">${f.a}</div></details>`).join("");
   const rel = (x.related || []).filter((rk) => ARTICLES[rk]).map((rk) =>
     `<a class="relcard" href="/articles/${rk}.html"><div class="rc">${ARTICLES[rk].cat}</div><div class="rt">${ARTICLES[rk].title}</div></a>`).join("");
 
@@ -131,9 +168,9 @@ function page(key, a) {
     publisher: { "@type": "Organization", name: "인사야" },
     mainEntityOfPage: url,
   };
-  const faqLd = x.faq && x.faq.length ? {
+  const faqLd = faqSrc && faqSrc.length ? {
     "@context": "https://schema.org", "@type": "FAQPage",
-    mainEntity: x.faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: strip(f.a) } })),
+    mainEntity: faqSrc.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: strip(f.a) } })),
   } : null;
 
   return `<!DOCTYPE html>
@@ -202,7 +239,35 @@ ${faqLd ? `<script type="application/ld+json">${JSON.stringify(faqLd)}</script>`
   .cta .t{font-weight:700}.cta .d{font-size:13px;color:var(--sub);margin:4px 0 12px}
   .cta a{display:inline-block;background:var(--brand);color:#fff;text-decoration:none;border-radius:10px;padding:12px 22px;font-weight:700}
   .notice{font-size:12px;color:var(--sub);background:#fafbfc;border:1px dashed var(--line);border-radius:10px;padding:11px 13px;margin-top:24px}
-  @media(max-width:560px){.related{grid-template-columns:1fr}}
+  /* 리치 블록 (in-app 리치가이드 톤) */
+  .rg-sec h2{display:flex;align-items:center;gap:7px;font-size:19px;margin:30px 0 10px}.rg-sec h2 .s-ic{font-size:18px}
+  .rb-h2{font-size:15.5px;font-weight:800;margin:18px 0 8px;color:var(--ink-900)}
+  .tldr{background:var(--brand-soft);border-radius:18px;padding:16px;margin:18px 0}
+  .tldr-t{font-size:13px;font-weight:800;color:var(--accent-ink);margin:2px 4px 10px}
+  .tldr-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .tldr-card{background:#fff;border-radius:13px;padding:15px 12px;text-align:center}
+  .tc-ic{font-size:22px}.tc-t{font-weight:800;font-size:15px;margin:6px 0 3px}.tc-d{font-size:12.5px;color:var(--sub)}
+  .bignums{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:14px 0}
+  .bignum{background:var(--panel);border-radius:13px;padding:14px 10px;text-align:center}
+  .bignum .n{font-size:23px;font-weight:800;color:var(--brand);letter-spacing:-.02em}.bignum .l{font-size:12px;color:var(--sub);margin-top:3px}
+  .steps2{list-style:none;padding:0}.steps2 li{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .steps2 .sn{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .steps2 .st b{font-size:14.5px}.steps2 .st i{display:block;font-style:normal;font-size:12.5px;color:var(--sub)}
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin:14px 0}
+  .flow .node{flex:1;min-width:104px;background:var(--panel);border-radius:12px;padding:12px 8px;text-align:center}
+  .flow .nic{font-size:20px}.flow .nt{font-weight:700;font-size:13.5px;margin-top:3px}.flow .nd{font-size:11.5px;color:var(--sub)}
+  .flow .arr{align-self:center;color:var(--sub);font-weight:700}
+  .tline{margin:14px 0;border-left:2px solid var(--brand-soft);padding-left:14px}
+  .tl-item{position:relative;padding:6px 0}.tl-item::before{content:"";position:absolute;left:-19px;top:11px;width:8px;height:8px;border-radius:50%;background:var(--brand)}
+  .tl-when{font-weight:800;font-size:13px;color:var(--accent-ink)}.tl-what{font-size:13.5px;color:#374151}
+  .selfcheck{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;margin:16px 0}
+  .sc-q{font-weight:800;font-size:15px;margin-bottom:10px}
+  .sc-opt{font-size:13.5px;padding:9px 12px;border-radius:10px;margin-top:6px;background:#eef7f1;border:1px solid #cfe9d9}.sc-opt b{color:var(--ok)}
+  .sc-opt.no{background:#f7f8fa;border-color:var(--line)}.sc-opt.no b{color:var(--sub)}
+  .embedbox{display:flex;align-items:center;gap:12px;text-decoration:none;background:var(--brand-soft);border:1px solid #d4e2ff;border-radius:14px;padding:14px;margin:16px 0}
+  .embedbox .eb-ic{font-size:22px}.embedbox .eb-tx{flex:1}.embedbox .eb-tx b{display:block;font-size:14.5px;color:var(--ink-900)}.embedbox .eb-tx i{font-style:normal;font-size:12.5px;color:var(--sub)}
+  .embedbox .eb-cta{font-weight:800;font-size:13px;color:var(--accent-ink);white-space:nowrap}
+  @media(max-width:560px){.related{grid-template-columns:1fr}.tldr-grid,.bignums{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>

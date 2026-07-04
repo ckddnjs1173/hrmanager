@@ -19,7 +19,7 @@
 <link rel="icon" type="image/svg+xml" href="https://insaya.onrender.com/assets/brand/favicon.svg"/>
 <link rel="icon" href="https://insaya.onrender.com/assets/brand/favicon.png"/>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"임금명세서, 안 주면 위반입니다","description":"2021년 11월부터 사업주는 임금을 줄 때마다 임금명세서를 교부해야 합니다(근로기준법 제48조). 안 주거나 항목이 빠지면 과태료 대상입니다.","datePublished":"2026-06-16","dateModified":"2026-06-16","author":{"@type":"Organization","name":"인사야"},"publisher":{"@type":"Organization","name":"인사야"},"mainEntityOfPage":"https://insaya.onrender.com/articles/payslip.html"}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"명세서를 한 번도 못 받았어요. 어떻게 하나요?","acceptedAnswer":{"@type":"Answer","text":"먼저 사업주에게 교부를 요청하고, 그래도 주지 않으면 고용노동부 노동포털·관할 노동청에 신고할 수 있습니다. 명세서는 임금체불을 다툴 때 중요한 증거가 됩니다."}},{"@type":"Question","name":"카톡·문자로 받아도 되나요?","acceptedAnswer":{"@type":"Answer","text":"네. 서면·전자문서(이메일·문자·앱) 어떤 형태든 가능합니다. 다만 성명·임금총액·구성항목·계산방법·공제내역 등 필수 항목이 모두 들어 있어야 합니다."}}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"명세서를 한 번도 못 받았어요.","acceptedAnswer":{"@type":"Answer","text":"먼저 사업주에게 교부를 요청하고, 그래도 주지 않으면 고용노동부 노동포털·관할 노동청에 신고할 수 있어요. 명세서는 체불을 다툴 때 핵심 증거가 됩니다."}},{"@type":"Question","name":"카톡으로 받아도 되나요?","acceptedAnswer":{"@type":"Answer","text":"네. 전자문서(이메일·문자·앱)도 가능합니다. 다만 성명·총액·구성항목·계산방법·공제내역 등 필수 항목이 모두 있어야 해요."}}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"홈","item":"https://insaya.onrender.com/"},{"@type":"ListItem","position":2,"name":"근로자"},{"@type":"ListItem","position":3,"name":"임금명세서, 안 주면 위반입니다","item":"https://insaya.onrender.com/articles/payslip.html"}]}</script>
 <style>
   @font-face{font-family:"Pretendard Variable";src:url("/assets/brand/fonts/PretendardVariable.woff2") format("woff2-variations");font-weight:100 900;font-display:swap}
@@ -61,7 +61,35 @@
   .cta .t{font-weight:700}.cta .d{font-size:13px;color:var(--sub);margin:4px 0 12px}
   .cta a{display:inline-block;background:var(--brand);color:#fff;text-decoration:none;border-radius:10px;padding:12px 22px;font-weight:700}
   .notice{font-size:12px;color:var(--sub);background:#fafbfc;border:1px dashed var(--line);border-radius:10px;padding:11px 13px;margin-top:24px}
-  @media(max-width:560px){.related{grid-template-columns:1fr}}
+  /* 리치 블록 (in-app 리치가이드 톤) */
+  .rg-sec h2{display:flex;align-items:center;gap:7px;font-size:19px;margin:30px 0 10px}.rg-sec h2 .s-ic{font-size:18px}
+  .rb-h2{font-size:15.5px;font-weight:800;margin:18px 0 8px;color:var(--ink-900)}
+  .tldr{background:var(--brand-soft);border-radius:18px;padding:16px;margin:18px 0}
+  .tldr-t{font-size:13px;font-weight:800;color:var(--accent-ink);margin:2px 4px 10px}
+  .tldr-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .tldr-card{background:#fff;border-radius:13px;padding:15px 12px;text-align:center}
+  .tc-ic{font-size:22px}.tc-t{font-weight:800;font-size:15px;margin:6px 0 3px}.tc-d{font-size:12.5px;color:var(--sub)}
+  .bignums{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:14px 0}
+  .bignum{background:var(--panel);border-radius:13px;padding:14px 10px;text-align:center}
+  .bignum .n{font-size:23px;font-weight:800;color:var(--brand);letter-spacing:-.02em}.bignum .l{font-size:12px;color:var(--sub);margin-top:3px}
+  .steps2{list-style:none;padding:0}.steps2 li{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .steps2 .sn{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .steps2 .st b{font-size:14.5px}.steps2 .st i{display:block;font-style:normal;font-size:12.5px;color:var(--sub)}
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin:14px 0}
+  .flow .node{flex:1;min-width:104px;background:var(--panel);border-radius:12px;padding:12px 8px;text-align:center}
+  .flow .nic{font-size:20px}.flow .nt{font-weight:700;font-size:13.5px;margin-top:3px}.flow .nd{font-size:11.5px;color:var(--sub)}
+  .flow .arr{align-self:center;color:var(--sub);font-weight:700}
+  .tline{margin:14px 0;border-left:2px solid var(--brand-soft);padding-left:14px}
+  .tl-item{position:relative;padding:6px 0}.tl-item::before{content:"";position:absolute;left:-19px;top:11px;width:8px;height:8px;border-radius:50%;background:var(--brand)}
+  .tl-when{font-weight:800;font-size:13px;color:var(--accent-ink)}.tl-what{font-size:13.5px;color:#374151}
+  .selfcheck{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;margin:16px 0}
+  .sc-q{font-weight:800;font-size:15px;margin-bottom:10px}
+  .sc-opt{font-size:13.5px;padding:9px 12px;border-radius:10px;margin-top:6px;background:#eef7f1;border:1px solid #cfe9d9}.sc-opt b{color:var(--ok)}
+  .sc-opt.no{background:#f7f8fa;border-color:var(--line)}.sc-opt.no b{color:var(--sub)}
+  .embedbox{display:flex;align-items:center;gap:12px;text-decoration:none;background:var(--brand-soft);border:1px solid #d4e2ff;border-radius:14px;padding:14px;margin:16px 0}
+  .embedbox .eb-ic{font-size:22px}.embedbox .eb-tx{flex:1}.embedbox .eb-tx b{display:block;font-size:14.5px;color:var(--ink-900)}.embedbox .eb-tx i{font-style:normal;font-size:12.5px;color:var(--sub)}
+  .embedbox .eb-cta{font-weight:800;font-size:13px;color:var(--accent-ink);white-space:nowrap}
+  @media(max-width:560px){.related{grid-template-columns:1fr}.tldr-grid,.bignums{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -72,15 +100,15 @@
     <div class="meta"><span class="au">인사야 편집팀 · 법령 기준 정리</span> · <span>최종 수정 2026-06-16</span> · <span>약 4분</span></div>
     <div class="lead">2021년 11월부터 사업주는 임금을 줄 때마다 임금명세서를 교부해야 합니다(근로기준법 제48조). 안 주거나 항목이 빠지면 과태료 대상입니다.</div>
     <div class="callout law"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M8.5 21h7M4 8l8-3 8 3"/><path d="M4 8 2 12.2a4 4 0 0 0 4 0L4 8zM20 8l-2 4.2a4 4 0 0 0 4 0L20 8z"/></svg></div><div>2021년 11월부터 <b>임금명세서 교부는 법적 의무</b>입니다(근로기준법 제48조). 미교부·필수기재 누락은 500만원 이하 과태료 대상입니다.</div></div>
-    <nav class="toc"><div class="t">목차</div><ol><li><a href="#sec0">반드시 들어가야 할 항목</a></li><li><a href="#sec1">왜 중요한가</a></li><li><a href="#faq">자주 묻는 질문</a></li></ol></nav>
-    <h2 id="sec0">반드시 들어가야 할 항목</h2><ul><li>성명·생년월일 등 근로자 정보</li><li>임금 총액과 <b>구성 항목별 금액</b>(기본급·수당 등)</li><li>계산 방법(연장·야간 등 시간 수와 단가)</li><li>공제 항목과 금액(4대보험·세금 등)</li></ul><h2 id="sec1">왜 중요한가</h2><p>임금명세서는 내가 받을 돈이 제대로 계산됐는지 확인하는 1차 자료이자, 임금체불·수당 누락을 다툴 때 핵심 증거가 됩니다.</p><p>종이·이메일·문자·앱 등 어떤 형태로든 교부할 수 있지만, 필수 항목이 빠지면 교부하지 않은 것으로 봅니다.</p>
-    <h2 id="check">준비 / 체크리스트</h2><ul class="checklist"><li>매월 임금명세서 수령·보관</li><li>구성 항목·공제 내역 확인</li><li>누락·오류 시 사업주에게 정정 요청</li><li>미교부 시 노동청 신고 가능</li></ul>
+    <nav class="toc"><div class="t">목차</div><ol><li><a href="#sec0">개요</a></li><li><a href="#sec1">왜 중요한가</a></li><li><a href="#sec2">안 주면</a></li><li><a href="#sec3">자주 묻는 질문</a></li><li><a href="#faq">자주 묻는 질문</a></li></ol></nav>
+    <div class="tldr"><div class="tldr-t">한 장 요약</div><div class="tldr-grid"><div class="tldr-card"><div class="tc-ic">🧾</div><div class="tc-t">교부 의무</div><div class="tc-d">2021.11~ 법적</div></div><div class="tldr-card"><div class="tc-ic">📋</div><div class="tc-t">필수 5항목</div><div class="tc-d">빠지면 위반</div></div><div class="tldr-card"><div class="tc-ic">⚖️</div><div class="tc-t">500만원</div><div class="tc-d">위반 시 과태료</div></div></div></div><section class="rg-sec" id="sec0"><h2><span class="s-ic">📌</span> 개요</h2><div class="callout law"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M8.5 21h7M4 8l8-3 8 3"/><path d="M4 8 2 12.2a4 4 0 0 0 4 0L4 8zM20 8l-2 4.2a4 4 0 0 0 4 0L20 8z"/></svg></div><div>2021년 11월부터 <b>임금을 줄 때마다 임금명세서 교부</b>는 법적 의무입니다(근로기준법 제48조).</div></div><h3 class="rb-h2"><span class="rb-em">📋</span> 반드시 들어가야 할 항목</h3><ul class="checklist"><li>성명·생년월일 등 근로자 정보</li><li>임금 총액</li><li>구성 항목별 금액(기본급·수당)</li><li>계산 방법(시간 수·단가)</li><li>공제 항목과 금액(4대보험·세금)</li></ul></section><section class="rg-sec" id="sec1"><h2><span class="s-ic">🔍</span> 왜 중요한가</h2><table class="art-table"><thead><tr><th>이럴 때</th><th>임금명세서가 하는 일</th></tr></thead><tbody><tr><td>수당이 빠진 것 같다</td><td>항목별 금액으로 확인</td></tr><tr><td>연장근로 단가가 의심</td><td>계산방법으로 검증</td></tr><tr><td>체불을 다툰다</td><td>금액·기간 입증 증거</td></tr><tr><td>4대보험 공제가 많다</td><td>공제 내역 확인</td></tr></tbody></table><div class="callout tip"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 18h5M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.8 10.6c.6.5.9 1 .95 1.9h5.7c.05-.9.35-1.4.95-1.9A6 6 0 0 0 12 3z"/></svg></div><div>종이·이메일·문자·앱 어떤 형태든 가능하지만 <b>필수 항목이 빠지면 미교부</b>로 봅니다.</div></div></section><section class="rg-sec" id="sec2"><h2><span class="s-ic">🏛️</span> 안 주면</h2><ol class="steps2"><li><span class="sn">1</span><span class="st"><b>사업주에게 교부 요청</b><i>구두·문자로 먼저 요청</i></span></li><li><span class="sn">2</span><span class="st"><b>노동청 신고</b><i>미교부 시 노동포털·관할 노동청</i></span></li><li><span class="sn">3</span><span class="st"><b>체불 함께 점검</b><i>수당 누락이 있으면 진정</i></span></li></ol><a class="embedbox" href="https://insaya.onrender.com/"><span class="eb-ic">🧮</span><span class="eb-tx"><b>임금명세서 양식 만들기</b><i>문서센터에서 표준 양식 생성</i></span><span class="eb-cta">문서센터 ›</span></a></section><section class="rg-sec" id="sec3"><h2><span class="s-ic">❓</span> 자주 묻는 질문</h2></section>
+    
     <div class="cta">
       <div class="t">내 상황은 어떨까요?</div>
       <div class="d">AI가 쟁점·예상 금액·다음 행동을 정리해드립니다. (무료)</div>
       <a href="/#start=payslip"><span class="tic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.1 7.5L3 21l1.9-5.9A8.5 8.5 0 1 1 21 11.5z"/></svg></span> 내 상황 AI로 진단하기</a>
     </div>
-    <h2 id="faq">자주 묻는 질문</h2><details><summary>명세서를 한 번도 못 받았어요. 어떻게 하나요?</summary><div class="ans">먼저 사업주에게 교부를 요청하고, 그래도 주지 않으면 고용노동부 노동포털·관할 노동청에 신고할 수 있습니다. 명세서는 임금체불을 다툴 때 중요한 증거가 됩니다.</div></details><details><summary>카톡·문자로 받아도 되나요?</summary><div class="ans">네. 서면·전자문서(이메일·문자·앱) 어떤 형태든 가능합니다. 다만 성명·임금총액·구성항목·계산방법·공제내역 등 필수 항목이 모두 들어 있어야 합니다.</div></details>
+    <h2 id="faq">자주 묻는 질문</h2><details><summary>명세서를 한 번도 못 받았어요.</summary><div class="ans">먼저 사업주에게 교부를 요청하고, 그래도 주지 않으면 고용노동부 노동포털·관할 노동청에 신고할 수 있어요. 명세서는 체불을 다툴 때 핵심 증거가 됩니다.</div></details><details><summary>카톡으로 받아도 되나요?</summary><div class="ans">네. 전자문서(이메일·문자·앱)도 가능합니다. 다만 성명·총액·구성항목·계산방법·공제내역 등 필수 항목이 모두 있어야 해요.</div></details>
     <h2>이런 글도 도움이 돼요</h2><div class="related"><a class="relcard" href="/articles/wage.html"><div class="rc">근로자</div><div class="rt">임금체불, 이렇게 받으세요</div></a><a class="relcard" href="/articles/holiday.html"><div class="rc">근로자</div><div class="rt">주휴수당, 알바도 받습니다</div></a><a class="relcard" href="/articles/contract.html"><div class="rc">근로자</div><div class="rt">근로계약서를 안 썼다면</div></a></div>
     <div class="notice"><b>안내</b> · 본 글은 공개된 법령·정부 자료를 바탕으로 정리한 일반 정보 제공이며(공인노무사 감수를 받지 않았습니다), 법률·노무 자문이 아닙니다. 구체적 사안은 공인노무사 상담을 권장합니다.<br/>미교부·필수기재 누락은 500만원 이하 과태료 대상입니다.</div>
   </div>

@@ -19,7 +19,7 @@
 <link rel="icon" type="image/svg+xml" href="https://insaya.onrender.com/assets/brand/favicon.svg"/>
 <link rel="icon" href="https://insaya.onrender.com/assets/brand/favicon.png"/>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"근로계약서, 유형별로 다릅니다","description":"정규직·계약직·단시간·일용 각각 필수 기재사항이 다릅니다. 특히 기간제·단시간은 누락 시 과태료가 더 큽니다.","datePublished":"2026-06-07","dateModified":"2026-06-07","author":{"@type":"Organization","name":"인사야"},"publisher":{"@type":"Organization","name":"인사야"},"mainEntityOfPage":"https://insaya.onrender.com/articles/emp_contract.html"}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"단시간 근로자는 뭐가 더 필요한가요?","acceptedAnswer":{"@type":"Answer","text":"근로일별 근로시간을 명시해야 하며, 기재 누락 시 과태료 기준이 더 엄격합니다."}}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"작성만 하고 안 줘도 되나요?","acceptedAnswer":{"@type":"Answer","text":"아닙니다. 교부까지 의무이며, 미교부 시 위반입니다. 반드시 1부를 근로자에게 주세요."}},{"@type":"Question","name":"기간제를 2년 넘겨 쓰면요?","acceptedAnswer":{"@type":"Answer","text":"기간제법상 2년을 초과해 계속 사용하면 기간의 정함이 없는 근로자(무기계약직)로 간주될 수 있습니다."}},{"@type":"Question","name":"위약금 조항을 넣어도 되나요?","acceptedAnswer":{"@type":"Answer","text":"근로기준법 제20조는 위약금·손해배상 예정을 금지합니다. 넣더라도 무효이니 넣지 마세요."}}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"홈","item":"https://insaya.onrender.com/"},{"@type":"ListItem","position":2,"name":"사업주"},{"@type":"ListItem","position":3,"name":"근로계약서, 유형별로 다릅니다","item":"https://insaya.onrender.com/articles/emp_contract.html"}]}</script>
 <style>
   @font-face{font-family:"Pretendard Variable";src:url("/assets/brand/fonts/PretendardVariable.woff2") format("woff2-variations");font-weight:100 900;font-display:swap}
@@ -61,7 +61,35 @@
   .cta .t{font-weight:700}.cta .d{font-size:13px;color:var(--sub);margin:4px 0 12px}
   .cta a{display:inline-block;background:var(--brand);color:#fff;text-decoration:none;border-radius:10px;padding:12px 22px;font-weight:700}
   .notice{font-size:12px;color:var(--sub);background:#fafbfc;border:1px dashed var(--line);border-radius:10px;padding:11px 13px;margin-top:24px}
-  @media(max-width:560px){.related{grid-template-columns:1fr}}
+  /* 리치 블록 (in-app 리치가이드 톤) */
+  .rg-sec h2{display:flex;align-items:center;gap:7px;font-size:19px;margin:30px 0 10px}.rg-sec h2 .s-ic{font-size:18px}
+  .rb-h2{font-size:15.5px;font-weight:800;margin:18px 0 8px;color:var(--ink-900)}
+  .tldr{background:var(--brand-soft);border-radius:18px;padding:16px;margin:18px 0}
+  .tldr-t{font-size:13px;font-weight:800;color:var(--accent-ink);margin:2px 4px 10px}
+  .tldr-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .tldr-card{background:#fff;border-radius:13px;padding:15px 12px;text-align:center}
+  .tc-ic{font-size:22px}.tc-t{font-weight:800;font-size:15px;margin:6px 0 3px}.tc-d{font-size:12.5px;color:var(--sub)}
+  .bignums{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:14px 0}
+  .bignum{background:var(--panel);border-radius:13px;padding:14px 10px;text-align:center}
+  .bignum .n{font-size:23px;font-weight:800;color:var(--brand);letter-spacing:-.02em}.bignum .l{font-size:12px;color:var(--sub);margin-top:3px}
+  .steps2{list-style:none;padding:0}.steps2 li{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .steps2 .sn{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .steps2 .st b{font-size:14.5px}.steps2 .st i{display:block;font-style:normal;font-size:12.5px;color:var(--sub)}
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin:14px 0}
+  .flow .node{flex:1;min-width:104px;background:var(--panel);border-radius:12px;padding:12px 8px;text-align:center}
+  .flow .nic{font-size:20px}.flow .nt{font-weight:700;font-size:13.5px;margin-top:3px}.flow .nd{font-size:11.5px;color:var(--sub)}
+  .flow .arr{align-self:center;color:var(--sub);font-weight:700}
+  .tline{margin:14px 0;border-left:2px solid var(--brand-soft);padding-left:14px}
+  .tl-item{position:relative;padding:6px 0}.tl-item::before{content:"";position:absolute;left:-19px;top:11px;width:8px;height:8px;border-radius:50%;background:var(--brand)}
+  .tl-when{font-weight:800;font-size:13px;color:var(--accent-ink)}.tl-what{font-size:13.5px;color:#374151}
+  .selfcheck{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;margin:16px 0}
+  .sc-q{font-weight:800;font-size:15px;margin-bottom:10px}
+  .sc-opt{font-size:13.5px;padding:9px 12px;border-radius:10px;margin-top:6px;background:#eef7f1;border:1px solid #cfe9d9}.sc-opt b{color:var(--ok)}
+  .sc-opt.no{background:#f7f8fa;border-color:var(--line)}.sc-opt.no b{color:var(--sub)}
+  .embedbox{display:flex;align-items:center;gap:12px;text-decoration:none;background:var(--brand-soft);border:1px solid #d4e2ff;border-radius:14px;padding:14px;margin:16px 0}
+  .embedbox .eb-ic{font-size:22px}.embedbox .eb-tx{flex:1}.embedbox .eb-tx b{display:block;font-size:14.5px;color:var(--ink-900)}.embedbox .eb-tx i{font-style:normal;font-size:12.5px;color:var(--sub)}
+  .embedbox .eb-cta{font-weight:800;font-size:13px;color:var(--accent-ink);white-space:nowrap}
+  @media(max-width:560px){.related{grid-template-columns:1fr}.tldr-grid,.bignums{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -72,15 +100,15 @@
     <div class="meta"><span class="au">인사야 편집팀 · 법령 기준 정리</span> · <span>최종 수정 2026-06-07</span> · <span>약 4분</span></div>
     <div class="lead">정규직·계약직·단시간·일용 각각 필수 기재사항이 다릅니다. 특히 기간제·단시간은 누락 시 과태료가 더 큽니다.</div>
     <div class="callout warn"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17h.01"/></svg></div><div>작성만 하고 <b>교부하지 않으면</b> 위반입니다. 서명본 1부를 반드시 근로자에게 주세요.</div></div>
-    <nav class="toc"><div class="t">목차</div><ol><li><a href="#sec0">공통 필수 기재</a></li><li><a href="#sec1">유형별 추가</a></li><li><a href="#faq">자주 묻는 질문</a></li></ol></nav>
-    <h2 id="sec0">공통 필수 기재</h2><ul><li>임금 구성·계산·지급방법</li><li>소정근로시간</li><li>휴일·연차</li><li>업무·근무장소</li></ul><h2 id="sec1">유형별 추가</h2><ul><li>기간제: 계약기간</li><li>단시간: 근로일별 근로시간</li><li>반드시 서면 교부</li></ul>
-    <h2 id="check">준비 / 체크리스트</h2><ul class="checklist"><li>유형에 맞는 양식 사용</li><li>서명본 2부(노사 각 1부)</li><li>변경 시 재작성</li></ul>
+    <nav class="toc"><div class="t">목차</div><ol><li><a href="#sec0">개요</a></li><li><a href="#sec1">유형 진단</a></li><li><a href="#sec2">작성 체크</a></li><li><a href="#sec3">자주 묻는 질문</a></li><li><a href="#faq">자주 묻는 질문</a></li></ol></nav>
+    <div class="tldr"><div class="tldr-t">한 장 요약</div><div class="tldr-grid"><div class="tldr-card"><div class="tc-ic">📝</div><div class="tc-t">유형별 필수기재</div><div class="tc-d">정규·기간제·단시간·연소</div></div><div class="tldr-card"><div class="tc-ic">✍️</div><div class="tc-t">서면 교부</div><div class="tc-d">1부 근로자에게</div></div><div class="tldr-card"><div class="tc-ic">⚠️</div><div class="tc-t">미교부=위반</div><div class="tc-d">과태료</div></div></div></div><section class="rg-sec" id="sec0"><h2><span class="s-ic">📌</span> 개요</h2><div class="bignums"><div class="bignum"><div class="n">제17조</div><div class="l">서면 명시·교부 의무</div></div><div class="bignum"><div class="n">근로 시작 전</div><div class="l">작성·교부 시점</div></div><div class="bignum"><div class="n">2년</div><div class="l">기간제 초과→무기계약</div></div></div><h3 class="rb-h2"><span class="rb-em">📝</span> 유형별 기재사항</h3><table class="art-table"><thead><tr><th>구분</th><th>추가 기재</th></tr></thead><tbody><tr><td>공통</td><td>임금·소정근로시간·휴일·연차·업무·근무장소</td></tr><tr><td>기간제</td><td>계약기간</td></tr><tr><td>단시간</td><td>근로일별 근로시간</td></tr><tr><td>연소(18세 미만)</td><td>친권자 동의서·연령증명 비치</td></tr></tbody></table><div class="callout law"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M8.5 21h7M4 8l8-3 8 3"/><path d="M4 8 2 12.2a4 4 0 0 0 4 0L4 8zM20 8l-2 4.2a4 4 0 0 0 4 0L20 8z"/></svg></div><div>작성뿐 아니라 <b>교부까지 사용자 의무</b>(근기법 제17조). 미교부는 그 자체로 위반입니다.</div></div></section><section class="rg-sec" id="sec1"><h2><span class="s-ic">🤔</span> 유형 진단</h2><div class="selfcheck"><div class="sc-q">단시간·기간제 근로자를 채용하시나요?</div><div class="sc-opt"><b>예</b> 단시간은 <b>근로일별 근로시간표</b>, 기간제는 <b>계약기간</b>을 반드시 명시하세요.</div><div class="sc-opt no"><b>아니오</b> 정규직도 임금·소정근로시간·휴일·연차·업무를 서면 명시해야 합니다.</div></div><table class="art-table"><thead><tr><th>유형</th><th>핵심 주의</th></tr></thead><tbody><tr><td>정규직</td><td>임금 구성·지급방법 명시</td></tr><tr><td>기간제</td><td>2년 초과 시 무기계약 간주</td></tr><tr><td>단시간</td><td>근로일별 시간표 필수</td></tr><tr><td>연소자</td><td>친권자 동의·연령증명</td></tr></tbody></table></section><section class="rg-sec" id="sec2"><h2><span class="s-ic">📋</span> 작성 체크</h2><ul class="checklist"><li>유형에 맞는 표준양식 사용</li><li>서명본 2부(노사 각 1부)</li><li>임금 구성·계산·지급방법 명시</li><li>근로조건 변경 시 재작성·재교부</li><li>위약금·손해배상 예정 조항 넣지 않기</li></ul><a class="embedbox" href="https://insaya.onrender.com/"><span class="eb-ic">🧮</span><span class="eb-tx"><b>표준 근로계약서 만들기</b><i>유형별 항목만 입력하면 초안 완성</i></span><span class="eb-cta">문서센터 ›</span></a></section><section class="rg-sec" id="sec3"><h2><span class="s-ic">❓</span> 자주 묻는 질문</h2></section>
+    
     <div class="cta">
       <div class="t">내 상황은 어떨까요?</div>
       <div class="d">AI가 쟁점·예상 금액·다음 행동을 정리해드립니다. (무료)</div>
       <a href="/#start=employer"><span class="tic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.1 7.5L3 21l1.9-5.9A8.5 8.5 0 1 1 21 11.5z"/></svg></span> 내 상황 AI로 진단하기</a>
     </div>
-    <h2 id="faq">자주 묻는 질문</h2><details><summary>단시간 근로자는 뭐가 더 필요한가요?</summary><div class="ans">근로일별 근로시간을 명시해야 하며, 기재 누락 시 과태료 기준이 더 엄격합니다.</div></details>
+    <h2 id="faq">자주 묻는 질문</h2><details><summary>작성만 하고 안 줘도 되나요?</summary><div class="ans">아닙니다. 교부까지 의무이며, 미교부 시 위반입니다. 반드시 1부를 근로자에게 주세요.</div></details><details><summary>기간제를 2년 넘겨 쓰면요?</summary><div class="ans">기간제법상 2년을 초과해 계속 사용하면 기간의 정함이 없는 근로자(무기계약직)로 간주될 수 있습니다.</div></details><details><summary>위약금 조항을 넣어도 되나요?</summary><div class="ans">근로기준법 제20조는 위약금·손해배상 예정을 금지합니다. 넣더라도 무효이니 넣지 마세요.</div></details>
     <h2>이런 글도 도움이 돼요</h2><div class="related"><a class="relcard" href="/articles/emp_risk.html"><div class="rc">사업주</div><div class="rt">사업장 노무 리스크, 미리 점검하세요</div></a><a class="relcard" href="/articles/emp_doc.html"><div class="rc">사업주</div><div class="rt">인사문서, 분쟁의 증거가 됩니다</div></a></div>
     <div class="notice"><b>안내</b> · 본 글은 공개된 법령·정부 자료를 바탕으로 정리한 일반 정보 제공이며(공인노무사 감수를 받지 않았습니다), 법률·노무 자문이 아닙니다. 구체적 사안은 공인노무사 상담을 권장합니다.<br/>작성만 하고 교부 안 하면 위반입니다. 반드시 1부를 근로자에게 주세요.</div>
   </div>

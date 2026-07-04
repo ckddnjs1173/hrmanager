@@ -19,7 +19,7 @@
 <link rel="icon" type="image/svg+xml" href="https://insaya.onrender.com/assets/brand/favicon.svg"/>
 <link rel="icon" href="https://insaya.onrender.com/assets/brand/favicon.png"/>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"직장 내 괴롭힘, 어떻게 대응할까","description":"지위·관계의 우위를 이용해 업무상 적정범위를 넘어 신체적·정신적 고통을 주는 행위는 법으로 금지됩니다(근로기준법 제76조의2).","datePublished":"2026-06-01","dateModified":"2026-06-01","author":{"@type":"Organization","name":"인사야"},"publisher":{"@type":"Organization","name":"인사야"},"mainEntityOfPage":"https://insaya.onrender.com/articles/harass.html"}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"증거가 녹취뿐인데 효력이 있나요?","acceptedAnswer":{"@type":"Answer","text":"본인이 대화 당사자인 녹취는 증거로 사용할 수 있습니다. 메신저·이메일·사건 일지와 함께 모아두면 더 좋습니다."}},{"@type":"Question","name":"회사가 조사를 안 하면요?","acceptedAnswer":{"@type":"Answer","text":"사용자는 신고 시 지체 없이 조사하고 조치할 의무가 있습니다. 방치하면 노동청에 진정할 수 있습니다."}}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"증거가 녹취뿐인데 효력이 있나요?","acceptedAnswer":{"@type":"Answer","text":"본인이 대화 당사자인 녹취는 증거로 쓸 수 있습니다. 메신저·일지와 함께 모으면 좋습니다."}},{"@type":"Question","name":"회사가 조사를 안 하면요?","acceptedAnswer":{"@type":"Answer","text":"사용자는 신고 시 지체 없이 조사·조치할 의무가 있습니다. 방치 시 노동청에 진정할 수 있습니다."}}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"홈","item":"https://insaya.onrender.com/"},{"@type":"ListItem","position":2,"name":"근로자"},{"@type":"ListItem","position":3,"name":"직장 내 괴롭힘, 어떻게 대응할까","item":"https://insaya.onrender.com/articles/harass.html"}]}</script>
 <style>
   @font-face{font-family:"Pretendard Variable";src:url("/assets/brand/fonts/PretendardVariable.woff2") format("woff2-variations");font-weight:100 900;font-display:swap}
@@ -61,7 +61,35 @@
   .cta .t{font-weight:700}.cta .d{font-size:13px;color:var(--sub);margin:4px 0 12px}
   .cta a{display:inline-block;background:var(--brand);color:#fff;text-decoration:none;border-radius:10px;padding:12px 22px;font-weight:700}
   .notice{font-size:12px;color:var(--sub);background:#fafbfc;border:1px dashed var(--line);border-radius:10px;padding:11px 13px;margin-top:24px}
-  @media(max-width:560px){.related{grid-template-columns:1fr}}
+  /* 리치 블록 (in-app 리치가이드 톤) */
+  .rg-sec h2{display:flex;align-items:center;gap:7px;font-size:19px;margin:30px 0 10px}.rg-sec h2 .s-ic{font-size:18px}
+  .rb-h2{font-size:15.5px;font-weight:800;margin:18px 0 8px;color:var(--ink-900)}
+  .tldr{background:var(--brand-soft);border-radius:18px;padding:16px;margin:18px 0}
+  .tldr-t{font-size:13px;font-weight:800;color:var(--accent-ink);margin:2px 4px 10px}
+  .tldr-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .tldr-card{background:#fff;border-radius:13px;padding:15px 12px;text-align:center}
+  .tc-ic{font-size:22px}.tc-t{font-weight:800;font-size:15px;margin:6px 0 3px}.tc-d{font-size:12.5px;color:var(--sub)}
+  .bignums{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:14px 0}
+  .bignum{background:var(--panel);border-radius:13px;padding:14px 10px;text-align:center}
+  .bignum .n{font-size:23px;font-weight:800;color:var(--brand);letter-spacing:-.02em}.bignum .l{font-size:12px;color:var(--sub);margin-top:3px}
+  .steps2{list-style:none;padding:0}.steps2 li{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .steps2 .sn{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .steps2 .st b{font-size:14.5px}.steps2 .st i{display:block;font-style:normal;font-size:12.5px;color:var(--sub)}
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin:14px 0}
+  .flow .node{flex:1;min-width:104px;background:var(--panel);border-radius:12px;padding:12px 8px;text-align:center}
+  .flow .nic{font-size:20px}.flow .nt{font-weight:700;font-size:13.5px;margin-top:3px}.flow .nd{font-size:11.5px;color:var(--sub)}
+  .flow .arr{align-self:center;color:var(--sub);font-weight:700}
+  .tline{margin:14px 0;border-left:2px solid var(--brand-soft);padding-left:14px}
+  .tl-item{position:relative;padding:6px 0}.tl-item::before{content:"";position:absolute;left:-19px;top:11px;width:8px;height:8px;border-radius:50%;background:var(--brand)}
+  .tl-when{font-weight:800;font-size:13px;color:var(--accent-ink)}.tl-what{font-size:13.5px;color:#374151}
+  .selfcheck{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;margin:16px 0}
+  .sc-q{font-weight:800;font-size:15px;margin-bottom:10px}
+  .sc-opt{font-size:13.5px;padding:9px 12px;border-radius:10px;margin-top:6px;background:#eef7f1;border:1px solid #cfe9d9}.sc-opt b{color:var(--ok)}
+  .sc-opt.no{background:#f7f8fa;border-color:var(--line)}.sc-opt.no b{color:var(--sub)}
+  .embedbox{display:flex;align-items:center;gap:12px;text-decoration:none;background:var(--brand-soft);border:1px solid #d4e2ff;border-radius:14px;padding:14px;margin:16px 0}
+  .embedbox .eb-ic{font-size:22px}.embedbox .eb-tx{flex:1}.embedbox .eb-tx b{display:block;font-size:14.5px;color:var(--ink-900)}.embedbox .eb-tx i{font-style:normal;font-size:12.5px;color:var(--sub)}
+  .embedbox .eb-cta{font-weight:800;font-size:13px;color:var(--accent-ink);white-space:nowrap}
+  @media(max-width:560px){.related{grid-template-columns:1fr}.tldr-grid,.bignums{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -72,15 +100,15 @@
     <div class="meta"><span class="au">인사야 편집팀 · 법령 기준 정리</span> · <span>최종 수정 2026-06-01</span> · <span>약 5분</span></div>
     <div class="lead">지위·관계의 우위를 이용해 업무상 적정범위를 넘어 신체적·정신적 고통을 주는 행위는 법으로 금지됩니다(근로기준법 제76조의2).</div>
     <div class="callout warn"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17h.01"/></svg></div><div>신고를 이유로 한 해고 등 <b>불리한 처우(보복)는 별도로 금지·처벌</b>됩니다.</div></div>
-    <nav class="toc"><div class="t">목차</div><ol><li><a href="#sec0">성립 요건</a></li><li><a href="#sec1">대응 절차</a></li><li><a href="#faq">자주 묻는 질문</a></li></ol></nav>
-    <h2 id="sec0">성립 요건</h2><ul><li>지위·관계의 우위 이용</li><li>업무상 적정범위 초과</li><li>신체적·정신적 고통 또는 근무환경 악화</li></ul><h2 id="sec1">대응 절차</h2><ul><li>① 증거 확보(녹취·메신저·일지)</li><li>② 회사에 신고 → 회사는 조사·조치 의무</li><li>③ 회사가 방치하면 노동청 진정</li><li>④ 불리한 처우(보복) 시 추가 제재 대상</li></ul>
-    <h2 id="check">준비 / 체크리스트</h2><ul class="checklist"><li>녹취·메신저 캡처</li><li>사건 일지(날짜·내용)</li><li>목격자</li><li>병원 진료기록(있을 경우)</li></ul>
+    <nav class="toc"><div class="t">목차</div><ol><li><a href="#sec0">개요</a></li><li><a href="#sec1">내 상황 진단</a></li><li><a href="#sec2">대응 절차</a></li><li><a href="#sec3">준비물</a></li><li><a href="#sec4">자주 묻는 질문</a></li><li><a href="#faq">자주 묻는 질문</a></li></ol></nav>
+    <div class="tldr"><div class="tldr-t">한 장 요약</div><div class="tldr-grid"><div class="tldr-card"><div class="tc-ic">🛡️</div><div class="tc-t">법으로 금지</div><div class="tc-d">근기법 제76조의2</div></div><div class="tldr-card"><div class="tc-ic">📣</div><div class="tc-t">회사 조치의무</div><div class="tc-d">신고 시 조사·조치</div></div><div class="tldr-card"><div class="tc-ic">🔒</div><div class="tc-t">보복 금지</div><div class="tc-d">불리한 처우 처벌</div></div></div></div><section class="rg-sec" id="sec0"><h2><span class="s-ic">📌</span> 개요</h2><h3 class="rb-h2"><span class="rb-em">⚖️</span> 성립 요건 3가지</h3><table class="art-table"><thead><tr><th>요건</th><th>내용</th></tr></thead><tbody><tr><td>지위·관계의 우위</td><td>이용</td></tr><tr><td>업무상 적정범위 초과</td><td>정당한 범위를 넘음</td></tr><tr><td>신체·정신적 고통</td><td>또는 근무환경 악화</td></tr></tbody></table></section><section class="rg-sec" id="sec1"><h2><span class="s-ic">🤔</span> 내 상황 진단</h2><div class="selfcheck"><div class="sc-q">반복적인 폭언·따돌림 등으로 고통받고 계신가요?</div><div class="sc-opt"><b>예</b> 직장 내 괴롭힘에 해당할 수 있어요. 증거를 모으고 회사·노동청에 신고할 수 있습니다.</div><div class="sc-opt no"><b>아니오</b> 정당한 업무지시 범위라면 해당하지 않을 수 있어요. 다만 지속·반복되면 다시 점검하세요.</div></div><table class="art-table"><thead><tr><th>상황</th><th>해당?</th></tr></thead><tbody><tr><td>반복적 폭언·모욕</td><td>✅</td></tr><tr><td>정당한 업무 지시</td><td>❌</td></tr><tr><td>집단 따돌림</td><td>✅</td></tr><tr><td>사적 심부름 강요</td><td>✅</td></tr></tbody></table></section><section class="rg-sec" id="sec2"><h2><span class="s-ic">🏛️</span> 대응 절차</h2><div class="flow"><div class="node"><div class="nic">🎙️</div><div class="nt">증거 확보</div></div><div class="arr">→</div><div class="node"><div class="nic">📣</div><div class="nt">회사 신고</div></div><div class="arr">→</div><div class="node"><div class="nic">🔎</div><div class="nt">조사·조치</div></div><div class="arr">→</div><div class="node"><div class="nic">🏛️</div><div class="nt">미흡 시 노동청</div></div></div><div class="callout warn"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17h.01"/></svg></div><div>신고를 이유로 한 <b>해고 등 불리한 처우는 별도로 금지·처벌</b>됩니다.</div></div></section><section class="rg-sec" id="sec3"><h2><span class="s-ic">📋</span> 준비물</h2><ul class="checklist"><li>녹취·메신저 캡처</li><li>사건 일지(날짜·내용)</li><li>목격자</li><li>병원 진료기록(있다면)</li></ul></section><section class="rg-sec" id="sec4"><h2><span class="s-ic">❓</span> 자주 묻는 질문</h2></section>
+    
     <div class="cta">
       <div class="t">내 상황은 어떨까요?</div>
       <div class="d">AI가 쟁점·예상 금액·다음 행동을 정리해드립니다. (무료)</div>
       <a href="/#start=harass"><span class="tic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.1 7.5L3 21l1.9-5.9A8.5 8.5 0 1 1 21 11.5z"/></svg></span> 내 상황 AI로 진단하기</a>
     </div>
-    <h2 id="faq">자주 묻는 질문</h2><details><summary>증거가 녹취뿐인데 효력이 있나요?</summary><div class="ans">본인이 대화 당사자인 녹취는 증거로 사용할 수 있습니다. 메신저·이메일·사건 일지와 함께 모아두면 더 좋습니다.</div></details><details><summary>회사가 조사를 안 하면요?</summary><div class="ans">사용자는 신고 시 지체 없이 조사하고 조치할 의무가 있습니다. 방치하면 노동청에 진정할 수 있습니다.</div></details>
+    <h2 id="faq">자주 묻는 질문</h2><details><summary>증거가 녹취뿐인데 효력이 있나요?</summary><div class="ans">본인이 대화 당사자인 녹취는 증거로 쓸 수 있습니다. 메신저·일지와 함께 모으면 좋습니다.</div></details><details><summary>회사가 조사를 안 하면요?</summary><div class="ans">사용자는 신고 시 지체 없이 조사·조치할 의무가 있습니다. 방치 시 노동청에 진정할 수 있습니다.</div></details>
     <h2>이런 글도 도움이 돼요</h2><div class="related"><a class="relcard" href="/articles/fire.html"><div class="rc">근로자</div><div class="rt">부당해고, 갑작스런 통보에 대응하기</div></a><a class="relcard" href="/articles/contract.html"><div class="rc">근로자</div><div class="rt">근로계약서를 안 썼다면</div></a></div>
     <div class="notice"><b>안내</b> · 본 글은 공개된 법령·정부 자료를 바탕으로 정리한 일반 정보 제공이며(공인노무사 감수를 받지 않았습니다), 법률·노무 자문이 아닙니다. 구체적 사안은 공인노무사 상담을 권장합니다.<br/>신고를 이유로 한 해고 등 불리한 처우는 별도로 금지·처벌됩니다.</div>
   </div>
