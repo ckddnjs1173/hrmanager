@@ -25,6 +25,8 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"인사야","description":"인사·노무 AI 상담 플랫폼"}</script>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root{
     /* ===== 디자인 시스템 토큰 (design/01~06) ===== */
@@ -33,8 +35,9 @@
     --ink-500:#4B5563; --ink-400:#6B7280; --ink-300:#9AA1AD; --ink-200:#C8CDD5;
     --ink-050:#F1F3F6;
     /* 블루 램프 */
-    --blue-50:#EEF3FF; --blue-100:#DBE6FF; --blue-200:#B9D0FF; --blue-300:#8AB0FF;
-    --blue-400:#5A8CFA; --blue-500:#2F6DF6; --blue-600:#1F54C9; --blue-700:#1A45A6;
+    /* 에디토리얼·신뢰형: 제네릭 파랑 → 딥 네이비 스케일 */
+    --blue-50:#EEF2F7; --blue-100:#DCE4EF; --blue-200:#B9C8DD; --blue-300:#8AA3C2;
+    --blue-400:#4E6E96; --blue-500:#1B3A5B; --blue-600:#142B47; --blue-700:#0E2038;
     /* 딥그린 램프 */
     --green-50:#E7F3F0; --green-100:#CFE7E1; --green-200:#9FD0C6; --green-300:#5FB3A6;
     --green-400:#2A9384; --green-500:#0F766E; --green-600:#0B5A53; --green-700:#084944;
@@ -50,6 +53,7 @@
     --accent-hover:var(--blue-400); --accent-active:var(--blue-700);
     /* 타이포 */
     --font-sans:"PretendardLocal","Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",system-ui,"Segoe UI",Roboto,sans-serif;
+    --font-serif:"Noto Serif KR",Georgia,"Nanum Myeongjo",serif;
     --fs-display:clamp(2rem,4.2vw,2.94rem); --fs-h1:1.875rem; --fs-h2:2.0625rem; --fs-h3:1.5625rem;
     --fs-title:1.0625rem; --fs-lead:1.0625rem; --fs-body:1rem; --fs-body-sm:.9rem;
     --fs-caption:.82rem; --fs-button:.97rem; --fs-legal:.75rem;
@@ -200,6 +204,8 @@
   .hero-eb{font-size:.8rem;font-weight:800;letter-spacing:.01em;color:var(--accent-ink);background:var(--accent-soft);
     padding:7px 15px;border-radius:999px;box-shadow:0 1px 0 rgba(47,109,246,.06)}
   .hero-h{font-size:clamp(2.1rem,5.2vw,3.1rem);font-weight:800;letter-spacing:-.035em;line-height:1.16;color:var(--ink-900);margin:0}
+  /* 에디토리얼: 디스플레이/제목/큰숫자에 세리프(명조) */
+  .hero-h,.fx-h2,.rg-h2,.tldr .tt,.bignum .n{font-family:var(--font-serif);font-weight:700;letter-spacing:-.01em}
   .greeting .hi{font-size:33px;font-weight:800;letter-spacing:-.03em;color:#0b0d12}
   .greeting .lead{color:var(--ink-500);font-size:1.06rem;max-width:480px;line-height:1.55}
   /* 홈 히어로 제품 프리뷰 */
