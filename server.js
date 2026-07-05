@@ -28,8 +28,8 @@ app.use((req, res, next) => {
   // SPA가 인라인 스타일/스크립트를 쓰므로 'unsafe-inline' 허용. 폰트는 jsdelivr CDN.
   res.setHeader("Content-Security-Policy",
     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; " +
-    "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
-    "font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data:; connect-src 'self'");
+    "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; " +
+    "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'");
   if (req.secure) res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
   next();
 });
