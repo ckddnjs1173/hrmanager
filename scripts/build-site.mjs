@@ -34,8 +34,8 @@ const ctx = {
 };
 ctx.window = ctx; ctx.globalThis = ctx; ctx.addEventListener = () => {};
 vm.createContext(ctx);
-vm.runInContext(scriptSrc + "\n;globalThis.__DATA__={ARTICLES,ART_EXTRA,AUTHOR,RICH_GUIDES:(typeof RICH_GUIDES!=='undefined'?RICH_GUIDES:{})};", ctx);
-const { ARTICLES, ART_EXTRA, AUTHOR, RICH_GUIDES } = ctx.__DATA__;
+vm.runInContext(scriptSrc + "\n;globalThis.__DATA__={ARTICLES,ART_EXTRA,AUTHOR,RICH_GUIDES:(typeof RICH_GUIDES!=='undefined'?RICH_GUIDES:{}),CALC_META:(typeof CALC_META!=='undefined'?CALC_META:{})};", ctx);
+const { ARTICLES, ART_EXTRA, AUTHOR, RICH_GUIDES, CALC_META } = ctx.__DATA__;
 
 // ---- 2) 콘텐츠 렌더러 (클라이언트 renderSec/callout/table와 동일 형태) ----
 // 단색 SVG 라인 아이콘 (정적 페이지용 · SPA의 ICON 세트와 동일 형태)
@@ -302,6 +302,61 @@ ${faqLd ? `<script type="application/ld+json">${JSON.stringify(faqLd)}</script>`
 </html>`;
 }
 
+// ---- 3b) 계산기 SEO 정적 페이지 (CALC_META → calc-<key>.html) ----
+function calcPage(key, m) {
+  const url = `${SITE_URL}/articles/calc-${key}.html`;
+  const desc = strip(m.desc).slice(0, 155);
+  const descA = attr(desc), titleA = attr(`${m.title} | 인사야`);
+  const accent = "#1B3A5B", accentSoft = "#eef2f7", accentInk = "#16345c";
+  const ogImage = `${SITE_URL}/assets/brand/og-default.png`;
+  const faq = (m.faq || []).map((f) => `<details><summary>${f.q}</summary><div class="ans">${f.a}</div></details>`).join("");
+  const rel = (m.related || []).filter((rk) => CALC_META[rk]).map((rk) =>
+    `<a class="relcard" href="/articles/calc-${rk}.html"><div class="rc">계산기</div><div class="rt">${CALC_META[rk].title.replace(/\s*\(.*\)\s*$/, "")}</div></a>`).join("");
+  const ld = { "@context": "https://schema.org", "@type": "Article", headline: m.title, description: desc, datePublished: "2026-07-01", dateModified: "2026-07-01", author: { "@type": "Organization", name: "인사야" }, publisher: { "@type": "Organization", name: "인사야" }, mainEntityOfPage: url };
+  const faqLd = m.faq && m.faq.length ? { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: m.faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: strip(f.a) } })) } : null;
+  return `<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>${titleA}</title><meta name="description" content="${descA}"/>
+<link rel="canonical" href="${url}"/>
+<meta property="og:type" content="article"/><meta property="og:title" content="${titleA}"/><meta property="og:description" content="${descA}"/><meta property="og:url" content="${url}"/><meta property="og:site_name" content="인사야"/><meta property="og:image" content="${ogImage}"/>
+<meta name="twitter:card" content="summary_large_image"/><meta name="twitter:title" content="${titleA}"/><meta name="twitter:description" content="${descA}"/><meta name="twitter:image" content="${ogImage}"/>
+<link rel="icon" href="${SITE_URL}/assets/brand/favicon.png"/>
+<script type="application/ld+json">${JSON.stringify(ld)}</script>
+${faqLd ? `<script type="application/ld+json">${JSON.stringify(faqLd)}</script>` : ""}
+<style>
+  :root{--ink:#16181d;--sub:#6b7280;--line:#e7e9ee;--brand:${accent};--brand-soft:${accentSoft};--accent-ink:${accentInk};--panel:#f7f8fa}
+  *{box-sizing:border-box}body{margin:0;font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif;color:var(--ink);line-height:1.7;background:#fff;word-break:keep-all;overflow-wrap:anywhere}
+  a{color:inherit}.top{border-bottom:1px solid var(--line);padding:14px 20px}.top a{font-weight:800;font-size:17px;text-decoration:none}.top b{color:var(--brand)}
+  .wrap{max-width:720px;margin:0 auto;padding:28px 20px 80px}
+  .crumb{font-size:12.5px;color:var(--sub);margin-bottom:8px}.crumb a{color:var(--accent-ink);text-decoration:none}
+  h1{font-size:29px;font-weight:800;line-height:1.3;margin:10px 0 8px}h2{font-size:20px;font-weight:700;margin:26px 0 8px}
+  .lead{font-size:16.5px;color:#2b2f38;border-left:3px solid var(--brand);padding-left:15px;margin:14px 0 20px}
+  ul{padding-left:20px}li{margin:5px 0;font-size:15px}
+  .basis{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:14.5px;margin:12px 0}
+  details{border:1px solid var(--line);border-radius:10px;margin-bottom:8px}summary{cursor:pointer;padding:13px 15px;font-weight:600}.ans{padding:0 15px 14px;color:#374151}
+  .cta{background:#fff;border:1.5px solid var(--brand);border-radius:14px;padding:20px;margin:22px 0;text-align:center}
+  .cta .t{font-weight:700}.cta .d{font-size:13px;color:var(--sub);margin:4px 0 12px}.cta a{display:inline-block;background:var(--brand);color:#fff;text-decoration:none;border-radius:10px;padding:12px 22px;font-weight:700}
+  .related{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.relcard{display:block;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:13px}.relcard .rc{font-size:11px;color:var(--sub)}.relcard .rt{font-weight:700;font-size:14px;margin-top:3px}
+  .notice{font-size:12px;color:var(--sub);background:#fafbfc;border:1px dashed var(--line);border-radius:10px;padding:11px 13px;margin-top:24px}
+  @media(max-width:560px){.related{grid-template-columns:1fr}}
+</style></head><body>
+  <div class="top"><a href="/">인사<b>야</b> <span style="font-size:12px;font-weight:700;color:var(--sub)">노무 AI 계산기</span></a></div>
+  <div class="wrap">
+    <div class="crumb"><a href="/">홈</a> › 받을 돈 계산기 › ${m.group}</div>
+    <h1>${m.title}</h1>
+    <div class="lead">${m.desc}</div>
+    <div class="cta"><div class="t">지금 바로 계산해 보세요</div><div class="d">무료 · 회원가입 없음 · 결과를 상담·신고에 그대로 활용</div><a href="/#calc=${key}">계산기 열기 →</a></div>
+    <h2>언제 쓰나요?</h2><ul>${(m.when || []).map((w) => `<li>${w}</li>`).join("")}</ul>
+    <h2>계산 근거</h2><div class="basis">${m.basis}</div>
+    ${faq ? `<h2>자주 묻는 질문</h2>${faq}` : ""}
+    ${rel ? `<h2>관련 계산기</h2><div class="related">${rel}</div>` : ""}
+    <div class="cta"><div class="t">계산 결과가 내 상황에 맞을까요?</div><div class="d">애매하면 AI가 쟁점·다음 행동까지 정리해 드려요</div><a href="/#start=wage">AI 무료 진단 →</a></div>
+    <div class="notice"><b>안내</b> · 본 계산기는 공개된 법령·수치를 바탕으로 한 <b>참고용 추정치</b>이며, 법률·노무 자문이 아닙니다. 정확한 금액은 관할기관·공인노무사 확인을 권장합니다.</div>
+  </div>
+</body></html>`;
+}
+
 // ---- 4) 출력 ----
 const outDir = path.join(ROOT, "articles");
 fs.mkdirSync(outDir, { recursive: true });
@@ -309,12 +364,17 @@ const keys = Object.keys(ARTICLES);
 for (const k of keys) {
   fs.writeFileSync(path.join(outDir, `${k}.html`), page(k, ARTICLES[k]), "utf-8");
 }
+const calcKeys = Object.keys(CALC_META);
+for (const k of calcKeys) {
+  fs.writeFileSync(path.join(outDir, `calc-${k}.html`), calcPage(k, CALC_META[k]), "utf-8");
+}
 
 // sitemap.xml
-const urls = [`${SITE_URL}/`, ...keys.map((k) => `${SITE_URL}/articles/${k}.html`)];
+const urls = [`${SITE_URL}/`, ...keys.map((k) => `${SITE_URL}/articles/${k}.html`), ...calcKeys.map((k) => `${SITE_URL}/articles/calc-${k}.html`)];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${keys.map((k) => `  <url><loc>${SITE_URL}/articles/${k}.html</loc><lastmod>${(ART_EXTRA[k] || {}).updated || "2026-06-01"}</lastmod><changefreq>monthly</changefreq></url>`).join("\n")}
+${calcKeys.map((k) => `  <url><loc>${SITE_URL}/articles/calc-${k}.html</loc><changefreq>monthly</changefreq></url>`).join("\n")}
   <url><loc>${SITE_URL}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
 </urlset>`;
 fs.writeFileSync(path.join(ROOT, "sitemap.xml"), sitemap, "utf-8");
@@ -323,6 +383,6 @@ fs.writeFileSync(path.join(ROOT, "sitemap.xml"), sitemap, "utf-8");
 fs.writeFileSync(path.join(ROOT, "robots.txt"),
   `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`, "utf-8");
 
-console.log(`✅ 정적 페이지 ${keys.length}개 → /articles/*.html`);
+console.log(`✅ 정적 페이지 ${keys.length}개(글) + ${calcKeys.length}개(계산기) → /articles/*.html`);
 console.log(`✅ sitemap.xml (${urls.length} URL) · robots.txt 생성`);
 console.log(`   SITE_URL=${SITE_URL}  (배포 시 SITE_URL 환경변수로 도메인 지정)`);
