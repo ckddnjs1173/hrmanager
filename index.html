@@ -2269,9 +2269,16 @@ const SOLVE=[
   {key:'wage', who:'근로자', icon:'💰', title:'월급·수당을 못 받았어요', desc:'임금체불 — 받을 돈 확인부터 신고까지',
     steps:[
       {ic:'📖',t:'1. 내 권리 확인',d:'임금체불 가이드로 쟁점 파악',cta:'가이드 보기',act:"openArticle('wage')"},
-      {ic:'🧮',t:'2. 받을 돈 계산',d:'체불액·주휴·퇴직금 예상',cta:'계산하기',act:"gotoCalc('severance')"},
-      {ic:'📄',t:'3. 문서 만들기',d:'내용증명·노동청 진정서 초안',cta:'내용증명',act:"openDoc('certmail')"},
+      {ic:'🧮',t:'2. 받을 돈 계산',d:'체불액·지연이자 예상',cta:'계산하기',act:"gotoCalc('delay')"},
+      {ic:'📄',t:'3. 내용증명 청구',d:'금액 자동 반영된 청구서',cta:'문서 만들기',act:"openDoc('certmail')"},
       {ic:'👩‍⚖️',t:'4. 노무사 상담',d:'임금체불 분야 노무사',cta:'노무사 찾기',act:"gotoNomu('임금체불')"},
+    ]},
+  {key:'severance', who:'근로자', icon:'📄', title:'퇴직금을 못 받았어요', desc:'퇴직금 — 자격 확인부터 청구까지',
+    steps:[
+      {ic:'📖',t:'1. 자격·계산 확인',d:'1년·주15시간 요건',cta:'가이드 보기',act:"openArticle('severance')"},
+      {ic:'🧮',t:'2. 퇴직금 계산',d:'평균임금 기준 예상액',cta:'계산하기',act:"gotoCalc('severance')"},
+      {ic:'📄',t:'3. 내용증명 청구',d:'금액 자동 반영된 청구서',cta:'문서 만들기',act:"openDoc('certmail')"},
+      {ic:'👩‍⚖️',t:'4. 노무사 상담',d:'퇴직금 분야 노무사',cta:'노무사 찾기',act:"gotoNomu('퇴직금')"},
     ]},
   {key:'fire', who:'근로자', icon:'⚖️', title:'갑자기 해고당했어요', desc:'부당해고 — 3개월 이내 대응이 중요',
     steps:[
@@ -2280,12 +2287,19 @@ const SOLVE=[
       {ic:'📄',t:'3. 구제신청서 작성',d:'노동위 부당해고 구제신청',cta:'문서 만들기',act:"openDoc('relief_app')"},
       {ic:'👩‍⚖️',t:'4. 노무사 상담',d:'부당해고 분야 노무사',cta:'노무사 찾기',act:"gotoNomu('부당해고')"},
     ]},
-  {key:'severance', who:'근로자', icon:'📄', title:'퇴직금을 못 받았어요', desc:'퇴직금 — 자격 확인부터 청구까지',
+  {key:'layoff', who:'근로자', icon:'🏭', title:'경영난으로 정리해고됐어요', desc:'정리해고 — 4요건·구제신청',
     steps:[
-      {ic:'📖',t:'1. 자격·계산 확인',d:'1년·주15시간 요건',cta:'가이드 보기',act:"openArticle('severance')"},
-      {ic:'🧮',t:'2. 퇴직금 계산',d:'평균임금 기준 예상액',cta:'계산하기',act:"gotoCalc('severance')"},
-      {ic:'📄',t:'3. 내용증명 청구',d:'퇴직금 지급 청구',cta:'내용증명',act:"openDoc('certmail')"},
-      {ic:'👩‍⚖️',t:'4. 노무사 상담',d:'퇴직금 분야 노무사',cta:'노무사 찾기',act:"gotoNomu('퇴직금')"},
+      {ic:'📖',t:'1. 4요건 확인',d:'긴박성·회피노력·선정·협의',cta:'가이드 보기',act:"openArticle('layoff')"},
+      {ic:'🧮',t:'2. 해고예고수당 계산',d:'30일분 통상임금',cta:'계산하기',act:"gotoCalc('notice')"},
+      {ic:'📄',t:'3. 구제신청서 작성',d:'노동위 구제(해고 3개월 내)',cta:'문서 만들기',act:"openDoc('relief_app')"},
+      {ic:'👩‍⚖️',t:'4. 노무사 상담',d:'부당해고 분야 노무사',cta:'노무사 찾기',act:"gotoNomu('부당해고')"},
+    ]},
+  {key:'holiday', who:'근로자', icon:'🕐', title:'주휴·연장수당을 못 받았어요', desc:'수당 계산 → 진정',
+    steps:[
+      {ic:'📖',t:'1. 받을 수 있는지',d:'주15시간·개근/가산 기준',cta:'가이드 보기',act:"openArticle('holiday')"},
+      {ic:'🧮',t:'2. 주휴수당 계산',d:'시급 기준 예상액',cta:'계산하기',act:"gotoCalc('holiday')"},
+      {ic:'📄',t:'3. 진정서 작성',d:'미지급 진정(금액 자동)',cta:'문서 만들기',act:"openDoc('complaint')"},
+      {ic:'👩‍⚖️',t:'4. 노무사 상담',d:'임금 분야 노무사',cta:'노무사 찾기',act:"gotoNomu('임금체불')"},
     ]},
   {key:'harass', who:'근로자', icon:'😟', title:'직장 내 괴롭힘을 당했어요', desc:'증거 확보 → 신고 → 노무사',
     steps:[
@@ -2294,17 +2308,53 @@ const SOLVE=[
       {ic:'🏛️',t:'3. 신고 절차',d:'노동청·노동포털',cta:'절차 보기',act:"nav('report')"},
       {ic:'👩‍⚖️',t:'4. 노무사 상담',d:'괴롭힘 분야 노무사',cta:'노무사 찾기',act:"gotoNomu('직장내괴롭힘')"},
     ]},
-  {key:'holiday', who:'근로자', icon:'🕐', title:'주휴수당을 못 받았어요', desc:'계산 → 청구',
+  {key:'sexharass', who:'근로자', icon:'🚫', title:'직장 내 성희롱을 당했어요', desc:'남녀고용평등법 — 조사·구제',
     steps:[
-      {ic:'📖',t:'1. 받을 수 있는지',d:'주15시간·개근',cta:'가이드 보기',act:"openArticle('holiday')"},
-      {ic:'🧮',t:'2. 주휴수당 계산',d:'시급 기준 예상액',cta:'계산하기',act:"gotoCalc('holiday')"},
-      {ic:'📄',t:'3. 진정서 작성',d:'미지급 진정',cta:'문서 만들기',act:"openDoc('complaint')"},
+      {ic:'📖',t:'1. 성희롱 확인',d:'괴롭힘과 차이·회사 의무',cta:'가이드 보기',act:"openArticle('sexharass')"},
+      {ic:'📄',t:'2. 신고서 작성',d:'사내 신고·노동청 진정',cta:'문서 만들기',act:"openDoc('complaint')"},
+      {ic:'🏛️',t:'3. 구제 창구',d:'노동청·국가인권위(1331)',cta:'기관 보기',act:"nav('official')"},
+      {ic:'👩‍⚖️',t:'4. 노무사 상담',d:'괴롭힘·성희롱 분야',cta:'노무사 찾기',act:"gotoNomu('직장내괴롭힘')"},
+    ]},
+  {key:'injury', who:'근로자', icon:'🩹', title:'일하다 다쳤어요 (산재)', desc:'요양·휴업급여 신청',
+    steps:[
+      {ic:'📖',t:'1. 산재 인정 확인',d:'업무상 재해·출퇴근재해',cta:'가이드 보기',act:"openArticle('injury')"},
+      {ic:'🧮',t:'2. 휴업급여 계산',d:'평균임금 70% 예상',cta:'계산하기',act:"gotoCalc('injurypay')"},
+      {ic:'🏛️',t:'3. 공단 신청',d:'근로복지공단 요양급여',cta:'기관 보기',act:"nav('official')"},
+      {ic:'👩‍⚖️',t:'4. 노무사 상담',d:'산재 분야 노무사',cta:'노무사 찾기',act:"gotoNomu('산재')"},
+    ]},
+  {key:'unemployment', who:'근로자', icon:'🧾', title:'실직해서 실업급여가 필요해요', desc:'수급 요건·금액·신청',
+    steps:[
+      {ic:'📖',t:'1. 수급 요건 확인',d:'비자발·180일 가입',cta:'가이드 보기',act:"openArticle('unemployment')"},
+      {ic:'🧮',t:'2. 실업급여 계산',d:'예상 수급액·기간',cta:'계산하기',act:"gotoCalc('unemploy')"},
+      {ic:'🏛️',t:'3. 신청 창구',d:'고용센터·고용보험',cta:'기관 보기',act:"nav('official')"},
+      {ic:'📖',t:'4. 사각지대라면',d:'국민취업지원제도',cta:'가이드 보기',act:"openArticle('jobsupport')"},
+    ]},
+  {key:'daebul', who:'근로자', icon:'🏛️', title:'회사가 도산해 임금을 못 받아요', desc:'대지급금 — 국가가 대신 지급',
+    steps:[
+      {ic:'📖',t:'1. 대지급금 확인',d:'도산·간이대지급금',cta:'가이드 보기',act:"openArticle('daebul')"},
+      {ic:'🧮',t:'2. 체불액 계산',d:'밀린 임금·지연이자',cta:'계산하기',act:"gotoCalc('delay')"},
+      {ic:'📄',t:'3. 진정·청구',d:'노동청 진정서',cta:'문서 만들기',act:"openDoc('complaint')"},
+      {ic:'🏛️',t:'4. 공단 신청',d:'근로복지공단(1588-0075)',cta:'기관 보기',act:"nav('official')"},
     ]},
   {key:'emp_fire', who:'사업주', icon:'🏢', title:'직원을 내보내야 해요', desc:'분쟁 없이 처리하는 절차',
     steps:[
       {ic:'📖',t:'1. 해고 전 점검',d:'종료유형·요건 확인',cta:'가이드 보기',act:"openArticle('emp_fire')"},
       {ic:'📄',t:'2. 통지서 작성',d:'해고예고·서면통지',cta:'문서 만들기',act:"openDoc('notice_dismissal')"},
       {ic:'🧮',t:'3. 예고수당 계산',d:'30일분 확인',cta:'계산하기',act:"gotoCalc('notice')"},
+      {ic:'👩‍⚖️',t:'4. 노무사 자문',d:'기업자문 노무사',cta:'노무사 찾기',act:"gotoNomu('기업자문')"},
+    ]},
+  {key:'emp_hire', who:'사업주', icon:'📝', title:'직원을 채용하려 해요', desc:'근로계약·필수 서류',
+    steps:[
+      {ic:'📖',t:'1. 계약 필수사항',d:'유형별 기재·교부',cta:'가이드 보기',act:"openArticle('emp_contract')"},
+      {ic:'📄',t:'2. 근로계약서 작성',d:'정규·기간제·단시간',cta:'문서 만들기',act:"openDoc('contract')"},
+      {ic:'🧮',t:'3. 인건비 계산',d:'4대보험 포함 총비용',cta:'계산하기',act:"gotoCalc('laborcost')"},
+      {ic:'👩‍⚖️',t:'4. 노무사 자문',d:'기업자문 노무사',cta:'노무사 찾기',act:"gotoNomu('기업자문')"},
+    ]},
+  {key:'emp_rule', who:'사업주', icon:'📋', title:'취업규칙을 만들어야 해요', desc:'10인 이상 작성·신고 의무',
+    steps:[
+      {ic:'📖',t:'1. 작성 의무 확인',d:'10인 이상·필수 기재',cta:'가이드 보기',act:"openArticle('emp_rule')"},
+      {ic:'🧮',t:'2. 상시근로자수 판정',d:'10인 이상인지',cta:'계산하기',act:"gotoCalc('headcount')"},
+      {ic:'📄',t:'3. 취업규칙 작성',d:'표준 취업규칙 서식',cta:'문서 만들기',act:"openDoc('work_rules')"},
       {ic:'👩‍⚖️',t:'4. 노무사 자문',d:'기업자문 노무사',cta:'노무사 찾기',act:"gotoNomu('기업자문')"},
     ]},
 ];
@@ -2320,7 +2370,7 @@ function renderSolve(){
         <span class="sc-who">${s.who}</span></button>`).join('')}</div>
     <div class="notice">상황별 안내는 일반 정보 제공이며, 구체적 판단은 공인노무사 상담을 권장합니다.</div>`;
 }
-const SOLVE_PACK={wage:'wage_worker', severance:'wage_worker', holiday:'wage_worker', fire:'fire_worker', emp_fire:'fire_employer'};
+const SOLVE_PACK={wage:'wage_worker', severance:'resign_worker', holiday:'wage_worker', fire:'fire_worker', layoff:'fire_worker', daebul:'wage_worker', emp_fire:'fire_employer', emp_hire:'hire_employer'};
 function openSolveCase(key){
   const s=SOLVE.find(x=>x.key===key); if(!s)return;
   const pack=SOLVE_PACK[key];
