@@ -2672,12 +2672,13 @@ function scrollChat(){ const b=document.getElementById('chatBody'); b.scrollTop=
    실제 계산은 오프스크린 #calcForm을 렌더→값 주입→doCalc()로 수행(토큰 0, 모델 무변경). */
 function _digits(s){ return parseInt(String(s).replace(/[^\d]/g,''),10)||0; }
 function krMoney(t){
-  let m=t.match(/(\d[\d,]*)\s*억(?:\s*(\d[\d,]*)\s*만)?/); if(m) return _digits(m[1])*1e8+(m[2]?_digits(m[2])*1e4:0);
+  let m=t.match(/(\d[\d,]*)\s*억(?:\s*(\d[\d,]*)\s*천)?(?:\s*(\d[\d,]*)\s*만)?/); if(m) return _digits(m[1])*1e8+(m[2]?_digits(m[2])*1e7:0)+(m[3]?_digits(m[3])*1e4:0);
+  m=t.match(/(\d[\d,]*)\s*천\s*만/); if(m) return _digits(m[1])*1e7;
   m=t.match(/(\d[\d,]*)\s*만\s*원?/); if(m) return _digits(m[1])*1e4;
   m=t.match(/(\d{1,3}(?:,\d{3})+|\d{6,})\s*원/); if(m) return _digits(m[1]);
   return null;
 }
-function krWage(t){ const m=t.match(/시급\s*(\d[\d,]*)\s*(만)?\s*원?/); if(!m) return null; return _digits(m[1])*(m[2]?1e4:1); }
+function krWage(t){ const m=t.match(/(?:시급|시간당)\s*(\d[\d,]*)\s*(만)?\s*원?/); if(!m) return null; return _digits(m[1])*(m[2]?1e4:1); }
 function krWeekHours(t){
   let m=t.match(/주\s*(\d{1,2})\s*시간/); if(m) return _digits(m[1]);
   const d=t.match(/(?:하루|1일|매일)\s*(\d{1,2})\s*시간/), wd=t.match(/주\s*([1-7])\s*일/);
@@ -2690,15 +2691,35 @@ function krTenure(t){   // 근속 개월수(근속 맥락 키워드 있을 때�
   if(!y&&!mo) return null;
   return (y?_digits(y[1]):0)*12 + (mo?_digits(mo[1]):0);
 }
-// 상황→계산기 매핑(먼저 매칭되는 것 우선). key: 있으면 헤드라인까지 계산할 수 있는 핵심 입력 id
+// 상황→계산기 매핑(먼저 매칭되는 것 우선 — 특정 표현이 위, 일반 표현이 아래).
+// 매칭은 사용자 발화(utext)만 사용(AI 답변의 법령 설명이 오탐 유발하지 않도록).
+// key: 추출되면 채팅 안에서 헤드라인까지 계산하는 핵심 입력 id. 없으면 계산기 안내형 카드.
 const CALC_INLINE=[
-  {type:'severance', re:/퇴직금|퇴직\s*정산|퇴사[^.]{0,8}(못|안)[^.]{0,4}(받|줘|준)/, key:'cs2',
+  {type:'retiretax', re:/퇴직소득세|퇴직금[^.]{0,4}(세금|세후|실수령)|퇴직[^.]{0,3}원천/, key:'rt1',
+   pick:t=>{ const f={}; const p=krMoney(t); if(p) f.rt1=p; const mo=krTenure(t); if(mo) f.rt2=Math.max(1,Math.round(mo/12)); return f; }},
+  {type:'severance', re:/퇴직금|퇴직\s*정산|퇴사[^.]{0,10}(못|안)[^.]{0,4}(받|줘|준)/, key:'cs2',
    pick:t=>{ const f={cs5:40}; const mo=krTenure(t); if(mo) f.cs1=Math.round(mo*30.4); const p=krMoney(t); if(p) f.cs2=p*3; return f; }},
+  {type:'matleave', re:/출산휴가|출산전후|육아휴직|출산[^.]{0,3}급여/, key:'ml1',
+   pick:t=>{ const f={ml0:/육아/.test(t)?'care':'birth'}; const p=krMoney(t); if(p) f.ml1=p; const mo=t.match(/(\d+)\s*개월/); if(mo&&f.ml0==='care') f.ml2=_digits(mo[1]); return f; }},
+  {type:'injurypay', re:/산재|휴업급여|업무상[^.]{0,3}(재해|부상|질병)|다쳤|다쳐서|일하다\s*다쳐/, key:'ij1',
+   pick:t=>{ const f={}; const p=krMoney(t); if(p) f.ij1=Math.round(p/30); const d=t.match(/(\d+)\s*일[^.]{0,4}(?:요양|치료|입원|쉬)|(?:요양|치료|입원)[^.]{0,4}(\d+)\s*일/); if(d) f.ij2=_digits(d[1]||d[2]); return f; }},
+  {type:'annual', re:/연차수당|미사용[^.]{0,3}연차|안\s*쓴\s*연차|연차[^.]{0,3}정산|남은\s*연차/, key:'ca1',
+   pick:t=>{ const f={}; const d=t.match(/연차\s*(\d+)\s*일|(\d+)\s*일[^.]{0,5}(?:남|미사용|안\s*씀|안\s*썼)/); if(d) f.ca1=_digits(d[1]||d[2]); const mo=krTenure(t); if(mo) f.ca3=+(mo/12).toFixed(1); const p=krMoney(t); if(p) f.ca2=Math.round(p/209*8); return f; }},
+  {type:'ot', re:/야근수당|야간수당|연장수당|연장근로수당|잔업[^.]{0,3}수당|휴일근로수당|주말근무[^.]{0,3}수당|연장[^.]{0,4}(못|안)[^.]{0,3}(받|줘|쳐)/, key:'co1',
+   pick:t=>{ const f={}; const w=krWage(t); if(w) f.co1=w; else { const p=krMoney(t); if(p) f.co1=Math.round(p/209); } const h=t.match(/(?:연장|야근|잔업|초과|야간)[^.]{0,5}?(\d+)\s*시간|(\d+)\s*시간[^.]{0,5}?(?:연장|야근|잔업|초과|야간)/); if(h) f.co2=_digits(h[1]||h[2]); return f; }},
+  {type:'minwage', re:/최저임금|최저시급|최저[^.]{0,3}미달|시급이\s*너무\s*(적|낮)/, key:'mwHour',
+   pick:t=>{ const w=krWage(t); return w?{mwType:'hour', mwHour:w}:{}; }},
   {type:'holiday', re:/주휴/, key:'ch2',
    pick:t=>{ const f={}; const w=krWage(t); if(w) f.ch2=w; const h=krWeekHours(t); if(h) f.ch1=h; return f; }},
-  {type:'delay', re:/체불|밀린|밀렸|미지급|월급[^.]{0,6}(못|안)[^.]{0,4}(받|줘|준)/, key:'dl1',
+  {type:'average', re:/평균임금/, key:'avg1',
+   pick:t=>{ const p=krMoney(t); return p?{avg1:p*3}:{}; }},
+  {type:'ordinary', re:/통상임금|통상시급/, key:'ord1',
+   pick:t=>{ const p=krMoney(t); return p?{ord1:p}:{}; }},
+  {type:'insur4', re:/4대\s*보험|사대\s*보험|보험료[^.]{0,4}(얼마|계산|공제)/, key:'i41',
+   pick:t=>{ const p=krMoney(t); return p?{i41:p}:{}; }},
+  {type:'delay', re:/체불|밀린\s*(월급|임금|급여|돈)|월급[^.]{0,3}밀렸|미지급|월급[^.]{0,6}(못|안)[^.]{0,4}(받|줘|준)/, key:'dl1',
    pick:t=>{ const p=krMoney(t); return p?{dl1:p}:{}; }},
-  {type:'net', re:/실수령|세후|실\s*수령/, key:'cnt1',
+  {type:'net', re:/실수령|세후|월급[^.]{0,3}실제로/, key:'cnt1',
    pick:t=>{ const p=krMoney(t); return p?{cnt1:p}:{}; }},
   {type:'unemploy', re:/실업급여|구직급여/, key:'cu1',
    pick:t=>{ const f={}; const p=krMoney(t); if(p) f.cu1=Math.round(p/30); const a=t.match(/(\d{2})\s*(?:살|세)/); if(a) f.cu2=_digits(a[1]); return f; }},
@@ -2715,9 +2736,10 @@ function computeInline(type, vals){
   calcType=prevType; try{ renderCalc(); }catch(e){}
   return out;
 }
-const _icLbl={cs1:'근속일수',cs2:'3개월 임금',cs5:'주 근로시간',ch1:'주 근로시간',ch2:'시급',dl1:'미지급액',cnt1:'월급',cu1:'1일 평균임금',cu2:'나이',cn1:'1일 통상임금'};
-const _icUnit={cs1:'일',cs5:'시간',ch1:'시간',cu2:'세'};
-const _icMoney=['cs2','ch2','dl1','cnt1','cu1','cn1'];
+const _icLbl={cs1:'근속일수',cs2:'3개월 임금',cs5:'주 근로시간',ch1:'주 근로시간',ch2:'시급',dl1:'미지급액',cnt1:'월급',cu1:'1일 평균임금',cu2:'나이',cn1:'1일 통상임금',
+  rt1:'퇴직급여',rt2:'근속연수',ml1:'월 통상임금',ml2:'육아휴직 개월',ij1:'1일 평균임금',ij2:'요양일수',ca1:'미사용 연차',ca2:'1일 통상임금',ca3:'근속연수',co1:'통상시급',co2:'연장시간',mwHour:'시급',avg1:'3개월 임금',ord1:'월 기본급',i41:'월 보수'};
+const _icUnit={cs1:'일',cs5:'시간',ch1:'시간',cu2:'세',rt2:'년',ml2:'개월',ij2:'일',ca1:'일',ca3:'년',co2:'시간'};
+const _icMoney=['cs2','ch2','dl1','cnt1','cu1','cn1','rt1','ml1','ij1','ca2','co1','mwHour','avg1','ord1','i41'];
 function inlineValChips(vals){
   return Object.keys(vals).filter(id=>vals[id]!=null&&_icLbl[id]).map(id=>{
     const v=_icMoney.includes(id)?won(vals[id]):(vals[id]+(_icUnit[id]||''));
@@ -2727,9 +2749,8 @@ let _inlineDone=[];
 function maybeInlineCalc(){
   try{
     const utext=convo.filter(m=>m.role==='user').map(m=>m.content).join('  ');
-    const atext=(convo.filter(m=>m.role==='assistant').slice(-1)[0]||{}).content||'';
-    const hay=utext+'  '+atext;
-    const hit=CALC_INLINE.find(c=>c.re.test(hay)); if(!hit||_inlineDone.includes(hit.type)) return;
+    // 매칭은 사용자 발화만(AI 답변의 법령 설명 오탐 방지). 추출도 사용자 발화 기준.
+    const hit=CALC_INLINE.find(c=>c.re.test(utext)); if(!hit||_inlineDone.includes(hit.type)) return;
     const vals=hit.pick(utext)||{};
     const head=(vals[hit.key]!=null)?(computeInline(hit.type,vals)||{}).head:null;
     _inlineDone.push(hit.type);
