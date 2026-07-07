@@ -1964,7 +1964,7 @@ async function renderDocs(){
         </button>`).join('')}</div>
     </div>`).join('');
 }
-async function openDoc(key){
+async function openDoc(key, prefill){
   const list=await loadDocs(); const t=list.find(x=>x.key===key); if(!t)return;
   _curDoc=key; _curDocText='';
   document.getElementById('docTitle').innerHTML=t.title+(t.std?' <span class="std-badge">표준양식</span>':'');
@@ -1974,6 +1974,7 @@ async function openDoc(key){
     const input=f.full?`<textarea id="df_${f.name}" rows="3" class="docin" placeholder="${f.placeholder||''}"></textarea>`
       :`<input id="df_${f.name}" class="docin" placeholder="${f.placeholder||''}"/>`;
     return `<div class="field${full}"><label for="df_${f.name}">${f.label}</label>${input}</div>`;}).join('');
+  if(prefill){ Object.keys(prefill).forEach(n=>{ const el=document.getElementById('df_'+n); if(el&&prefill[n]!=null) el.value=prefill[n]; }); }
   document.getElementById('docPreviewWrap').style.display='none';
   nav('docform'); setSite(currentSite);
   document.querySelector('.content').scrollTop=0;
@@ -5182,7 +5183,8 @@ function calcReport({title, head, headLbl='예상 금액', rows=[], note='', for
   const bd=renderBreakdown(breakdown);
   track('calc', title);
   const fml=formula?`<div class="calc-fml"><b>산식</b> ${formula}</div>`:'';
-  _calcReport={title, text:`[${title}]\n${headLbl}: ${head}\n`+rows.map(r=>`- ${r[0]}: ${String(r[1]).replace(/<[^>]+>/g,'')}`).join('\n')+(formula?`\n\n산식: ${formula.replace(/<[^>]+>/g,'')}`:'')+(note?`\n\n※ ${note.replace(/<[^>]+>/g,'')}`:'')+'\n\n※ '+CALC_DISCLAIMER.replace(/<[^>]+>/g,'')+' (인사야)'};
+  const docBtn=(typeof CALC_DOC!=='undefined'&&CALC_DOC[calcType])?`<button class="btn" onclick="calcToDoc('${calcType}')"><span class="tic">${ICON.file}</span> 이 결과로 ${CALC_DOC[calcType].label}</button>`:'';
+  _calcReport={title, head, text:`[${title}]\n${headLbl}: ${head}\n`+rows.map(r=>`- ${r[0]}: ${String(r[1]).replace(/<[^>]+>/g,'')}`).join('\n')+(formula?`\n\n산식: ${formula.replace(/<[^>]+>/g,'')}`:'')+(note?`\n\n※ ${note.replace(/<[^>]+>/g,'')}`:'')+'\n\n※ '+CALC_DISCLAIMER.replace(/<[^>]+>/g,'')+' (인사야)'};
   document.getElementById('calcOut').innerHTML=`
     <div class="calc-out ${tone}"><div class="lbl">${headLbl}</div><div class="val"${_calcAnimate?' data-count':''}>${head}</div></div>
     ${bd}
@@ -5194,6 +5196,7 @@ function calcReport({title, head, headLbl='예상 금액', rows=[], note='', for
     <div class="actions" style="margin-top:14px;flex-wrap:wrap">
       <button class="btn" onclick="copyCalc(this)"><span class="tic">${ICON.official}</span> 결과 복사</button>
       <button class="btn" onclick="printCalc()"><span class="tic">${ICON.print}</span> 리포트 인쇄</button>
+      ${docBtn}
       <button class="btn primary" onclick="beginChat('방금 계산한 [${title}] 결과가 제 상황에 맞는지, 더 받을 수 있는 게 없는지 상담하고 싶어요.')"><span class="tic">${ICON.ai}</span> 이 결과가 안 맞다면 · AI 진단</button>
       <button class="btn" onclick="nav('summary')">상담 요약서</button>
       <button class="btn" onclick="nav('nomu')">노무사 검토 <span class="arr">›</span></button></div>`;
@@ -5630,6 +5633,21 @@ function calcUsagepromote(){
     note:'적법한 사용촉진(근로기준법 제61조)을 <b>서면으로 정확히</b> 지키면 미사용 연차수당 지급의무가 면제돼요. 하나라도 빠지면 수당을 줘야 해요. <b>입사 1년 미만(최대 11일) 연차</b>는 촉진 시기가 달라요(만료 3개월 전 1차·1개월 전 2차). 회계연도(1/1~12/31) 관리 시 만료일은 12월 31일이에요.'});
 }
 
+// 계산 결과 → 문서 자동채움 (깊이: 계산기가 죽지 않고 진정서·내용증명으로 이어짐)
+const CALC_DOC={
+  severance:{doc:'certmail', label:'퇴직금 청구서 만들기', map:r=>({amount:r.head, detail:'퇴직금 '+r.head+'을(를) 청구합니다.\n\n'+r.text})},
+  delay:{doc:'certmail', label:'체불액 청구서 만들기', map:r=>({amount:r.head, detail:'미지급 임금·퇴직금 및 지연이자 '+r.head+'을(를) 청구합니다.\n\n'+r.text})},
+  notice:{doc:'certmail', label:'해고예고수당 청구서 만들기', map:r=>({amount:r.head, detail:'해고예고수당 '+r.head+'을(를) 청구합니다.\n\n'+r.text})},
+  holiday:{doc:'complaint', label:'주휴수당 진정서 만들기', map:r=>({fact:'주휴수당이 지급되지 않았습니다.\n\n'+r.text, ask:'미지급 주휴수당 '+r.head+'의 지급을 요구합니다.'})},
+  ot:{doc:'complaint', label:'가산수당 진정서 만들기', map:r=>({fact:'연장·야간·휴일 가산수당이 지급되지 않았습니다.\n\n'+r.text, ask:'미지급 가산수당 '+r.head+'의 지급을 요구합니다.'})},
+  annual:{doc:'complaint', label:'연차수당 진정서 만들기', map:r=>({fact:'미사용 연차수당이 정산되지 않았습니다.\n\n'+r.text, ask:'미사용 연차수당 '+r.head+'의 지급을 요구합니다.'})},
+  minwage:{doc:'complaint', label:'최저임금 진정서 만들기', map:r=>({fact:'최저임금에 미달하는 임금을 지급받았습니다.\n\n'+r.text, ask:'최저임금 미달 차액의 지급을 요구합니다.'})},
+};
+function calcToDoc(ct){
+  const m=CALC_DOC[ct]; if(!m||!_calcReport) return;
+  track('calc2doc', ct);
+  openDoc(m.doc, m.map(_calcReport));
+}
 // 계산기 SEO 메타 — 정적 페이지(calc-<key>.html) 생성 및 검색 노출용
 const CALC_META={
   net:{title:'월급 실수령액 계산기 (2026)', group:'급여·수당', desc:'세전 월급에서 국민연금·건강보험·고용보험·소득세를 뺀 실제 받는 금액(실수령액)을 계산해요.', when:['입사·이직 전 실수령액이 궁금할 때','연봉 협상 시 세후 금액 비교','비과세 식대 반영 후 실수령 확인'], basis:'2026년 4대보험 근로자 요율(국민연금 4.75%·건강 3.595%·장기요양 건보의 13.14%·고용 0.9%)과 근로소득 간이세액표 근사로 산출해요.', faq:[{q:'실수령액이 왜 사람마다 다른가요?',a:'비과세액(식대 등)·부양가족 수·공제 항목에 따라 소득세가 달라지기 때문이에요. 정확한 원천징수액은 홈택스 간이세액표로 확인하세요.'},{q:'4대보험은 얼마나 떼나요?',a:'2026년 근로자 부담은 대략 급여의 9% 안팎이에요(국민연금 4.75+건강 3.595+장기요양+고용 0.9%).'}], related:['minwage','convert','insur4']},
