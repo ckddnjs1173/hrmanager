@@ -1190,77 +1190,34 @@
         <span class="logo-beta">베타</span>
       </a>
       <button class="tab on" data-nav="home" onclick="nav('home')">AI 상담</button>
-      <div class="navdrop" id="workerDrop">
-        <button class="tab navdrop-btn" data-nav="worker" onclick="toggleDrop('workerDrop',event)" aria-haspopup="true" aria-expanded="false">근로자 <span class="caret">▾</span></button>
+      <button class="tab" data-nav="solve" onclick="nav('solve')">상황별 해결</button>
+      <button class="tab" data-nav="calc" onclick="nav('calc')">계산기</button>
+      <div class="navdrop" id="guideDrop">
+        <button class="tab navdrop-btn" onclick="toggleDrop('guideDrop',event)" aria-haspopup="true" aria-expanded="false">가이드 <span class="caret">▾</span></button>
         <div class="navdrop-panel mega" role="menu">
           <div class="mega-cols">
             <div class="mega-col">
-              <a class="navdrop-cat" onclick="openCategory('worker','wage')" style="cursor:pointer">임금·수당 ›</a>
-              <a role="menuitem" onclick="navArticle('wage')">임금체불</a>
-              <a role="menuitem" onclick="navArticle('holiday')">주휴수당</a>
-              <a role="menuitem" onclick="navArticle('worktime')">근로시간·주52시간</a>
-              <a class="navdrop-cat" onclick="openCategory('worker','severance')" style="cursor:pointer">퇴직·실업 ›</a>
-              <a role="menuitem" onclick="navArticle('severance')">퇴직금</a>
-              <a role="menuitem" onclick="navArticle('unemployment')">실업급여</a>
-              <a role="menuitem" onclick="navArticle('pension')">퇴직연금</a>
-              <a class="navdrop-cat" onclick="openCategory('worker','fire')" style="cursor:pointer">해고·괴롭힘 ›</a>
-              <a role="menuitem" onclick="navArticle('fire')">부당해고</a>
-              <a role="menuitem" onclick="navArticle('harass')">직장 내 괴롭힘</a>
+              <a class="navdrop-cat" onclick="navTool('worker')" style="cursor:pointer">근로자 가이드 ›</a>
+              <a role="menuitem" onclick="openCategory('worker','wage')">임금·수당</a>
+              <a role="menuitem" onclick="openCategory('worker','severance')">퇴직·실업</a>
+              <a role="menuitem" onclick="openCategory('worker','fire')">해고·괴롭힘</a>
+              <a role="menuitem" onclick="openCategory('worker','contract')">계약·신분</a>
+              <a role="menuitem" onclick="openCategory('worker','protect')">모성·산재·차별</a>
+              <a role="menuitem" onclick="openCategory('worker','help')">절차·지원·예방</a>
             </div>
             <div class="mega-col">
-              <a class="navdrop-cat" onclick="openCategory('worker','contract')" style="cursor:pointer">계약·신분 ›</a>
-              <a role="menuitem" onclick="navArticle('contract')">근로계약서</a>
-              <a role="menuitem" onclick="navArticle('nonreg')">비정규직 보호</a>
-              <a role="menuitem" onclick="navArticle('youthjob')">청소년 알바</a>
-              <a class="navdrop-cat" onclick="openCategory('worker','protect')" style="cursor:pointer">모성·산재·차별 ›</a>
-              <a role="menuitem" onclick="navArticle('maternity')">출산·육아휴직</a>
-              <a role="menuitem" onclick="navArticle('injury')">산재보상</a>
-              <a role="menuitem" onclick="navArticle('equality')">고용상 차별</a>
-              <a class="navdrop-cat" onclick="openCategory('worker','help')" style="cursor:pointer">절차·지원 ›</a>
-              <a role="menuitem" onclick="navArticle('procedure')">노동 행정절차</a>
-              <a role="menuitem" onclick="navArticle('daebul')">대지급금</a>
+              <a class="navdrop-cat" onclick="navTool('employer')" style="cursor:pointer">사업주 가이드 ›</a>
+              <a role="menuitem" onclick="openCategory('employer','risk')">리스크·안전</a>
+              <a role="menuitem" onclick="openCategory('employer','hire')">채용·계약</a>
+              <a role="menuitem" onclick="openCategory('employer','fire')">해고·인사문서</a>
+              <a role="menuitem" onclick="openCategory('employer','pay')">임금·근태</a>
+              <a role="menuitem" onclick="openCategory('employer','rule')">규정·지원금</a>
             </div>
           </div>
-          <div class="mega-foot"><a onclick="navTool('worker')">근로자 홈 전체 보기 →</a></div>
+          <div class="mega-foot"><a onclick="navTool('official')">공식 기관 ↗</a>　·　<a onclick="navTool('report')">노동청 절차 →</a></div>
         </div>
       </div>
-      <div class="navdrop" id="employerDrop">
-        <button class="tab navdrop-btn" data-nav="employer" onclick="toggleDrop('employerDrop',event)" aria-haspopup="true" aria-expanded="false">사업주 <span class="caret">▾</span></button>
-        <div class="navdrop-panel mega" role="menu">
-          <div class="mega-cols">
-            <div class="mega-col">
-              <a class="navdrop-cat" onclick="openCategory('employer','risk')" style="cursor:pointer">리스크·안전 ›</a>
-              <a role="menuitem" onclick="navArticle('emp_risk')">노무 리스크 진단</a>
-              <a role="menuitem" onclick="navArticle('severeaccident')">중대재해처벌법</a>
-              <a class="navdrop-cat" onclick="openCategory('employer','hire')" style="cursor:pointer">채용·계약 ›</a>
-              <a role="menuitem" onclick="navArticle('emp_contract')">근로계약서 작성</a>
-              <a role="menuitem" onclick="navArticle('emp_minor')">청소년 고용</a>
-              <a class="navdrop-cat" onclick="openCategory('employer','fire')" style="cursor:pointer">해고·인사문서 ›</a>
-              <a role="menuitem" onclick="navArticle('emp_fire')">해고 전 체크</a>
-              <a role="menuitem" onclick="navArticle('emp_doc')">인사문서 관리</a>
-            </div>
-            <div class="mega-col">
-              <a class="navdrop-cat" onclick="openCategory('employer','pay')" style="cursor:pointer">임금·근태 ›</a>
-              <a role="menuitem" onclick="navArticle('emp_pay')">급여·수당 계산</a>
-              <a role="menuitem" onclick="navArticle('emp_annual')">연차휴가 관리</a>
-              <a class="navdrop-cat" onclick="openCategory('employer','rule')" style="cursor:pointer">규정·지원금 ›</a>
-              <a role="menuitem" onclick="navArticle('emp_rule')">취업규칙</a>
-              <a role="menuitem" onclick="navArticle('empsubsidy')">고용장려금</a>
-            </div>
-          </div>
-          <div class="mega-foot"><a onclick="navTool('employer')">사업주 홈 전체 보기 →</a></div>
-        </div>
-      </div>
-      <div class="navdrop" id="toolsDrop">
-        <button class="tab navdrop-btn" onclick="toggleTools(event)" aria-haspopup="true" aria-expanded="false">도구 <span class="caret">▾</span></button>
-        <div class="navdrop-panel" id="toolsPanel" role="menu">
-          <a role="menuitem" onclick="navTool('calc')"><span class="ndi" data-icon="calc"></span><span><b>받을 돈 계산기</b><i>퇴직금·주휴·실수령액 등 27종</i></span></a>
-          <a role="menuitem" onclick="navTool('docs')"><span class="ndi" data-icon="docs"></span><span><b>문서센터</b><i>표준양식 24종 + 문서팩</i></span></a>
-          <a role="menuitem" onclick="navTool('solve')"><span class="ndi" data-icon="solve"></span><span><b>상황별 해결</b><i>진단→계산→문서→연결 원스톱</i></span></a>
-          <a role="menuitem" onclick="navTool('report')"><span class="ndi" data-icon="report"></span><span><b>노동청 절차</b><i>진정 접수 절차 안내</i></span></a>
-          <a role="menuitem" onclick="navTool('official')"><span class="ndi" data-icon="official"></span><span><b>공식 기관</b><i>노동포털·노동위·공단 링크</i></span></a>
-        </div>
-      </div>
+      <button class="tab" data-nav="docs" onclick="nav('docs')">문서센터</button>
       <button class="tab" data-nav="nomu" onclick="nav('nomu')">노무사 찾기</button>
       <div class="grow"></div>
       <button class="nav-cta" onclick="nav('home')"><span class="nav-cta-ic" data-icon="ai"></span>무료 진단</button>
@@ -1620,7 +1577,7 @@
     <button class="on" data-nav="home" onclick="nav('home')"><span class="bi" data-icon="ai"></span>AI 상담</button>
     <button data-nav="worker" onclick="nav('worker')"><span class="bi" data-icon="worker"></span>근로자</button>
     <button data-nav="employer" onclick="nav('employer')"><span class="bi" data-icon="employer"></span>사업주</button>
-    <button id="btTools" onclick="toggleTools(event)"><span class="bi" data-icon="tools"></span>도구</button>
+    <button data-nav="calc" onclick="nav('calc')"><span class="bi" data-icon="calc"></span>계산기</button>
     <button data-nav="nomu" onclick="nav('nomu')"><span class="bi" data-icon="nomu"></span>노무사</button>
   </nav>
 </div>
