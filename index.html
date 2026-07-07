@@ -2705,8 +2705,12 @@ const CALC_INLINE=[
    pick:t=>{ const f={}; const p=krMoney(t); if(p) f.ij1=Math.round(p/30); const d=t.match(/(\d+)\s*일[^.]{0,4}(?:요양|치료|입원|쉬)|(?:요양|치료|입원)[^.]{0,4}(\d+)\s*일/); if(d) f.ij2=_digits(d[1]||d[2]); return f; }},
   {type:'annual', re:/연차수당|미사용[^.]{0,3}연차|안\s*쓴\s*연차|연차[^.]{0,3}정산|남은\s*연차/, key:'ca1',
    pick:t=>{ const f={}; const d=t.match(/연차\s*(\d+)\s*일|(\d+)\s*일[^.]{0,5}(?:남|미사용|안\s*씀|안\s*썼)/); if(d) f.ca1=_digits(d[1]||d[2]); const mo=krTenure(t); if(mo) f.ca3=+(mo/12).toFixed(1); const p=krMoney(t); if(p) f.ca2=Math.round(p/209*8); return f; }},
+  {type:'annualdays', re:/연차[^.]{0,6}(며칠|몇\s*개|몇\s*일|몇개|발생|생기|생겨|받을\s*수)|(\d{1,2})\s*년\s*차/, key:'ad1',
+   pick:t=>{ const m=t.match(/(?:입사|근속|근무|다닌|다녀|재직|일한|일하고)[^.]{0,6}(\d{1,2})\s*년|(\d{1,2})\s*년\s*차/); return m?{ad1:_digits(m[1]||m[2])}:{}; }},
   {type:'ot', re:/야근수당|야간수당|연장수당|연장근로수당|잔업[^.]{0,3}수당|휴일근로수당|주말근무[^.]{0,3}수당|연장[^.]{0,4}(못|안)[^.]{0,3}(받|줘|쳐)/, key:'co1',
    pick:t=>{ const f={}; const w=krWage(t); if(w) f.co1=w; else { const p=krMoney(t); if(p) f.co1=Math.round(p/209); } const h=t.match(/(?:연장|야근|잔업|초과|야간)[^.]{0,5}?(\d+)\s*시간|(\d+)\s*시간[^.]{0,5}?(?:연장|야근|잔업|초과|야간)/); if(h) f.co2=_digits(h[1]||h[2]); return f; }},
+  {type:'pkgwage', re:/포괄\s*임금|포괄\s*연봉|포괄\s*급여|포괄제/, key:'pk1',
+   pick:t=>{ const p=krMoney(t); return p?{pk1:p}:{}; }},
   {type:'minwage', re:/최저임금|최저시급|최저[^.]{0,3}미달|시급이\s*너무\s*(적|낮)/, key:'mwHour',
    pick:t=>{ const w=krWage(t); return w?{mwType:'hour', mwHour:w}:{}; }},
   {type:'holiday', re:/주휴/, key:'ch2',
@@ -2715,16 +2719,30 @@ const CALC_INLINE=[
    pick:t=>{ const p=krMoney(t); return p?{avg1:p*3}:{}; }},
   {type:'ordinary', re:/통상임금|통상시급/, key:'ord1',
    pick:t=>{ const p=krMoney(t); return p?{ord1:p}:{}; }},
+  {type:'dcpension', re:/DC\s*형?|확정\s*기여|퇴직연금[^.]{0,6}(부담|적립|납입)/, key:'dc1',
+   pick:t=>{ const p=krMoney(t); return p?{dc1:(/연봉|연간|1년/.test(t)?p:p*12)}:{}; }},
+  {type:'laborcost', re:/인건비|총\s*비용|실부담|총부담|고용\s*비용|사람\s*쓰는\s*비용/, key:'lc1',
+   pick:t=>{ const p=krMoney(t); return p?{lc1:p}:{}; }},
   {type:'insur4', re:/4대\s*보험|사대\s*보험|보험료[^.]{0,4}(얼마|계산|공제)/, key:'i41',
    pick:t=>{ const p=krMoney(t); return p?{i41:p}:{}; }},
+  {type:'daytax', re:/일용직[^.]{0,12}(세금|소득세|원천|공제)|일당[^.]{0,12}(세금|소득세|원천|공제|떼)|하루\s*일당[^.]{0,6}세/, key:'dt1',
+   pick:t=>{ const p=krMoney(t); return p?{dt1:p}:{}; }},
+  {type:'withtax', re:/원천징수|근로소득세|갑근세|월\s*원천세|월급[^.]{0,5}(세금|소득세)[^.]{0,4}(얼마|떼|공제|계산)/, key:'wt1',
+   pick:t=>{ const p=krMoney(t); return p?{wt1:p}:{}; }},
   {type:'delay', re:/체불|밀린\s*(월급|임금|급여|돈)|월급[^.]{0,3}밀렸|미지급|월급[^.]{0,6}(못|안)[^.]{0,4}(받|줘|준)/, key:'dl1',
    pick:t=>{ const p=krMoney(t); return p?{dl1:p}:{}; }},
   {type:'net', re:/실수령|세후|월급[^.]{0,3}실제로/, key:'cnt1',
    pick:t=>{ const p=krMoney(t); return p?{cnt1:p}:{}; }},
+  {type:'prorate', re:/일할|중도\s*(입사|퇴사|입퇴사)|중간에\s*(입사|들어|그만|나가)|며칠\s*(만|일)?\s*근무|입사[^.]{0,6}(첫\s*달|이번\s*달)/, key:'pr3',
+   pick:t=>{ const f={}; const p=krMoney(t); if(p) f.pr1=p; const d=t.match(/(\d+)\s*일\s*(?:근무|일했|출근|만)|근무[^.]{0,3}(\d+)\s*일/); if(d) f.pr3=_digits(d[1]||d[2]); return f; }},
+  {type:'convert', re:/환산|시급[^.]{0,14}(월급|연봉|주급|일급|얼마)|(월급|연봉)[^.]{0,14}(시급|환산)/, key:'cv1',
+   pick:t=>{ const w=krWage(t); return w?{cv1:w}:{}; }},
   {type:'unemploy', re:/실업급여|구직급여/, key:'cu1',
    pick:t=>{ const f={}; const p=krMoney(t); if(p) f.cu1=Math.round(p/30); const a=t.match(/(\d{2})\s*(?:살|세)/); if(a) f.cu2=_digits(a[1]); return f; }},
   {type:'notice', re:/해고예고|예고수당|즉시\s*해고|당장\s*나가|내일부터\s*나오지/, key:'cn1',
    pick:t=>{ const f={}; const p=krMoney(t); if(p) f.cn1=Math.round(p/209*8); return f; }},
+  {type:'headcount', re:/상시\s*근로자|5인\s*(이상|미만)[^.]{0,10}(판정|기준|맞|되|여부|인지|해당)|우리\s*회사[^.]{0,8}5인|직원[^.]{0,6}\d+\s*명[^.]{0,8}5인/, key:'hc1',
+   pick:t=>{ return {}; }},
 ];
 function applyCalcVals(vals){ if(!vals) return; Object.keys(vals).forEach(id=>{ const el=document.getElementById(id); if(el&&vals[id]!=null) el.value=vals[id]; }); }
 // 오프스크린 계산(#calcForm은 계산기 화면이 비활성이어도 DOM에 존재) → 헤드라인만 회수, 폼 원복
@@ -2737,9 +2755,10 @@ function computeInline(type, vals){
   return out;
 }
 const _icLbl={cs1:'근속일수',cs2:'3개월 임금',cs5:'주 근로시간',ch1:'주 근로시간',ch2:'시급',dl1:'미지급액',cnt1:'월급',cu1:'1일 평균임금',cu2:'나이',cn1:'1일 통상임금',
-  rt1:'퇴직급여',rt2:'근속연수',ml1:'월 통상임금',ml2:'육아휴직 개월',ij1:'1일 평균임금',ij2:'요양일수',ca1:'미사용 연차',ca2:'1일 통상임금',ca3:'근속연수',co1:'통상시급',co2:'연장시간',mwHour:'시급',avg1:'3개월 임금',ord1:'월 기본급',i41:'월 보수'};
-const _icUnit={cs1:'일',cs5:'시간',ch1:'시간',cu2:'세',rt2:'년',ml2:'개월',ij2:'일',ca1:'일',ca3:'년',co2:'시간'};
-const _icMoney=['cs2','ch2','dl1','cnt1','cu1','cn1','rt1','ml1','ij1','ca2','co1','mwHour','avg1','ord1','i41'];
+  rt1:'퇴직급여',rt2:'근속연수',ml1:'월 통상임금',ml2:'육아휴직 개월',ij1:'1일 평균임금',ij2:'요양일수',ca1:'미사용 연차',ca2:'1일 통상임금',ca3:'근속연수',co1:'통상시급',co2:'연장시간',mwHour:'시급',avg1:'3개월 임금',ord1:'월 기본급',i41:'월 보수',
+  cv1:'시급',pr1:'월급',pr3:'근무일수',pk1:'월 포괄급여',lc1:'월급',wt1:'월급',dt1:'일당',ad1:'근속연수',dc1:'연간 임금총액'};
+const _icUnit={cs1:'일',cs5:'시간',ch1:'시간',cu2:'세',rt2:'년',ml2:'개월',ij2:'일',ca1:'일',ca3:'년',co2:'시간',pr3:'일',ad1:'년'};
+const _icMoney=['cs2','ch2','dl1','cnt1','cu1','cn1','rt1','ml1','ij1','ca2','co1','mwHour','avg1','ord1','i41','cv1','pr1','pk1','lc1','wt1','dt1','dc1'];
 function inlineValChips(vals){
   return Object.keys(vals).filter(id=>vals[id]!=null&&_icLbl[id]).map(id=>{
     const v=_icMoney.includes(id)?won(vals[id]):(vals[id]+(_icUnit[id]||''));
