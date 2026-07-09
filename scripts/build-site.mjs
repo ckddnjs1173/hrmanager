@@ -46,7 +46,11 @@ const ICON = {
   law: _svg('<path d="M12 3v18M8.5 21h7M4 8l8-3 8 3"/><path d="M4 8 2 12.2a4 4 0 0 0 4 0L4 8zM20 8l-2 4.2a4 4 0 0 0 4 0L20 8z"/>'),
   chat: _svg('<path d="M21 11.5a8.4 8.4 0 0 1-12.1 7.5L3 21l1.9-5.9A8.5 8.5 0 1 1 21 11.5z"/>'),
 };
-const callout = (c) => `<div class="callout ${c.type}"><div class="ic">${ICON[c.type] || ICON.tip}</div><div>${c.text}</div></div>`;
+const callout = (c) => `<div class="callout ${c.type}"><div class="ic">${ICON[c.type] || (c.type === "crit" ? ICON.warn : ICON.tip)}</div><div>${c.text}</div></div>`;
+// 매트릭스 표 셀: {y:'적용'}/{n:'미적용'} → 배지, 문자열은 그대로
+const mxCell = (cell) => (cell && typeof cell === "object")
+  ? (cell.y != null ? `<span class="yn y">${cell.y}</span>` : cell.n != null ? `<span class="yn n">${cell.n}</span>` : "")
+  : (cell == null ? "" : cell);
 const table = (t) =>
   `<table class="art-table"><thead><tr>${t.head.map((h) => `<th>${h}</th>`).join("")}</tr></thead>` +
   `<tbody>${t.rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
@@ -110,6 +114,11 @@ function richBlock(b) {
     case "checklist": return `<ul class="checklist">${b.items.map((c) => `<li>${c}</li>`).join("")}</ul>`;
     case "selfcheck": return `<div class="selfcheck"><div class="sc-q">${b.q}</div><div class="sc-opt"><b>예</b> ${b.yes}</div><div class="sc-opt no"><b>아니오</b> ${b.no}</div></div>`;
     case "embed": return `<a class="embedbox" href="${SITE_URL}/"><span class="eb-ic">🧮</span><span class="eb-tx"><b>${b.title}</b>${b.desc ? `<i>${b.desc}</i>` : ""}</span><span class="eb-cta">${b.cta || "열기"} ›</span></a>`;
+    case "cardnews": return `<div class="rg-cn">${b.cards.map((c, i) => `<div class="rg-cnc cn-${c.tone || ["law", "tip", "warn", "dark"][i % 4]}"><span class="cn-n">${i + 1}</span>${c.kick ? `<span class="cn-k">${c.kick}</span>` : ""}<span class="cn-big">${c.big}</span>${c.cap ? `<span class="cn-cap">${c.cap}</span>` : ""}</div>`).join("")}</div>`;
+    case "vscards": return `<div class="rg-vs"><div class="vs-c vs-a"><div class="vs-h">${b.a.h}</div><ul>${b.a.items.map((x) => `<li>${x}</li>`).join("")}</ul></div><div class="vs-x"><span>VS</span></div><div class="vs-c vs-b"><div class="vs-h">${b.b.h}</div><ul>${b.b.items.map((x) => `<li>${x}</li>`).join("")}</ul></div></div>`;
+    case "matrix": return `<div class="rg-mxwrap"><table class="rg-mx"><thead><tr>${b.cols.map((c, i) => `<th${i ? ' class="c"' : ""}>${c}</th>`).join("")}</tr></thead><tbody>${b.rows.map((r) => `<tr>${r.map((cell, i) => i === 0 ? `<th>${cell}</th>` : `<td class="c">${mxCell(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    case "casecard": return `<div class="rg-case"><div class="cs-av">${b.av || (b.who || "?")[0]}</div><div class="cs-bd"><div class="cs-who">${b.who || ""}</div><div class="cs-q">${b.quote}</div>${b.out ? `<span class="cs-out">${b.out}</span>` : ""}</div></div>`;
+    case "figures": return `<table class="rg-fig"><tbody>${b.rows.map((r) => `<tr><td class="k">${r[0]}</td><td class="v">${r[1]}</td></tr>`).join("")}${b.sub ? `<tr class="sub"><td class="k">${b.sub[0]}</td><td class="v">${b.sub[1]}</td></tr>` : ""}${b.total ? `<tr class="total"><td class="k">${b.total[0]}</td><td class="v">${b.total[1]}</td></tr>` : ""}</tbody></table>`;
     default: return "";
   }
 }
@@ -233,6 +242,46 @@ ${faqLd ? `<script type="application/ld+json">${JSON.stringify(faqLd)}</script>`
   .callout .ic{flex-shrink:0;font-size:18px;line-height:1.4}.callout .ic>svg{width:1em;height:1em}
   .tic{display:inline-flex;align-items:center;vertical-align:-.14em}.tic>svg{width:1em;height:1em}
   .callout.tip{background:#eef7f1;border:1px solid #cfe9d9}.callout.warn{background:#fdf4e7;border:1px solid #f3e0bf}.callout.law{background:var(--brand-soft);border:1px solid #d4e2ff}
+  .callout.crit{background:#fbe7e3;border:1px solid #f3ccc4}
+  /* Phase 1 콘텐츠 다양화 모듈 */
+  .rg-cn{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 12px;margin:18px 0;scroll-snap-type:x mandatory}
+  .rg-cnc{scroll-snap-align:start;flex:0 0 190px;border-radius:15px;padding:18px;min-height:196px;display:flex;flex-direction:column;color:#fff;position:relative;overflow:hidden}
+  .rg-cnc .cn-n{position:absolute;top:12px;right:15px;font-family:var(--font-serif);font-size:2.4rem;font-weight:800;opacity:.16;line-height:1}
+  .rg-cnc .cn-k{font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.9}
+  .rg-cnc .cn-big{font-family:var(--font-serif);font-weight:800;font-size:1.95rem;letter-spacing:-.03em;margin:auto 0 6px;line-height:1.08}
+  .rg-cnc .cn-cap{font-size:13px;line-height:1.5;opacity:.95}
+  .cn-law{background:linear-gradient(155deg,#2F6DF6,#1B4FCC)}.cn-tip{background:linear-gradient(155deg,#12885F,#0B6446)}
+  .cn-warn{background:linear-gradient(155deg,#C77A1C,#8F560F)}.cn-dark{background:linear-gradient(155deg,#2B3140,#141820)}
+  .rg-vs{display:grid;grid-template-columns:1fr auto 1fr;margin:18px 0;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .rg-vs .vs-c{padding:18px}.rg-vs .vs-a{background:linear-gradient(180deg,#e1f4ec,transparent 62%)}.rg-vs .vs-b{background:linear-gradient(180deg,#fbe7e3,transparent 62%)}
+  .rg-vs .vs-h{font-weight:800;font-size:14.5px;margin-bottom:12px}.rg-vs .vs-a .vs-h{color:#0B6446}.rg-vs .vs-b .vs-h{color:#A32E1D}
+  .rg-vs ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+  .rg-vs li{font-size:13.5px;color:var(--sub);padding-left:19px;position:relative;line-height:1.5}
+  .rg-vs li::before{position:absolute;left:0;top:0;font-weight:800}.rg-vs .vs-a li::before{content:"✓";color:#12885F}.rg-vs .vs-b li::before{content:"✕";color:#D2452F}
+  .rg-vs .vs-x{display:grid;place-items:center;width:46px;background:var(--panel);border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  .rg-vs .vs-x span{font-family:var(--font-serif);font-weight:800;color:var(--sub);font-size:14px}
+  @media(max-width:560px){.rg-vs{grid-template-columns:1fr}.rg-vs .vs-x{width:auto;height:40px;border:none;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}}
+  .rg-mxwrap{overflow-x:auto;margin:18px 0}
+  table.rg-mx{border-collapse:collapse;width:100%;font-size:14px;min-width:420px}
+  table.rg-mx th,table.rg-mx td{padding:11px 13px;text-align:left;border-bottom:1px solid #eef0f4}
+  table.rg-mx thead th{font-size:12px;color:var(--sub);font-weight:700;border-bottom:1px solid var(--line)}
+  table.rg-mx thead th.c,table.rg-mx td.c{text-align:center;width:118px}
+  table.rg-mx tbody th{font-weight:600;color:var(--ink-900)}
+  .rg-mx .yn{display:inline-flex;align-items:center;gap:5px;font-weight:700;font-size:12.5px;padding:4px 10px;border-radius:999px}
+  .rg-mx .yn.y{color:#0B6446;background:#e1f4ec}.rg-mx .yn.n{color:#A32E1D;background:#fbe7e3}
+  table.rg-fig{border-collapse:collapse;width:100%;font-size:14.5px;margin:18px 0}
+  table.rg-fig td{padding:10px 4px;border-bottom:1px solid #eef0f4}
+  table.rg-fig td.v{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-900);font-weight:600}
+  table.rg-fig td.k{color:var(--sub)}
+  table.rg-fig tr.sub td{color:var(--sub);font-size:13px;border-bottom:none;padding-top:3px}
+  table.rg-fig tr.total td{border-top:2px solid var(--ink-900);border-bottom:none;padding-top:13px}
+  table.rg-fig tr.total td.k{color:var(--ink-900);font-weight:700}
+  table.rg-fig tr.total td.v{color:var(--accent-ink);font-weight:800;font-family:var(--font-serif);font-size:1.3rem}
+  .rg-case{display:flex;gap:15px;padding:18px;margin:18px 0;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+  .rg-case .cs-av{flex:none;width:44px;height:44px;border-radius:50%;background:var(--brand-soft);color:var(--accent-ink);display:grid;place-items:center;font-weight:800;font-family:var(--font-serif)}
+  .rg-case .cs-who{font-size:12.5px;color:var(--sub)}
+  .rg-case .cs-q{font-family:var(--font-serif);font-size:1.05rem;line-height:1.5;color:var(--ink-900);margin:4px 0 11px;font-weight:600}
+  .rg-case .cs-out{font-size:13px;color:#0B6446;background:#e1f4ec;display:inline-block;padding:5px 11px;border-radius:8px;font-weight:600}
   .art-table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
   .art-table th,.art-table td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}.art-table th{background:var(--panel)}
   .checklist{list-style:none;padding:0}.checklist li{padding:9px 12px;background:var(--panel);border-radius:9px;margin-bottom:7px;font-size:14.5px}.checklist li::before{content:"✓ ";color:var(--ok);font-weight:800}
