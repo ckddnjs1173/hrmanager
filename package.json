@@ -10,6 +10,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "build": "node scripts/build-site.mjs",
+    "test": "node --test",
+    "check": "npm test && npm run build",
     "migrate": "node scripts/migrate-json-to-db.mjs",
     "ingest": "node scripts/ingest-nomusa.mjs"
   },
