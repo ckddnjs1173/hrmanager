@@ -13,6 +13,7 @@ import { SYSTEM_PROMPT, SUMMARY_SCHEMA, SUMMARY_INSTRUCTION } from "./lib/prompt
 import { listDocs, renderDoc, listPacks, renderPack } from "./lib/docs.js";
 import { bookings, leads, nomusa, accessLogs, adminStats, privacy, retentionSweep, events, EVENT_TYPES, partners, feedback } from "./lib/repo.js";
 import { notify, notifications, availableChannels } from "./lib/notify.js";
+import { createCaseRouter } from "./lib/case-routes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -79,6 +80,9 @@ function rateLimit({ windowMs = 60000, max = 30 } = {}) {
 }
 // 주기적 정리(메모리 누수 방지)
 setInterval(() => { const now = Date.now(); for (const [k, e] of rlStore) if (e.reset < now) rlStore.delete(k); }, 300000).unref?.();
+
+// ===== Case API (인사야 1.0) =====
+app.use("/api/cases", rateLimit({ windowMs: 60000, max: 30 }), createCaseRouter());
 
 // AI provider는 lib/ai.js가 결정 (ANTHROPIC_API_KEY → Claude / GEMINI_API_KEY → Gemini / 없으면 데모).
 if (!AI_ENABLED) {
