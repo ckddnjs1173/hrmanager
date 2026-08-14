@@ -50,12 +50,12 @@ test("small workplace keeps notice-pay baseline but does not expose unfair-dismi
   assert.ok(legal.warnings.includes("small_workplace_labor_board_remedy_not_available_under_lsa_baseline"));
 });
 
-test("under-three-calendar-month worker does not receive an automatic notice-pay estimate", () => {
+test("worker one day short of three calendar months stays inside the notice exception baseline", () => {
   const legal = getDismissalLegalContext({
     separationType: "dismissal",
-    employmentStartDate: "2026-05-31",
-    noticeDate: "2026-08-29",
-    effectiveDate: "2026-08-30",
+    employmentStartDate: "2026-05-15",
+    noticeDate: "2026-08-13",
+    effectiveDate: "2026-08-14",
     workplaceEmployeeCount: 8,
     writtenNoticeReceived: true,
     noticePayPaid: false,
@@ -70,9 +70,9 @@ test("under-three-calendar-month worker does not receive an automatic notice-pay
 test("exact three-calendar-month boundary is no longer treated as under three months", () => {
   const legal = getDismissalLegalContext({
     separationType: "dismissal",
-    employmentStartDate: "2026-05-31",
-    noticeDate: "2026-08-30",
-    effectiveDate: "2026-08-31",
+    employmentStartDate: "2026-05-15",
+    noticeDate: "2026-08-14",
+    effectiveDate: "2026-08-15",
     workplaceEmployeeCount: 8,
     writtenNoticeReceived: true,
     noticePayPaid: false,
