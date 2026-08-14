@@ -94,4 +94,10 @@ test("server boots and product entry points respond", { timeout: 12000 }, async 
   const wageHtml = await wageRes.text();
   assert.match(wageHtml, /id="wageApp"/);
   assert.match(wageHtml, /wage-intake-client\.js/);
+
+  const dismissalRes = await fetch(`${base}/dismissal-intake`);
+  assert.equal(dismissalRes.status, 200, stderr);
+  const dismissalHtml = await dismissalRes.text();
+  assert.match(dismissalHtml, /id="dismissalApp"/);
+  assert.match(dismissalHtml, /dismissal-intake-client\.js/);
 });
