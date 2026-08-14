@@ -29,6 +29,14 @@ test("wage intake client uses protected API and session-only token storage", () 
   assert.doesNotMatch(js, /accessToken=.*URL|searchParams\.set\([^)]*token/i);
 });
 
+test("wage workspace prefers the server-owned next best action", () => {
+  const js = read("wage-intake-client.js");
+  assert.match(js, /current\?\.nextAction/);
+  assert.match(js, /current\?\.case\?\.actions\?\.\[0\]/);
+  assert.match(js, /serverAction\.description/);
+  assert.match(js, /id="facts"/);
+});
+
 test("home launcher routes the primary wage entry to the new case page", () => {
   const js = read("wage-intake-launcher.js");
   assert.match(js, /const TARGET = "\/wage-intake"/);
