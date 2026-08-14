@@ -50,12 +50,12 @@ test("small workplace keeps notice-pay baseline but does not expose unfair-dismi
   assert.ok(legal.warnings.includes("small_workplace_labor_board_remedy_not_available_under_lsa_baseline"));
 });
 
-test("under-three-month worker does not receive an automatic notice-pay estimate", () => {
+test("under-three-calendar-month worker does not receive an automatic notice-pay estimate", () => {
   const legal = getDismissalLegalContext({
     separationType: "dismissal",
-    employmentStartDate: "2026-06-01",
-    noticeDate: "2026-07-31",
-    effectiveDate: "2026-08-01",
+    employmentStartDate: "2026-05-31",
+    noticeDate: "2026-08-29",
+    effectiveDate: "2026-08-30",
     workplaceEmployeeCount: 8,
     writtenNoticeReceived: true,
     noticePayPaid: false,
@@ -65,6 +65,23 @@ test("under-three-month worker does not receive an automatic notice-pay estimate
 
   assert.equal(legal.noticeAllowance.status, "statutory_exception_under_3_months");
   assert.equal(legal.noticeAllowance.amount, 0);
+});
+
+test("exact three-calendar-month boundary is no longer treated as under three months", () => {
+  const legal = getDismissalLegalContext({
+    separationType: "dismissal",
+    employmentStartDate: "2026-05-31",
+    noticeDate: "2026-08-30",
+    effectiveDate: "2026-08-31",
+    workplaceEmployeeCount: 8,
+    writtenNoticeReceived: true,
+    noticePayPaid: false,
+    ordinaryDailyWage: 100000,
+    employerReason: "성과",
+  });
+
+  assert.equal(legal.noticeAllowance.status, "possible_shortfall");
+  assert.equal(legal.noticeAllowance.amount, 3000000);
 });
 
 test("clear advised-resignation indicators do not auto-route to labor board", () => {
