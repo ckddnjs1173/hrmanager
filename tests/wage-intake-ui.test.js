@@ -37,9 +37,11 @@ test("wage workspace prefers the server-owned next best action", () => {
   assert.match(js, /id="facts"/);
 });
 
-test("home launcher routes the primary wage entry to the new case page", () => {
+test("home launcher preserves the wage route while adding other case entries", () => {
   const js = read("wage-intake-launcher.js");
-  assert.match(js, /const TARGET = "\/wage-intake"/);
+  assert.match(js, /const WAGE_TARGET = "\/wage-intake"/);
+  assert.match(js, /window\.location\.assign\(WAGE_TARGET\)/);
   assert.match(js, /data-wage-case-launcher/);
   assert.match(js, /key === "wage"/);
+  assert.match(js, /const DISMISSAL_TARGET = "\/dismissal-intake"/);
 });
