@@ -35,6 +35,13 @@ async function waitForServer() {
   throw new Error(`server did not become ready\n${serverOutput}`);
 }
 
+async function choose(page, name, value) {
+  const input = page.locator(`input[name="${name}"][value="${value}"]`);
+  assert.equal(await input.count(), 1, `choice missing: ${name}=${value}`);
+  await input.locator("..").click();
+  assert.equal(await input.isChecked(), true, `choice not selected: ${name}=${value}`);
+}
+
 async function fillVisibleIntake(page) {
   const values = {
     employmentEndDate: "2026-08-01",
@@ -74,8 +81,8 @@ async function completeDesktopJourney(browser) {
   await page.goto(`${BASE}/wage-intake`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: /못 받은 임금을/ }).waitFor();
 
-  await page.locator('input[name="employmentStatus"][value="resigned"]').check();
-  await page.locator('input[name="unpaidItems"][value="월급"]').check();
+  await choose(page, "employmentStatus", "resigned");
+  await choose(page, "unpaidItems", "월급");
   await page.getByRole("button", { name: "사건 만들고 계속하기" }).click();
 
   for (let step = 0; step < 6; step += 1) {
@@ -91,7 +98,7 @@ async function completeDesktopJourney(browser) {
   assert.match(await page.locator("#facts").innerText(), /2026-07-01 ~ 2026-07-31/);
 
   for (const key of ["overtimeWork", "nightWork", "holidayWork", "unusedAnnualLeave"]) {
-    await page.locator(`input[name="${key}"][value="false"]`).check();
+    await choose(page, key, "false");
   }
   await page.getByRole("button", { name: "추가 수당 정보 저장" }).click();
 
