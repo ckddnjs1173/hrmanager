@@ -23,7 +23,7 @@
 | Case 접근 보호 | ✅ | 고엔트로피 토큰, 해시 저장, 7일 기본 만료, 폐기 구현 |
 | Case 보존 정책 | ✅ | 방치 Case 30일, 삭제 Case 7일 기본 자동 파기 |
 | 보호 Case API | ✅ | 생성·조회·수정·삭제 및 문서·리포트 접근제어 |
-| 자동 테스트/CI | ✅ | Node 테스트 + build + release gate를 PR/main에서 실행 |
+| 자동 테스트/CI | ✅ | Node test + build + release gate + Chromium E2E |
 | 임금체불 Intake | ✅ | 필수·조건부 사실, 질문 순서, 쟁점, 증거 상태 |
 | 임금체불 Money | ✅ | 미지급 원금·최저임금 기준·가산 추정·지연이자 baseline |
 | 임금체불 Legal Versioning | ✅ | 사건 기간 기준 2023~2026 최저임금 버전 및 공식 출처 baseline |
@@ -32,9 +32,9 @@
 | 임금체불 공식절차 | ✅ | 고용노동부 노동포털 진정 경로 연결 |
 | 임금체불 Case Report | ✅ | 사실·금액·증거·근거·다음 행동을 텍스트로 내보내기 |
 | 임금체불 Release Gate | ✅ | 필수 모듈·출처·토큰 저장방식·문서 안전 렌더 자동 검사 |
+| 실제 Chromium E2E | ✅ | 데스크톱 전체 여정 + 390×844 모바일 viewport 자동 검증 |
 | 범용 Legal Versioning | 🟡 | 임금체불 vertical slice baseline만 구현. 전 노동사건 확대 필요 |
 | 범용 Case Workspace | 🟡 | 임금체불 패턴은 완성, 다른 사건 공통화 필요 |
-| 실제 브라우저 E2E | 🔴 | Node/API/UI 정적 검증은 있으나 실제 Chromium 사용자 여정 자동화 미구현 |
 | 운영 DB 영속성 | 🔴 | Render 무료 플랜의 비영구 디스크에서 Case 장기 보존 불가 |
 
 ## 2. 임금체불 Vertical Slice 현재 여정
@@ -57,7 +57,9 @@
 → 사건 삭제 또는 보존기간 자동 파기
 ```
 
-핵심 원칙은 기존 대형 `index.html`을 Big Bang 재작성하지 않고 `wage-intake-*`, `wage-workspace.*`, Case 도메인 모듈을 별도로 추가하는 점진 분리다.
+이 전체 데스크톱 여정은 실제 Chromium E2E가 자동 실행한다. 모바일은 390×844 viewport에서 가로 overflow와 주요 CTA 노출을 검증한다.
+
+핵심 구현 원칙은 기존 대형 `index.html`을 Big Bang 재작성하지 않고 `wage-intake-*`, `wage-workspace.*`, Case 도메인 모듈을 별도로 추가하는 점진 분리다.
 
 ## 3. 임금체불 Money / Legal 상태
 
@@ -126,16 +128,9 @@
 - `certmail` — 내용증명(임금·퇴직금 청구)
 - `complaint` — 노동청 진정서
 
-Case가 가진 다음 값들을 가능한 범위에서 자동 반영한다.
+Case가 가진 근무기간·미지급 기간·미지급 항목·현재 계산 가능한 금액을 가능한 범위에서 자동 반영한다.
 
-- 근무기간
-- 미지급 기간
-- 미지급 항목
-- 현재 계산 가능한 금액
-
-공식 절차는 고용노동부 노동포털 임금체불 진정 경로를 안내한다.
-
-문서·절차를 단순 링크 모음으로 두지 않고 Case의 현재 상태에서 이어지는 리소스로 취급한다.
+공식 절차는 고용노동부 노동포털 임금체불 진정 경로를 안내한다. 문서·절차를 단순 링크 모음으로 두지 않고 Case의 현재 상태에서 이어지는 리소스로 취급한다.
 
 ## 6. 프론트엔드 상태
 
@@ -151,21 +146,27 @@ Case가 가진 다음 값들을 가능한 범위에서 자동 반영한다.
 
 남은 프론트 과제:
 
-- 실제 Chromium E2E
-- 모바일 viewport E2E
 - 다른 Case type 공통 컴포넌트화
 - 레거시 `index.html`의 콘텐츠·계산 로직 단계적 분리
+- 로그인 기반 `내 사건`이 필요해질 경우 계정 UI 추가
 
 ## 7. 테스트 / 품질 상태
 
-현재 PR과 `main`의 CI는 다음 release gate를 실행한다.
+현재 PR과 `main`의 CI는 두 job으로 구성한다.
 
 ```text
-npm ci
-npm run release:check
-  └─ npm test
-  └─ npm run build
-  └─ scripts/release-check.mjs
+check
+  npm ci
+  npm run release:check
+    └─ npm test
+    └─ npm run build
+    └─ scripts/release-check.mjs
+
+browser-e2e (check 성공 후)
+  npm ci
+  Playwright runtime 설치
+  Chromium 설치
+  node scripts/browser-e2e.mjs
 ```
 
 현재 자동 검증 범위:
@@ -184,14 +185,14 @@ npm run release:check
 - Case retention
 - 정적 SEO build
 - release invariant 검사
+- 실제 Chromium 사건 생성 → Intake → Workspace → Money → Sources → Evidence → Document → Report → Procedure 여정
+- 390×844 모바일 viewport 가로 overflow / primary CTA 노출
 
 남은 품질 과제:
 
-1. 실제 Chromium E2E
-2. 모바일 viewport 사용자 여정
-3. 배포된 production smoke
-4. AI fixture 기반 회귀 테스트
-5. 다른 Case type별 법률/계산 회귀 테스트
+1. 배포된 production smoke 자동화
+2. AI fixture 기반 회귀 테스트
+3. 다른 Case type별 법률/계산/E2E 회귀 테스트
 
 ## 8. 운영 DB 영속성
 
@@ -218,11 +219,12 @@ Render Blueprint는 무료 web plan을 사용하고 있고 persistent disk가 �
 - [x] Case 접근 토큰 만료
 - [x] Case 보존/삭제 lifecycle
 - [x] 자동 테스트/CI release gate
+- [x] 실제 Chromium + 모바일 E2E baseline
 - [x] 임금체불 vertical slice code-level 완결
 - [x] 임금체불 Money / Legal Versioning baseline
 - [x] 임금체불 문서 / 공식 절차 / Case Report
-- [ ] 실제 브라우저 E2E baseline
 - [ ] production DB 영속성
+- [ ] production smoke 자동화
 - [ ] 범용 Case Workspace 모듈화
 - [ ] 범용 Legal Versioning 확대
 
@@ -230,7 +232,7 @@ Render Blueprint는 무료 web plan을 사용하고 있고 persistent disk가 �
 
 | 사건 | 현재 상태 | 다음 핵심 작업 |
 |---|---:|---|
-| 임금체불 | ✅ code-level slice | 브라우저 E2E + production persistence 후 production-ready 판정 |
+| 임금체불 | ✅ code-level slice | production persistence + production smoke 후 production-ready 판정 |
 | 해고·권고사직 | 🔴 | Case template / Intake / 기한 / 구제절차 |
 | 퇴직금 | 🔴 | Case template / 평균임금·퇴직금 Money |
 | 근로시간·수당 | 🔴 | Case template / 근로시간·가산 rule |
@@ -252,25 +254,25 @@ Render Blueprint는 무료 web plan을 사용하고 있고 persistent disk가 �
 
 ## 10. 다음 구현 순서
 
-1. 실제 Chromium + 모바일 E2E baseline
-2. 임금체불 production smoke
-3. production DB 영속성 방식 결정 및 적용
-4. 공통 Case Workspace / Action / Resource 구조 추출
-5. 해고·권고사직 Case 구현
-6. 퇴직금 Case 구현
-7. 근로시간·수당 Case 구현
-8. 연차 Case 구현
-9. AI 상담을 Case 생성/업데이트 인터페이스로 점진 연결
+1. production DB 영속성 방식 결정 및 적용
+2. 배포된 production smoke 자동화
+3. 공통 Case Workspace / Action / Resource 구조 추출
+4. 해고·권고사직 Case 구현
+5. 퇴직금 Case 구현
+6. 근로시간·수당 Case 구현
+7. 연차 Case 구현
+8. AI 상담을 Case 생성/업데이트 인터페이스로 점진 연결
+9. 범용 Legal Versioning 및 공식 데이터 수집 확대
 10. 전체 핵심 사건 회귀 테스트와 release gate 확대
 
 ## 11. 결론
 
 임금체불은 이제 단순 Intake 데모가 아니다.
 
-현재 코드 기준으로 다음 사이클이 닫혔다.
+현재 코드와 실제 Chromium 기준으로 다음 사이클이 닫혔다.
 
 **Case 생성 → 구조화 Intake → Money → 사건 기준 Legal Rule → 공식 근거 → 증거 → Next Best Action → 문서 → 공식 절차 → Case Report → 보존/삭제 lifecycle**
 
-따라서 임금체불 vertical slice는 **code-level release gate 통과 상태**다.
+따라서 임금체불 vertical slice는 **code-level release gate + real-browser E2E 통과 상태**다.
 
-다만 인사야 전체 제품 개발이 끝난 것은 아니다. production-ready 판정에는 실제 브라우저 E2E와 영속 DB가 남아 있고, 이후 이 패턴을 해고·권고사직·퇴직금·근로시간·연차 사건으로 확장해야 한다.
+다만 인사야 전체 제품 개발이 끝난 것은 아니다. 임금체불의 production-ready 판정에는 영속 DB와 production smoke가 남아 있고, 이후 이 패턴을 해고·권고사직·퇴직금·근로시간·연차 사건으로 확장해야 한다.
