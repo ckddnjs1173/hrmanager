@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>해고·권고사직 사건 정리 · 인사야</title>
+  <meta name="description" content="해고·권고사직·계약종료 경위를 사건 단위로 정리하고 적용범위, 해고예고수당, 증거, 문서와 노동위원회 절차를 확인합니다." />
+  <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+  <link rel="stylesheet" href="/wage-intake.css" />
+  <link rel="stylesheet" href="/wage-workspace.css" />
+  <link rel="stylesheet" href="/dismissal-intake.css" />
+</head>
+<body>
+  <header class="case-topbar">
+    <a class="case-brand" href="/" aria-label="인사야 홈"><span class="case-brand-dot">●</span><span>인사야</span></a>
+    <div class="case-topbar-center">내 사건</div>
+    <a class="case-home-link" href="/">홈으로</a>
+  </header>
+
+  <main class="case-shell">
+    <section class="case-hero dismissal-hero">
+      <div class="case-kicker">해고·권고사직 · Case Workspace 베타</div>
+      <h1>회사와의 종료 경위를<br />먼저 정확히 나눠봐요.</h1>
+      <p>‘권고사직’이라는 이름만으로 합의 종료가 되는 것도, ‘계약만료’라는 말만으로 다 끝나는 것도 아닙니다. 실제 통보 방식·동의 여부·사업장 규모·날짜를 기준으로 가능한 절차를 나눕니다.</p>
+    </section>
+
+    <section id="dismissalApp" class="case-app" aria-live="polite">
+      <div class="case-loading"><div class="case-spinner" aria-hidden="true"></div><p>사건 화면을 준비하고 있어요.</p></div>
+    </section>
+
+    <section class="case-safety" aria-label="개인정보 및 법률 안내">
+      <b>사건·개인정보 안내</b>
+      <p>접근 토큰은 이 탭의 세션에만 보관합니다. 권고사직·계약만료·해고 여부는 명칭이 아니라 실제 사실관계에 따라 달라질 수 있으므로, 이 화면은 사건 정리와 기한 확인을 위한 1차 기준으로 사용하세요.</p>
+    </section>
+  </main>
+
+  <script type="module" src="/dismissal-intake-client.js"></script>
+</body>
+</html>
