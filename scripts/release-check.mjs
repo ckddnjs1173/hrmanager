@@ -10,6 +10,8 @@ const requiredFiles = [
   "wage-workspace.js",
   "wage-report-ui.js",
   "scripts/browser-e2e.mjs",
+  "scripts/write-build-info.mjs",
+  "scripts/production-smoke.mjs",
   "lib/case-routes.js",
   "lib/wage-intake-service.js",
   "lib/wage-money.js",
@@ -30,6 +32,11 @@ for (const file of requiredFiles) {
   if (!fs.existsSync(path.join(root, file))) failures.push(`missing required file: ${file}`);
 }
 
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+if (!String(packageJson.scripts?.build || "").includes("write-build-info.mjs")) {
+  failures.push("build script must emit Render build-info metadata");
+}
+
 const legalText = fs.readFileSync(path.join(root, "lib/legal-rules.js"), "utf8");
 if (!legalText.includes("minimumwage.go.kr")) failures.push("minimum wage official source is missing");
 if (!legalText.includes("law.go.kr")) failures.push("National Law Information Center source is missing");
@@ -43,6 +50,11 @@ const browserE2E = fs.readFileSync(path.join(root, "scripts/browser-e2e.mjs"), "
 if (!browserE2E.includes("chromium.launch")) failures.push("browser E2E must launch Chromium");
 if (!browserE2E.includes("viewport: { width: 390, height: 844 }")) failures.push("browser E2E must include a mobile viewport");
 if (!browserE2E.includes("사건 요약 복사")) failures.push("browser E2E must exercise Case Report export");
+
+const productionSmoke = fs.readFileSync(path.join(root, "scripts/production-smoke.mjs"), "utf8");
+if (!productionSmoke.includes("EXPECTED_COMMIT")) failures.push("production smoke must verify the deployed commit");
+if (!productionSmoke.includes("/api/cases/wage-intake")) failures.push("production smoke must exercise the wage Case API");
+if (!productionSmoke.includes('method: "DELETE"')) failures.push("production smoke must clean up its synthetic Case");
 
 const renderPath = path.join(root, "render.yaml");
 if (fs.existsSync(renderPath)) {
