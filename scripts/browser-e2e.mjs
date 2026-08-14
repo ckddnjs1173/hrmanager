@@ -135,8 +135,9 @@ async function completeDismissalJourney(browser) {
   await page.getByRole("button", { name: "사실 저장·다시 판단" }).click();
   await page.waitForTimeout(100);
 
+  const workspaceText = await page.locator(".dismissal-workspace").innerText();
   const assessment = await page.locator(".assessment-list").innerText();
-  assert.match(assessment, /상시 5명 이상/);
+  assert.match(workspaceText, /상시 5명 이상/);
   assert.match(assessment, /신청 가능성 검토/);
   assert.match(assessment, /3,600,000원/);
   const sourceText = await page.locator("#dismissal-sources").innerText();
