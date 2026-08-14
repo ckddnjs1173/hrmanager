@@ -329,9 +329,17 @@ function factRows(facts) {
 }
 
 function nextAction(intake) {
+  const serverAction = current?.nextAction || current?.case?.actions?.[0];
+  if (serverAction) {
+    return {
+      title: serverAction.title,
+      desc: serverAction.description,
+      target: serverAction.target,
+    };
+  }
   if (intake.missingExtraFacts?.length) return { title: "추가 수당 가능성을 확인하세요.", desc: "연장·야간·휴일근로와 미사용 연차 여부를 확인하면 사건 금액 범위를 더 정확하게 좁힐 수 있습니다.", target: "extra" };
   if ((intake.evidence?.haveCount || 0) < 2) return { title: "증거를 먼저 확보해 두세요.", desc: "급여명세서와 계좌내역처럼 지급 여부를 바로 확인할 수 있는 자료부터 정리하는 것이 좋습니다.", target: "evidence" };
-  return { title: "핵심 사실 정리가 끝났습니다.", desc: "다음 단계에서는 확인된 사실을 기준으로 체불액 계산과 공식 절차 준비로 이어집니다.", target: "evidence" };
+  return { title: "핵심 사실 정리가 끝났습니다.", desc: "다음 단계에서는 확인된 사실을 기준으로 체불액 계산과 공식 절차 준비로 이어집니다.", target: "facts" };
 }
 
 function renderWorkspace() {
@@ -345,7 +353,7 @@ function renderWorkspace() {
         <span class="status-pill">사건 정리 중</span>
       </div>
       <div class="workspace-grid">
-        <section class="workspace-card">
+        <section class="workspace-card" id="facts">
           <h3>확인된 사실</h3>
           <div class="fact-list">${factRows(facts).map(([k,v]) => `<div class="fact-row"><span class="fact-key">${esc(k)}</span><span class="fact-value">${esc(v)}</span></div>`).join("")}</div>
         </section>
