@@ -9,6 +9,7 @@ const requiredFiles = [
   "wage-intake-client.js",
   "wage-workspace.js",
   "wage-report-ui.js",
+  "scripts/browser-e2e.mjs",
   "lib/case-routes.js",
   "lib/wage-intake-service.js",
   "lib/wage-money.js",
@@ -37,6 +38,11 @@ const workspaceText = fs.readFileSync(path.join(root, "wage-workspace.js"), "utf
 if (!workspaceText.includes("sessionStorage")) failures.push("wage workspace must use sessionStorage for case access");
 if (workspaceText.includes("localStorage")) failures.push("wage workspace must not persist the case token in localStorage");
 if (!workspaceText.includes("textContent = result.document")) failures.push("document preview must use plain text rendering");
+
+const browserE2E = fs.readFileSync(path.join(root, "scripts/browser-e2e.mjs"), "utf8");
+if (!browserE2E.includes("chromium.launch")) failures.push("browser E2E must launch Chromium");
+if (!browserE2E.includes("viewport: { width: 390, height: 844 }")) failures.push("browser E2E must include a mobile viewport");
+if (!browserE2E.includes("사건 요약 복사")) failures.push("browser E2E must exercise Case Report export");
 
 const renderPath = path.join(root, "render.yaml");
 if (fs.existsSync(renderPath)) {
