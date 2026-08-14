@@ -53,7 +53,7 @@ test("summary schema retains core case fields", () => {
   }
 });
 
-test("server boots and /api/health responds", { timeout: 12000 }, async (t) => {
+test("server boots and product entry points respond", { timeout: 12000 }, async (t) => {
   const dir = mkdtempSync(path.join(tmpdir(), "insaya-smoke-"));
   const port = 33000 + Math.floor(Math.random() * 20000);
   const child = spawn(process.execPath, ["server.js"], {
@@ -78,8 +78,20 @@ test("server boots and /api/health responds", { timeout: 12000 }, async (t) => {
     try { rmSync(dir, { recursive: true, force: true }); } catch {}
   });
 
-  const res = await waitForHealth(`http://127.0.0.1:${port}/api/health`);
+  const base = `http://127.0.0.1:${port}`;
+  const res = await waitForHealth(`${base}/api/health`);
   assert.equal(res.status, 200, stderr);
   const body = await res.json();
   assert.equal(typeof body.ai, "boolean");
+
+  const homeRes = await fetch(`${base}/`);
+  assert.equal(homeRes.status, 200, stderr);
+  const homeHtml = await homeRes.text();
+  assert.match(homeHtml, /<script type="module" src="\/wage-intake-launcher\.js"><\/script>/);
+
+  const wageRes = await fetch(`${base}/wage-intake`);
+  assert.equal(wageRes.status, 200, stderr);
+  const wageHtml = await wageRes.text();
+  assert.match(wageHtml, /id="wageApp"/);
+  assert.match(wageHtml, /wage-intake-client\.js/);
 });

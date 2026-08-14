@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>임금체불 사건 정리 · 인사야</title>
+  <meta name="description" content="임금체불 상황을 사건 단위로 정리하고 필요한 사실·증거·다음 행동을 확인합니다." />
+  <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+  <link rel="stylesheet" href="/wage-intake.css" />
+</head>
+<body>
+  <header class="case-topbar">
+    <a class="case-brand" href="/" aria-label="인사야 홈">
+      <span class="case-brand-dot">●</span>
+      <span>인사야</span>
+    </a>
+    <div class="case-topbar-center">내 사건</div>
+    <a class="case-home-link" href="/">홈으로</a>
+  </header>
+
+  <main class="case-shell">
+    <section class="case-hero">
+      <div class="case-kicker">임금체불 · Case Workspace 베타</div>
+      <h1>못 받은 임금을<br />사건 단위로 정리해요.</h1>
+      <p>한 번에 모든 정보를 요구하지 않습니다. 지금 필요한 사실부터 최대 3개씩 확인하고, 사건 정리가 끝나면 증거와 다음 행동으로 이어집니다.</p>
+    </section>
+
+    <section id="wageApp" class="case-app" aria-live="polite">
+      <div class="case-loading">
+        <div class="case-spinner" aria-hidden="true"></div>
+        <p>사건 화면을 준비하고 있어요.</p>
+      </div>
+    </section>
+
+    <section class="case-safety" aria-label="개인정보 안내">
+      <b>개인정보 안내</b>
+      <p>현재 베타에서는 사건 접근 토큰을 이 탭의 세션에만 보관합니다. URL에는 토큰을 넣지 않으며, 공용 PC에서는 사용 후 사건 삭제를 권장합니다.</p>
+    </section>
+  </main>
+
+  <script type="module" src="/wage-intake-client.js"></script>
+</body>
+</html>
