@@ -11,6 +11,7 @@
     "dev": "node --watch server.js",
     "test": "node --test",
     "check": "npm test && npm run build",
+    "release:check": "npm run check && node scripts/release-check.mjs",
     "build": "node scripts/build-site.mjs",
     "migrate": "node scripts/migrate-json-to-db.mjs",
     "ingest": "node scripts/ingest-nomusa.mjs"
