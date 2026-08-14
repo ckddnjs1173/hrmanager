@@ -290,7 +290,7 @@ app.get("/api/admin/bookings", adminAuth, (req, res) => {
 app.post("/api/admin/booking/:id", adminAuth, (req, res) => {
   const fields = {};
   if (req.body?.status && STAT.includes(req.body.status)) fields.status = req.body.status;
-  if (typeof req.body?.memo === "string") fields.memo = clean(req.body.memo;
+  if (typeof req.body?.memo === "string") fields.memo = clean(req.body.memo);
   // 노무사 배정: id로 배정하면 표시용 이름도 함께 저장
   if (typeof req.body?.assigned_nomusa_id === "string") {
     fields.assigned_nomusa_id = clean(req.body.assigned_nomusa_id);
