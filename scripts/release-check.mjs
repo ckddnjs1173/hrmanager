@@ -9,6 +9,9 @@ const requiredFiles = [
   "wage-intake-client.js",
   "wage-workspace.js",
   "wage-report-ui.js",
+  "dismissal-intake.html",
+  "dismissal-intake-client.js",
+  "dismissal-intake.css",
   "scripts/browser-e2e.mjs",
   "scripts/write-build-info.mjs",
   "scripts/production-smoke.mjs",
@@ -18,6 +21,12 @@ const requiredFiles = [
   "lib/legal-rules.js",
   "lib/wage-resources.js",
   "lib/wage-report.js",
+  "lib/dismissal-intake.js",
+  "lib/dismissal-rules.js",
+  "lib/dismissal-actions.js",
+  "lib/dismissal-resources.js",
+  "lib/dismissal-report.js",
+  "lib/dismissal-service.js",
 ];
 
 const failures = [];
@@ -37,24 +46,37 @@ if (!String(packageJson.scripts?.build || "").includes("write-build-info.mjs")) 
   failures.push("build script must emit Render build-info metadata");
 }
 
-const legalText = fs.readFileSync(path.join(root, "lib/legal-rules.js"), "utf8");
-if (!legalText.includes("minimumwage.go.kr")) failures.push("minimum wage official source is missing");
-if (!legalText.includes("law.go.kr")) failures.push("National Law Information Center source is missing");
+const wageLegalText = fs.readFileSync(path.join(root, "lib/legal-rules.js"), "utf8");
+if (!wageLegalText.includes("minimumwage.go.kr")) failures.push("minimum wage official source is missing");
+if (!wageLegalText.includes("law.go.kr")) failures.push("National Law Information Center wage source is missing");
 
-const workspaceText = fs.readFileSync(path.join(root, "wage-workspace.js"), "utf8");
-if (!workspaceText.includes("sessionStorage")) failures.push("wage workspace must use sessionStorage for case access");
-if (workspaceText.includes("localStorage")) failures.push("wage workspace must not persist the case token in localStorage");
-if (!workspaceText.includes("textContent = result.document")) failures.push("document preview must use plain text rendering");
+const dismissalLegalText = fs.readFileSync(path.join(root, "lib/dismissal-rules.js"), "utf8");
+for (const article of ["제23조", "제26조", "제27조", "제28조"]) {
+  if (!dismissalLegalText.includes(article)) failures.push(`dismissal legal source missing: ${article}`);
+}
+if (!dismissalLegalText.includes("nlrc.go.kr")) failures.push("dismissal labor-board source is missing");
+
+const wageWorkspaceText = fs.readFileSync(path.join(root, "wage-workspace.js"), "utf8");
+if (!wageWorkspaceText.includes("sessionStorage")) failures.push("wage workspace must use sessionStorage for case access");
+if (wageWorkspaceText.includes("localStorage")) failures.push("wage workspace must not persist the case token in localStorage");
+if (!wageWorkspaceText.includes("textContent = result.document")) failures.push("wage document preview must use plain text rendering");
+
+const dismissalClientText = fs.readFileSync(path.join(root, "dismissal-intake-client.js"), "utf8");
+if (!dismissalClientText.includes("sessionStorage")) failures.push("dismissal workspace must use sessionStorage for case access");
+if (dismissalClientText.includes("localStorage")) failures.push("dismissal workspace must not persist the case token in localStorage");
+if (!dismissalClientText.includes('querySelector("pre").textContent')) failures.push("dismissal document preview must use plain text rendering");
 
 const browserE2E = fs.readFileSync(path.join(root, "scripts/browser-e2e.mjs"), "utf8");
 if (!browserE2E.includes("chromium.launch")) failures.push("browser E2E must launch Chromium");
 if (!browserE2E.includes("viewport: { width: 390, height: 844 }")) failures.push("browser E2E must include a mobile viewport");
+if (!browserE2E.includes("/dismissal-intake")) failures.push("browser E2E must exercise the dismissal Case flow");
 if (!browserE2E.includes("사건 요약 복사")) failures.push("browser E2E must exercise Case Report export");
 
 const productionSmoke = fs.readFileSync(path.join(root, "scripts/production-smoke.mjs"), "utf8");
 if (!productionSmoke.includes("EXPECTED_COMMIT")) failures.push("production smoke must verify the deployed commit");
 if (!productionSmoke.includes("/api/cases/wage-intake")) failures.push("production smoke must exercise the wage Case API");
-if (!productionSmoke.includes('method: "DELETE"')) failures.push("production smoke must clean up its synthetic Case");
+if (!productionSmoke.includes("/api/cases/dismissal-intake")) failures.push("production smoke must exercise the dismissal Case API");
+if (!productionSmoke.includes('method: "DELETE"')) failures.push("production smoke must clean up its synthetic Cases");
 
 const renderPath = path.join(root, "render.yaml");
 if (fs.existsSync(renderPath)) {
