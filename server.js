@@ -14,6 +14,7 @@ import { listDocs, renderDoc, listPacks, renderPack } from "./lib/docs.js";
 import { bookings, leads, nomusa, accessLogs, adminStats, privacy, retentionSweep, events, EVENT_TYPES, partners, feedback } from "./lib/repo.js";
 import { notify, notifications, availableChannels } from "./lib/notify.js";
 import { createCaseRouter } from "./lib/case-routes.js";
+import { createProductHomeHandler } from "./lib/product-home.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -289,7 +290,7 @@ app.get("/api/admin/bookings", adminAuth, (req, res) => {
 app.post("/api/admin/booking/:id", adminAuth, (req, res) => {
   const fields = {};
   if (req.body?.status && STAT.includes(req.body.status)) fields.status = req.body.status;
-  if (typeof req.body?.memo === "string") fields.memo = clean(req.body.memo);
+  if (typeof req.body?.memo === "string") fields.memo = clean(req.body.memo;
   // 노무사 배정: id로 배정하면 표시용 이름도 함께 저장
   if (typeof req.body?.assigned_nomusa_id === "string") {
     fields.assigned_nomusa_id = clean(req.body.assigned_nomusa_id);
@@ -429,6 +430,9 @@ function rPage(title, inner) {
 
 // 서버 상태(프론트가 데모/실모드 판단용)
 app.get("/api/health", (req, res) => res.json({ ai: AI_ENABLED, provider: AI_INFO?.provider || null, model: AI_INFO?.model || null }));
+
+// 홈은 기존 index.html을 유지하면서 제품 전환용 런처 스크립트만 주입한다.
+app.get("/", createProductHomeHandler(__dirname));
 
 // 정적 파일 (프론트 + 생성된 정적 글/sitemap). extensions로 /articles/wage 도 동작.
 app.use(express.static(__dirname, {
