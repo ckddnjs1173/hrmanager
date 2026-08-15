@@ -15,6 +15,9 @@ const requiredFiles = [
   "retirement-intake.html",
   "retirement-intake-client.js",
   "retirement-intake.css",
+  "worktime-intake.html",
+  "worktime-intake-client.js",
+  "worktime-intake.css",
   "scripts/browser-e2e.mjs",
   "scripts/write-build-info.mjs",
   "scripts/production-smoke.mjs",
@@ -36,6 +39,12 @@ const requiredFiles = [
   "lib/retirement-resources.js",
   "lib/retirement-report.js",
   "lib/retirement-service.js",
+  "lib/worktime-intake.js",
+  "lib/worktime-rules.js",
+  "lib/worktime-actions.js",
+  "lib/worktime-resources.js",
+  "lib/worktime-report.js",
+  "lib/worktime-service.js",
 ];
 
 const failures = [];
@@ -72,6 +81,13 @@ for (const article of ["제4조", "제8조", "제9조", "제15조", "제20조"])
 if (!retirementLegalText.includes("moel.go.kr")) failures.push("retirement MOEL calculator source is missing");
 if (!retirementLegalText.includes("law.go.kr")) failures.push("retirement National Law Information Center source is missing");
 
+const worktimeLegalText = fs.readFileSync(path.join(root, "lib/worktime-rules.js"), "utf8");
+for (const article of ["제50조", "제53조", "제54조", "제55조", "제56조"]) {
+  if (!worktimeLegalText.includes(article)) failures.push(`working-time legal source missing: ${article}`);
+}
+if (!worktimeLegalText.includes("별표 1")) failures.push("working-time small-workplace scope source is missing");
+if (!worktimeLegalText.includes("law.go.kr")) failures.push("working-time National Law Information Center source is missing");
+
 const wageWorkspaceText = fs.readFileSync(path.join(root, "wage-workspace.js"), "utf8");
 if (!wageWorkspaceText.includes("sessionStorage")) failures.push("wage workspace must use sessionStorage for case access");
 if (wageWorkspaceText.includes("localStorage")) failures.push("wage workspace must not persist the case token in localStorage");
@@ -87,11 +103,17 @@ if (!retirementClientText.includes("sessionStorage")) failures.push("retirement 
 if (retirementClientText.includes("localStorage")) failures.push("retirement workspace must not persist the case token in localStorage");
 if (!retirementClientText.includes('querySelector("pre").textContent')) failures.push("retirement document preview must use plain text rendering");
 
+const worktimeClientText = fs.readFileSync(path.join(root, "worktime-intake-client.js"), "utf8");
+if (!worktimeClientText.includes("sessionStorage")) failures.push("working-time workspace must use sessionStorage for case access");
+if (worktimeClientText.includes("localStorage")) failures.push("working-time workspace must not persist the case token in localStorage");
+if (!worktimeClientText.includes('querySelector("pre").textContent')) failures.push("working-time document preview must use plain text rendering");
+
 const browserE2E = fs.readFileSync(path.join(root, "scripts/browser-e2e.mjs"), "utf8");
 if (!browserE2E.includes("chromium.launch")) failures.push("browser E2E must launch Chromium");
 if (!/viewport\s*:\s*\{\s*width\s*:\s*390\s*,\s*height\s*:\s*844\s*\}/.test(browserE2E)) failures.push("browser E2E must include a mobile viewport");
 if (!browserE2E.includes("/dismissal-intake")) failures.push("browser E2E must exercise the dismissal Case flow");
 if (!browserE2E.includes("/retirement-intake")) failures.push("browser E2E must exercise the retirement Case flow");
+if (!browserE2E.includes("/worktime-intake")) failures.push("browser E2E must exercise the working-time Case flow");
 if (!browserE2E.includes("사건 요약 복사")) failures.push("browser E2E must exercise Case Report export");
 
 const productionSmoke = fs.readFileSync(path.join(root, "scripts/production-smoke.mjs"), "utf8");
@@ -99,6 +121,7 @@ if (!productionSmoke.includes("EXPECTED_COMMIT")) failures.push("production smok
 if (!productionSmoke.includes("/api/cases/wage-intake")) failures.push("production smoke must exercise the wage Case API");
 if (!productionSmoke.includes("/api/cases/dismissal-intake")) failures.push("production smoke must exercise the dismissal Case API");
 if (!productionSmoke.includes("/api/cases/retirement-intake")) failures.push("production smoke must exercise the retirement Case API");
+if (!productionSmoke.includes("/api/cases/worktime-intake")) failures.push("production smoke must exercise the working-time Case API");
 if (!productionSmoke.includes('method: "DELETE"')) failures.push("production smoke must clean up its synthetic Cases");
 
 const renderPath = path.join(root, "render.yaml");

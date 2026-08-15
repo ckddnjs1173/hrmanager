@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>근로시간·연장/야간/휴일수당 사건 정리 · 인사야</title>
+  <meta name="description" content="근로시간과 연장·야간·휴일근로를 사건 단위로 정리하고 예상 미지급 수당, 휴게·주간 연장한도, 증거, 문서와 공식 절차를 확인합니다." />
+  <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+  <link rel="stylesheet" href="/wage-intake.css" />
+  <link rel="stylesheet" href="/wage-workspace.css" />
+  <link rel="stylesheet" href="/worktime-intake.css" />
+</head>
+<body>
+  <header class="case-topbar">
+    <a class="case-brand" href="/" aria-label="인사야 홈"><span class="case-brand-dot">●</span><span>인사야</span></a>
+    <div class="case-topbar-center">내 사건</div>
+    <a class="case-home-link" href="/">홈으로</a>
+  </header>
+
+  <main class="case-shell">
+    <section class="case-hero worktime-hero">
+      <div class="case-kicker">근로시간·연장/야간/휴일수당 · Case Workspace 베타</div>
+      <h1>언제 얼마나 더 일했는지 나누면<br />받아야 할 수당이 보여요.</h1>
+      <p>일반 고정근로시간제를 기준으로 평일 연장·야간, 휴일 8시간 이내·초과를 서로 겹치지 않게 나눠 계산합니다. 상시근로자 수에 따라 법정 가산 적용범위를 분리합니다.</p>
+    </section>
+
+    <section id="worktimeApp" class="case-app" aria-live="polite">
+      <div class="case-loading"><div class="case-spinner" aria-hidden="true"></div><p>사건 화면을 준비하고 있어요.</p></div>
+    </section>
+
+    <section class="case-safety" aria-label="개인정보 및 계산 안내">
+      <b>계산·개인정보 안내</b>
+      <p>접근 토큰은 이 탭 세션에만 보관합니다. 탄력·선택·재량근로, 감시·단속적 근로, 특례업종 등은 이 자동 계산 범위에서 제외하며 실제 근무표·출퇴근기록과 임금구성에 따라 결과가 달라질 수 있습니다.</p>
+    </section>
+  </main>
+
+  <script type="module" src="/worktime-intake-client.js"></script>
+</body>
+</html>

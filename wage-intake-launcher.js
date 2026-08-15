@@ -1,6 +1,7 @@
 const WAGE_TARGET = "/wage-intake";
 const DISMISSAL_TARGET = "/dismissal-intake";
 const RETIREMENT_TARGET = "/retirement-intake";
+const WORKTIME_TARGET = "/worktime-intake";
 
 function goToWageIntake() {
   window.location.assign(WAGE_TARGET);
@@ -14,6 +15,10 @@ function goToRetirementIntake() {
   window.location.assign(RETIREMENT_TARGET);
 }
 
+function goToWorktimeIntake() {
+  window.location.assign(WORKTIME_TARGET);
+}
+
 function injectStyles() {
   if (document.getElementById("wageIntakeLauncherStyle")) return;
   const style = document.createElement("style");
@@ -23,10 +28,12 @@ function injectStyles() {
     .case-launcher{border:1px solid #dce4ef;border-radius:18px;background:linear-gradient(135deg,#f8fbff 0%,#eef2f7 100%);padding:20px;display:flex;align-items:center;justify-content:space-between;gap:18px;box-shadow:0 10px 30px rgba(20,43,71,.07)}
     .case-launcher.dismissal{background:linear-gradient(135deg,#fffaf5 0%,#f5f7fb 100%)}
     .case-launcher.retirement{background:linear-gradient(135deg,#f7fff9 0%,#f3f7f5 100%)}
+    .case-launcher.worktime{background:linear-gradient(135deg,#f5f9ff 0%,#f4f7fb 100%)}
     .case-launcher-copy{min-width:0}
     .case-launcher-kicker{font-size:.72rem;font-weight:800;letter-spacing:.02em;color:#1b3a5b;margin-bottom:4px}
     .case-launcher.dismissal .case-launcher-kicker{color:#825a21}
     .case-launcher.retirement .case-launcher-kicker{color:#356449}
+    .case-launcher.worktime .case-launcher-kicker{color:#275d91}
     .case-launcher-title{font-size:1.06rem;font-weight:800;color:#0b0d12;line-height:1.35}
     .case-launcher-desc{font-size:.82rem;color:#6b7280;margin-top:4px;line-height:1.55}
     .case-launcher-btn{flex-shrink:0;border:0;border-radius:12px;background:#1b3a5b;color:#fff;padding:12px 16px;font:inherit;font-size:.86rem;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(27,58,91,.16)}
@@ -35,6 +42,8 @@ function injectStyles() {
     .case-launcher.dismissal .case-launcher-btn:hover{background:#4f391d}
     .case-launcher.retirement .case-launcher-btn{background:#356449;box-shadow:0 6px 16px rgba(53,100,73,.16)}
     .case-launcher.retirement .case-launcher-btn:hover{background:#294f39}
+    .case-launcher.worktime .case-launcher-btn{background:#275d91;box-shadow:0 6px 16px rgba(39,93,145,.16)}
+    .case-launcher.worktime .case-launcher-btn:hover{background:#1e4b77}
     @media(max-width:700px){.case-launcher{align-items:stretch;flex-direction:column}.case-launcher-btn{width:100%;padding:13px 16px}}
   `;
   document.head.appendChild(style);
@@ -72,10 +81,19 @@ function injectHomeEntries() {
       </div>
       <button class="case-launcher-btn" type="button" data-open-retirement>퇴직급여 사건 시작하기</button>
     </div>
+    <div class="case-launcher worktime" data-worktime-case-launcher>
+      <div class="case-launcher-copy">
+        <div class="case-launcher-kicker">내 사건 · 근로시간·수당</div>
+        <div class="case-launcher-title">연장·야간·휴일근로 수당이 맞게 지급됐나요?</div>
+        <div class="case-launcher-desc">상시근로자 수와 시간대별 실제 근로시간을 기준으로 가산수당, 주간 연장한도와 휴게 문제를 함께 정리합니다.</div>
+      </div>
+      <button class="case-launcher-btn" type="button" data-open-worktime>근로시간 사건 시작하기</button>
+    </div>
   `;
   stack.querySelector("[data-open-wage]")?.addEventListener("click", goToWageIntake);
   stack.querySelector("[data-open-dismissal]")?.addEventListener("click", goToDismissalIntake);
   stack.querySelector("[data-open-retirement]")?.addEventListener("click", goToRetirementIntake);
+  stack.querySelector("[data-open-worktime]")?.addEventListener("click", goToWorktimeIntake);
 
   const before = greeting.querySelector(".he-label");
   if (before) greeting.insertBefore(stack, before);
@@ -90,6 +108,7 @@ function connectSolveFlow() {
     if (key === "wage") return goToWageIntake();
     if (["fire", "dismissal"].includes(key)) return goToDismissalIntake();
     if (["retirement", "severance"].includes(key)) return goToRetirementIntake();
+    if (["worktime", "overtime", "premium_pay"].includes(key)) return goToWorktimeIntake();
     return original.call(this, key, ...rest);
   }
   wrapped.__caseWorkspaceWrapped = true;
@@ -112,6 +131,11 @@ function enhanceExistingButtons() {
     if (retirement) {
       event.preventDefault();
       return goToRetirementIntake();
+    }
+    const worktime = event.target?.closest?.("[data-worktime-intake]");
+    if (worktime) {
+      event.preventDefault();
+      return goToWorktimeIntake();
     }
   });
 }
