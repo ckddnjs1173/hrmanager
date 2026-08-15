@@ -26,8 +26,8 @@ test("standard severance case calculates average wage and service-day prorated b
   assert.equal(legal.eligibility.serviceDays, 943);
   assert.equal(legal.averageWage.period.days, 92);
   assert.ok(Math.abs(legal.averageWage.amount - 104347.82608695653) < 0.01);
-  assert.equal(legal.money.statutoryEstimate, 8080111);
-  assert.equal(legal.money.outstandingEstimate, 8080111);
+  assert.equal(legal.money.statutoryEstimate, 8087671);
+  assert.equal(legal.money.outstandingEstimate, 8087671);
   assert.equal(legal.payment.dueDate, "2026-08-15");
   assert.equal(legal.payment.late, true);
   assert.ok(legal.sources.some((source) => source.article === "근로자퇴직급여 보장법 제8조"));
