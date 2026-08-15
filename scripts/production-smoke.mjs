@@ -48,7 +48,7 @@ async function assertPublicPages() {
   assert.equal(health.response.status, 200, "health endpoint must return 200");
   assert.equal(typeof health.body?.ai, "boolean");
 
-  for (const path of ["/", "/wage-intake", "/dismissal-intake", "/retirement-intake"]) {
+  for (const path of ["/", "/wage-intake", "/dismissal-intake", "/retirement-intake", "/worktime-intake"]) {
     const response = await fetch(`${BASE}${path}`, { headers: { "cache-control": "no-cache" } });
     assert.equal(response.status, 200, `${path} must return 200`);
     const text = await response.text();
@@ -207,10 +207,64 @@ async function exerciseSyntheticRetirementCase() {
   }
 }
 
+async function exerciseSyntheticWorktimeCase() {
+  let caseId = null;
+  let token = null;
+  try {
+    const created = await fetchJson("/api/cases/worktime-intake", {
+      method: "POST",
+      body: JSON.stringify({ facts: {
+        referenceDate: "2026-08-16",
+        workplaceEmployeeCount: 8,
+        standardWorkSystem: true,
+        ordinaryHourlyWage: 20000,
+        baseWageForExtraHoursPaid: true,
+        amountAlreadyPaid: 0,
+        weekdayOvertimeDayHours: 10,
+        weekdayOvertimeNightHours: 2,
+        holidayDayUpTo8Hours: 0,
+        holidayNightUpTo8Hours: 0,
+        holidayDayOver8Hours: 0,
+        holidayNightOver8Hours: 0,
+        maxWeeklyOvertimeHours: 13,
+        representativeDailyWorkHours: 9,
+        representativeBreakMinutes: 30,
+        evidence: { attendanceRecord: "have", workSchedule: "have", payslip: "planned" },
+      } }),
+    });
+
+    assert.equal(created.response.status, 201, "synthetic working-time Case must be created");
+    caseId = created.body?.case?.id;
+    token = created.body?.accessToken;
+    assert.ok(caseId && token);
+    assert.equal(created.body?.legal?.fivePlus, true);
+    assert.equal(created.body?.legal?.premium?.outstandingEstimate, 140000);
+    assert.equal(created.body?.legal?.weeklyOvertime?.status, "possible_over_12_hour_limit");
+    assert.equal(created.body?.legal?.break?.status, "possible_shortfall");
+    assert.ok(created.body?.legal?.sources?.some((source) => source.article === "근로기준법 제56조"));
+
+    const headers = { "x-case-token": token };
+    const loaded = await fetchJson(`/api/cases/${encodeURIComponent(caseId)}/worktime-intake`, { headers });
+    assert.equal(loaded.response.status, 200);
+    const documentResult = await fetchJson(`/api/cases/${encodeURIComponent(caseId)}/worktime-document/certmail`, {
+      method: "POST", headers, body: JSON.stringify({ values: { to: "운영 스모크 사업장" } }),
+    });
+    assert.equal(documentResult.response.status, 200);
+    assert.match(documentResult.body?.document?.text || "", /140,000원/);
+    const report = await fetchJson(`/api/cases/${encodeURIComponent(caseId)}/worktime-report`, { headers });
+    assert.equal(report.response.status, 200);
+    assert.match(report.body?.text || "", /근로시간·연장\/야간\/휴일수당 사건 요약/);
+    assert.match(report.body?.text || "", /140,000원/);
+  } finally {
+    await cleanupCase(caseId, token);
+  }
+}
+
 const info = await waitForExpectedDeploy();
 console.log(`✅ expected Render deploy live: ${info.commit.slice(0, 12)} · ${info.branch || "branch unknown"}`);
 await assertPublicPages();
 await exerciseSyntheticWageCase();
 await exerciseSyntheticDismissalCase();
 await exerciseSyntheticRetirementCase();
-console.log(`✅ production smoke passed: wage + dismissal + retirement · ${BASE}`);
+await exerciseSyntheticWorktimeCase();
+console.log(`✅ production smoke passed: wage + dismissal + retirement + working-time · ${BASE}`);
