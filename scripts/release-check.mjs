@@ -12,6 +12,9 @@ const requiredFiles = [
   "dismissal-intake.html",
   "dismissal-intake-client.js",
   "dismissal-intake.css",
+  "retirement-intake.html",
+  "retirement-intake-client.js",
+  "retirement-intake.css",
   "scripts/browser-e2e.mjs",
   "scripts/write-build-info.mjs",
   "scripts/production-smoke.mjs",
@@ -27,6 +30,12 @@ const requiredFiles = [
   "lib/dismissal-resources.js",
   "lib/dismissal-report.js",
   "lib/dismissal-service.js",
+  "lib/retirement-intake.js",
+  "lib/retirement-rules.js",
+  "lib/retirement-actions.js",
+  "lib/retirement-resources.js",
+  "lib/retirement-report.js",
+  "lib/retirement-service.js",
 ];
 
 const failures = [];
@@ -56,6 +65,13 @@ for (const article of ["제23조", "제26조", "제27조", "제28조"]) {
 }
 if (!dismissalLegalText.includes("nlrc.go.kr")) failures.push("dismissal labor-board source is missing");
 
+const retirementLegalText = fs.readFileSync(path.join(root, "lib/retirement-rules.js"), "utf8");
+for (const article of ["제4조", "제8조", "제9조", "제15조", "제20조"]) {
+  if (!retirementLegalText.includes(article)) failures.push(`retirement legal source missing: ${article}`);
+}
+if (!retirementLegalText.includes("moel.go.kr")) failures.push("retirement MOEL calculator source is missing");
+if (!retirementLegalText.includes("law.go.kr")) failures.push("retirement National Law Information Center source is missing");
+
 const wageWorkspaceText = fs.readFileSync(path.join(root, "wage-workspace.js"), "utf8");
 if (!wageWorkspaceText.includes("sessionStorage")) failures.push("wage workspace must use sessionStorage for case access");
 if (wageWorkspaceText.includes("localStorage")) failures.push("wage workspace must not persist the case token in localStorage");
@@ -66,16 +82,23 @@ if (!dismissalClientText.includes("sessionStorage")) failures.push("dismissal wo
 if (dismissalClientText.includes("localStorage")) failures.push("dismissal workspace must not persist the case token in localStorage");
 if (!dismissalClientText.includes('querySelector("pre").textContent')) failures.push("dismissal document preview must use plain text rendering");
 
+const retirementClientText = fs.readFileSync(path.join(root, "retirement-intake-client.js"), "utf8");
+if (!retirementClientText.includes("sessionStorage")) failures.push("retirement workspace must use sessionStorage for case access");
+if (retirementClientText.includes("localStorage")) failures.push("retirement workspace must not persist the case token in localStorage");
+if (!retirementClientText.includes('querySelector("pre").textContent')) failures.push("retirement document preview must use plain text rendering");
+
 const browserE2E = fs.readFileSync(path.join(root, "scripts/browser-e2e.mjs"), "utf8");
 if (!browserE2E.includes("chromium.launch")) failures.push("browser E2E must launch Chromium");
-if (!browserE2E.includes("viewport: { width: 390, height: 844 }")) failures.push("browser E2E must include a mobile viewport");
+if (!/viewport\s*:\s*\{\s*width\s*:\s*390\s*,\s*height\s*:\s*844\s*\}/.test(browserE2E)) failures.push("browser E2E must include a mobile viewport");
 if (!browserE2E.includes("/dismissal-intake")) failures.push("browser E2E must exercise the dismissal Case flow");
+if (!browserE2E.includes("/retirement-intake")) failures.push("browser E2E must exercise the retirement Case flow");
 if (!browserE2E.includes("사건 요약 복사")) failures.push("browser E2E must exercise Case Report export");
 
 const productionSmoke = fs.readFileSync(path.join(root, "scripts/production-smoke.mjs"), "utf8");
 if (!productionSmoke.includes("EXPECTED_COMMIT")) failures.push("production smoke must verify the deployed commit");
 if (!productionSmoke.includes("/api/cases/wage-intake")) failures.push("production smoke must exercise the wage Case API");
 if (!productionSmoke.includes("/api/cases/dismissal-intake")) failures.push("production smoke must exercise the dismissal Case API");
+if (!productionSmoke.includes("/api/cases/retirement-intake")) failures.push("production smoke must exercise the retirement Case API");
 if (!productionSmoke.includes('method: "DELETE"')) failures.push("production smoke must clean up its synthetic Cases");
 
 const renderPath = path.join(root, "render.yaml");
