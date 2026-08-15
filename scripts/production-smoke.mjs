@@ -48,7 +48,7 @@ async function assertPublicPages() {
   assert.equal(health.response.status, 200, "health endpoint must return 200");
   assert.equal(typeof health.body?.ai, "boolean");
 
-  for (const path of ["/", "/wage-intake", "/dismissal-intake"]) {
+  for (const path of ["/", "/wage-intake", "/dismissal-intake", "/retirement-intake"]) {
     const response = await fetch(`${BASE}${path}`, { headers: { "cache-control": "no-cache" } });
     assert.equal(response.status, 200, `${path} must return 200`);
     const text = await response.text();
@@ -160,9 +160,57 @@ async function exerciseSyntheticDismissalCase() {
   }
 }
 
+async function exerciseSyntheticRetirementCase() {
+  let caseId = null;
+  let token = null;
+  try {
+    const created = await fetchJson("/api/cases/retirement-intake", {
+      method: "POST",
+      body: JSON.stringify({ facts: {
+        benefitType: "severance_pay",
+        employmentStartDate: "2024-01-01",
+        retirementDate: "2026-08-01",
+        averageWeeklyScheduledHours: 40,
+        hadUnder15HourPeriods: false,
+        hasAverageWageExcludedPeriod: false,
+        threeMonthWageTotal: 9200000,
+        annualBonusTotal12m: 1200000,
+        annualLeaveAllowanceForAverageWage: 400000,
+        ordinaryDailyWage: 100000,
+        amountAlreadyPaid: 0,
+        evidence: { employmentContract: "have", payslips3m: "have", bankHistory: "planned" },
+      } }),
+    });
+
+    assert.equal(created.response.status, 201, "synthetic retirement Case must be created");
+    caseId = created.body?.case?.id;
+    token = created.body?.accessToken;
+    assert.ok(caseId && token);
+    assert.equal(created.body?.legal?.eligibility?.eligible, true);
+    assert.equal(created.body?.legal?.money?.outstandingEstimate, 8087671);
+    assert.ok(created.body?.legal?.sources?.some((source) => source.article === "근로자퇴직급여 보장법 제8조"));
+
+    const headers = { "x-case-token": token };
+    const loaded = await fetchJson(`/api/cases/${encodeURIComponent(caseId)}/retirement-intake`, { headers });
+    assert.equal(loaded.response.status, 200);
+    const documentResult = await fetchJson(`/api/cases/${encodeURIComponent(caseId)}/retirement-document/certmail`, {
+      method: "POST", headers, body: JSON.stringify({ values: { to: "운영 스모크 사업장" } }),
+    });
+    assert.equal(documentResult.response.status, 200);
+    assert.match(documentResult.body?.document?.text || "", /8,087,671원/);
+    const report = await fetchJson(`/api/cases/${encodeURIComponent(caseId)}/retirement-report`, { headers });
+    assert.equal(report.response.status, 200);
+    assert.match(report.body?.text || "", /퇴직금·퇴직연금 사건 요약/);
+    assert.match(report.body?.text || "", /8,087,671원/);
+  } finally {
+    await cleanupCase(caseId, token);
+  }
+}
+
 const info = await waitForExpectedDeploy();
 console.log(`✅ expected Render deploy live: ${info.commit.slice(0, 12)} · ${info.branch || "branch unknown"}`);
 await assertPublicPages();
 await exerciseSyntheticWageCase();
 await exerciseSyntheticDismissalCase();
-console.log(`✅ production smoke passed: wage + dismissal · ${BASE}`);
+await exerciseSyntheticRetirementCase();
+console.log(`✅ production smoke passed: wage + dismissal + retirement · ${BASE}`);

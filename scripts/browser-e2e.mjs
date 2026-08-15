@@ -166,6 +166,60 @@ async function completeDismissalJourney(browser) {
   await context.close();
 }
 
+async function completeRetirementJourney(browser) {
+  const context = await browser.newContext({ viewport: { width: 1365, height: 900 }, permissions: ["clipboard-read", "clipboard-write"] });
+  const page = await context.newPage();
+  const consoleErrors = collectConsoleErrors(page);
+  await page.goto(`${BASE}/retirement-intake`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "퇴직급여 사건 만들기" }).waitFor();
+
+  await choose(page, "benefitType", "severance_pay");
+  await page.locator('[name="employmentStartDate"]').fill("2024-01-01");
+  await page.locator('[name="retirementDate"]').fill("2026-08-01");
+  await page.locator('[name="averageWeeklyScheduledHours"]').fill("40");
+  await page.locator('[name="hadUnder15HourPeriods"]').selectOption("false");
+  await page.getByRole("button", { name: "퇴직급여 사건 만들기" }).click();
+  await page.locator(".retirement-workspace").waitFor();
+
+  await page.locator('[name="hasAverageWageExcludedPeriod"]').selectOption("false");
+  await page.getByRole("button", { name: "계산 정보 저장·재계산" }).click();
+  await page.locator('[name="threeMonthWageTotal"]').waitFor();
+  await page.locator('[name="threeMonthWageTotal"]').fill("9200000");
+  await page.locator('[name="annualBonusTotal12m"]').fill("1200000");
+  await page.locator('[name="annualLeaveAllowanceForAverageWage"]').fill("400000");
+  await page.locator('[name="ordinaryDailyWage"]').fill("100000");
+  await page.locator('[name="amountAlreadyPaid"]').fill("0");
+  await page.getByRole("button", { name: "계산 정보 저장·재계산" }).click();
+  await page.waitForTimeout(100);
+
+  const moneyText = await page.locator("#retirement-money").innerText();
+  assert.match(moneyText, /8,087,671원/);
+  assert.match(moneyText, /2026-05-01 ~ 2026-07-31/);
+  const sourceText = await page.locator("#retirement-sources").innerText();
+  assert.match(sourceText, /근로자퇴직급여 보장법 제8조/);
+  assert.match(sourceText, /고용노동부/);
+
+  await page.locator('select[name="employmentContract"]').selectOption("have");
+  await page.locator('select[name="payslips3m"]').selectOption("have");
+  await page.locator('select[name="bankHistory"]').selectOption("planned");
+  await page.getByRole("button", { name: "증거 상태 저장" }).click();
+
+  await page.locator("#retirement-documents").waitFor();
+  await page.getByRole("button", { name: /퇴직급여 지급 요청 내용증명/ }).click();
+  await page.locator("#retirement-doc-preview").waitFor();
+  assert.match(await page.locator("#retirement-doc-preview pre").innerText(), /8,087,671원/);
+  await page.locator("#retirement-doc-preview [data-close]").click();
+
+  await page.getByRole("button", { name: "사건 요약 복사" }).click();
+  await page.getByRole("button", { name: "사건 요약 복사됨" }).waitFor();
+  const report = await page.evaluate(() => navigator.clipboard.readText());
+  assert.match(report, /퇴직금·퇴직연금 사건 요약/);
+  assert.match(report, /8,087,671원/);
+  assert.match(await page.locator("#retirement-procedures").innerText(), /노동포털/);
+  assert.deepEqual(consoleErrors, [], `retirement browser console errors:\n${consoleErrors.join("\n")}`);
+  await context.close();
+}
+
 async function verifyMobileLayout(browser, path, buttonName) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
   const page = await context.newPage();
@@ -183,9 +237,11 @@ try {
   browser = await chromium.launch({ headless: true });
   await completeWageJourney(browser);
   await completeDismissalJourney(browser);
+  await completeRetirementJourney(browser);
   await verifyMobileLayout(browser, "/wage-intake", "사건 만들고 계속하기");
   await verifyMobileLayout(browser, "/dismissal-intake", "사건 만들고 적용범위 확인");
-  console.log("✅ Chromium E2E passed: wage + dismissal desktop journeys and mobile viewports");
+  await verifyMobileLayout(browser, "/retirement-intake", "퇴직급여 사건 만들기");
+  console.log("✅ Chromium E2E passed: wage + dismissal + retirement desktop journeys and mobile viewports");
 } finally {
   if (browser) await browser.close().catch(() => {});
   server.kill("SIGTERM");
