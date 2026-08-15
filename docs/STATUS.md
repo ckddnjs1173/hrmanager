@@ -1,15 +1,17 @@
-# 인사야 1.0 구현 현황
+# 인사야 1.0 구현 현황 — Release Candidate
 
-> **Source of Truth:** 현재 `main`의 실제 구현·CI·운영 검증 상태를 기록한다.
+> **Source of Truth:** 현재 `main`의 실제 구현·CI·운영 검증 상태
 > **기준일:** 2026-08-16
 > **Production:** https://insaya.onrender.com/
-> **마지막 기능 기준 커밋:** `e9625e4f80981abd43aafb41790c2fd8079be6be`
+> **코드 기준 RC 커밋:** `c3cbf0df2a2c712c1bdc64b44417f3fcaf6d3e03`
 
 ---
 
 ## 1. 현재 결론
 
-인사야 1.0의 **핵심 5개 Case vertical slice**는 모두 구현되어 실제 Render 운영 환경까지 검증됐다.
+인사야 1.0은 **코드·기능 기준 Release Candidate 상태**다.
+
+핵심 5개 노동사건은 모두 전용 Case Workspace, 결정론 법률/계산, 보호 API, 문서·공식 절차, 실제 Chromium 회귀, Render 운영 스모크까지 닫혔다.
 
 ```text
 ✅ 임금체불
@@ -19,86 +21,57 @@
 ✅ 연차유급휴가·미사용수당
 ```
 
-각 Case는 단순 계산기나 설명 페이지가 아니라 다음 흐름을 가진다.
+각 Case의 기본 사용자 흐름:
 
 ```text
 사건 생성
-→ 필수 사실 구조화
-→ 적용범위/법률 규칙
+→ 핵심 사실 구조화
+→ 적용범위 / 법률 버전
 → 금액 또는 핵심 판단
 → 증거 상태
 → 다음 행동 1개
 → 공식 근거
 → 문서 초안
 → 공식기관 절차
-→ 사건 요약 내보내기
+→ Case Report
 → 사건 삭제
 ```
 
-현재 개발 단계는 **핵심 Case 증설 단계에서 공통화·운영 안정화 단계로 전환**한다.
+**현재 기능 개발의 핵심 범위는 완료했다.**
+
+실제 장기 운영 출시를 막는 남은 P0는 하나다.
+
+```text
+🔴 영속 저장소 활성화 + 실제 backup/restore rehearsal
+```
+
+백업/복구 코드와 runbook은 이미 준비되어 있다. 비용이 발생할 수 있는 Render persistent disk 또는 외부 영속 DB 선택만 별도 운영 결정으로 남아 있다.
 
 ---
 
-## 2. 검증 상태
+## 2. 핵심 5개 Case
 
-### GitHub CI
+| Case | 진입 경로 | 운영 검증 |
+|---|---|---|
+| 임금체불 | `/wage-intake` | ✅ |
+| 해고·권고사직 | `/dismissal-intake` | ✅ |
+| 퇴직금·퇴직연금 | `/retirement-intake` | ✅ |
+| 근로시간·수당 | `/worktime-intake` | ✅ |
+| 연차유급휴가·미사용수당 | `/annual-leave-intake` | ✅ |
 
-`main`과 모든 PR은 `.github/workflows/ci.yml`을 기준으로 검증한다.
-
-1. `check`
-   - `npm ci`
-   - Node 회귀 테스트
-   - 정적 build
-   - Release gate
-2. `browser-e2e`
-   - 실제 Chromium 설치
-   - 임금체불·해고·퇴직급여·근로시간 전체 사용자 여정
-   - 연차 전용 전체 사용자 여정
-   - 390×844 모바일 overflow/주요 CTA 확인
-3. `production-smoke` (`main` push만)
-   - Render의 `build-info.json` 커밋 SHA가 `github.sha`와 일치하는지 확인
-   - 운영 URL에서 합성 Case 생성
-   - 법률/금액 결과 확인
-   - 문서 생성 확인
-   - Case Report 확인
-   - 합성 Case 즉시 삭제
-
-### 현재 자동 검증 기준
-
-- Node 회귀 테스트: **92개 통과**
-- Release gate: 통과
-- Chromium E2E: 통과
-- Render exact-commit production smoke: 통과
-
-운영 스모크는 실제 사용자 개인정보를 사용하지 않고 PII 없는 합성 Case만 사용한다.
+공통 보호 API는 `lib/case-routes.js`가 `lib/case-domain-registry.js`를 기준으로 생성한다.
 
 ---
 
-## 3. 핵심 5개 Case
+## 3. Case 공통 구조
 
-| Case | 진입 경로 | 주요 서버 도메인 | 운영 검증 |
-|---|---|---|---|
-| 임금체불 | `/wage-intake` | `lib/wage-*`, `lib/legal-rules.js` | ✅ |
-| 해고·권고사직 | `/dismissal-intake` | `lib/dismissal-*` | ✅ |
-| 퇴직금·퇴직연금 | `/retirement-intake` | `lib/retirement-*` | ✅ |
-| 근로시간·수당 | `/worktime-intake` | `lib/worktime-*` | ✅ |
-| 연차 | `/annual-leave-intake` | `lib/annual-leave-*` | ✅ |
+### Case 저장 모델
 
-모든 전용 Case API는 `lib/case-routes.js`에서 보호 토큰 기반으로 노출한다.
-
----
-
-## 4. Case 공통 기반
-
-### 저장 모델
-
-Case는 SQLite 저장소에 구조화된 상태로 저장한다.
-
-주요 필드:
+주요 구조화 필드:
 
 - `case_type`
 - `status`
-- 사건일/기간/고용기간
+- 사건일 / 기간 / 고용기간
 - `facts`
 - `missing_facts`
 - `issues`
@@ -109,204 +82,260 @@ Case는 SQLite 저장소에 구조화된 상태로 저장한다.
 - `documents`
 - `meta`
 
-대화 로그가 없어도 현재 사건 상태를 이해할 수 있도록 한다.
+대화 로그 없이도 현재 사건 상태를 복원할 수 있도록 한다.
 
 ### 접근 보호
 
 - Case 생성 시 opaque access token 발급
-- 토큰 원문은 DB에 저장하지 않음
-- 브라우저는 `sessionStorage`에만 토큰 저장
-- Case API는 `x-case-token` 또는 Bearer token 검증
-- 만료 토큰 차단
-- 삭제 시 token revoke
-- 방치 Case 보존정책 sweep 존재
+- 토큰 원문 DB 미저장
+- 브라우저는 `sessionStorage`에만 저장
+- `x-case-token` 또는 Bearer 검증
+- token expiry / revoke
+- Case 삭제 처리
+- 방치 사건 retention sweep
 
-### 출력 안전
+### 문서 안전
 
-- Case 문서 preview는 서버가 만든 문서를 HTML로 주입하지 않고 plain text로 렌더링
-- 사용자가 입력한 값이 문서 preview DOM에서 실행되지 않도록 유지
+Case 문서는 서버가 생성하고 browser preview는 `textContent`로 표시한다. 사용자 입력을 HTML로 실행하지 않는다.
 
 ---
 
-## 5. Case별 구현 범위
+## 4. Case별 완료 범위
 
-### 임금체불 — ✅ Production verified
+### 임금체불 — ✅
 
 - 재직/퇴직, 미지급 항목, 기간, 약정임금 Intake
-- 월 전기간 임금 principal 계산
-- 부분월은 임의 일할계산 금지, 사용자 확인 금액 요구
+- 전월 임금 principal 계산
+- 부분월 임의 일할계산 금지
 - 사건 기준일 최저임금 버전
 - 5인 이상 연장·야간·휴일 가산 baseline
 - 퇴직 후 금품청산/지연이자 baseline
-- 증거 체크
-- 내용증명/진정서
-- 노동포털 연결
-- Case Report
+- 증거·문서·노동포털·Case Report
 
-### 해고·권고사직 — ✅ Production verified
+### 해고·권고사직 — ✅
 
 - 해고/권고사직 성격 분리
-- 상시 5명 이상 구제 baseline 분기
-- 해고예고와 부당해고 구제를 별도 쟁점으로 관리
-- 계속근로 3개월 경계 달력 기준 처리
-- 해고예고수당 잠정 계산
+- 5인 이상 부당해고 구제 baseline
+- 해고예고와 부당해고 구제 분리
+- 계속근로 3개월 달력 경계
+- 해고예고수당 계산
 - 근로기준법 제23·26·27·28조 및 노동위원회 근거
-- 구제신청/문서/공식 절차/Case Report
+- 구제신청·문서·Case Report
 
-### 퇴직금·퇴직연금 — ✅ Production verified
+### 퇴직금·퇴직연금 — ✅
 
 - 일반 퇴직금 / DB / DC / 유형 모름 분기
 - 1년·주 15시간 적용범위
 - 평균임금 직전 3개월 baseline
-- 통상임금 하한 적용
-- 평균임금 제외기간은 자동 추정 금지
-- 주 15시간 미만 혼재기간은 qualifying service 요구
-- DC는 평균임금식과 분리
-- 문서/노동포털/Case Report
+- 통상임금 하한
+- 평균임금 제외기간 자동 추정 금지
+- 주 15시간 미만 혼재기간 qualifying service 요구
+- DC 별도 계산
+- 문서·노동포털·Case Report
 
-### 근로시간·연장/야간/휴일수당 — ✅ Production verified
+### 근로시간·연장/야간/휴일수당 — ✅
 
 - 일반 고정근로시간제 baseline
 - 상시근로자 수 분기
 - 통상시급 + 6개 배타적 시간 bucket
-- 연장·야간·휴일 가산의 중복을 명시적으로 계산
-- 주 12시간 연장한도 별도 판단
-- 휴게시간 별도 판단
-- 4명 이하에서는 제56조 가산을 자동 적용하지 않음
-- 탄력·선택·재량 등 대체 근로시간제는 자동계산 차단
-- 문서/노동포털/Case Report
+- 연장·야간·휴일 가산 중복 계산
+- 주 12시간 연장한도 판단
+- 휴게시간 판단
+- 4명 이하 제56조 가산 자동 적용 금지
+- 대체 근로시간제 자동계산 차단
+- 문서·노동포털·Case Report
 
-### 연차유급휴가·미사용수당 — ✅ Production verified
+### 연차유급휴가·미사용수당 — ✅
 
-- 주 15시간 및 사업장 규모 적용범위
-- 최초 1년 월 단위 발생 baseline
-- 1년 이상 최신 연차 발생 cohort 계산
-- 365일 종료 / 다음 발생일 존속 경계 반영
-- 출근율 80% 기준과 저출근율 월별 발생 분기
-- 장기근속 가산 및 25일 상한 baseline
-- 발생일수를 자동 미사용일수로 간주하지 않음
-- 실제 연차대장 확인 미사용일수로 수당 계산
-- 사용촉진 사실만으로 수당 0원 자동 확정 금지
-- 2026-08-20, 2027-06-10 법률 버전 경계 관리
-- 문서/노동포털/Case Report
-
----
-
-## 6. 기존 제품 기능
-
-핵심 Case 외 기존 기능은 유지되고 있다.
-
-| 영역 | 상태 | 비고 |
-|---|---|---|
-| AI 노무 상담 | 🟢 유지 | Anthropic/Gemini 등 provider 구성, 키 없으면 데모 |
-| 상담 요약 | 🟢 유지 | 구조화 요약 API |
-| 계산기 | 🟡 Legacy + Case 연결 진행 | 기존 27종 독립 계산기와 Case 결정론 계산이 공존 |
-| 문서센터 | 🟢 유지 | 문서 24종+ / 문서팩, Case prefill 사용 |
-| 노동 가이드/SEO | 🟢 유지 | 정적 build 유지 |
-| 노무사 정보 | 🟢 유지 | 공개 검색/프로필 데이터 |
-| 상담 요청/전문가 전달 | 🟢 유지 | 동의·토큰·요약 전달 흐름 |
-| Admin/운영 | 🟡 Legacy 유지 | 제품화 우선순위 후단 |
-
-새 개발은 Legacy 도구 개수 증설보다 Case 중심 통합을 우선한다.
+- 주 15시간·사업장 규모 적용범위
+- 최초 1년 월 단위 발생
+- 1년 이상 최신 연차 발생 cohort
+- 365일 종료 / 발생일 존속 경계
+- 출근율 80% 분기
+- 장기근속 가산·25일 상한
+- 발생일수와 실제 미사용일수 분리
+- 실제 연차대장 미사용일수 기준 수당
+- 사용촉진만으로 수당 0원 자동 확정 금지
+- 2026-08-20 / 2027-06-10 법률 버전 경계
+- 문서·노동포털·Case Report
 
 ---
 
-## 7. Refactor Phase 현황
+## 5. 공통화 완료 상태
 
-| Phase | 상태 | 현재 판단 |
-|---|---|---|
-| A. 테스트/CI 안전망 | 🟢 완료 | Node + Release gate + Chromium + Production smoke |
-| B. 프론트 분리 | 🟡 진행 | Case별 전용 HTML/CSS/JS 분리. 메인 `index.html`은 여전히 큼 |
-| C. Legal / Calculator 분리 | 🟡 진행 | Case별 결정론 규칙 모듈은 존재하나 공통 registry/source 구조 필요 |
-| D. Content Source 분리 | 🔴 미착수 | Legacy 콘텐츠가 `index.html`과 강결합 |
-| E. Server 도메인 분리 | 🟡 진행 | Case router는 분리됨. `server.js`의 기타 API 책임은 여전히 큼 |
+### Case Registry — ✅
 
----
+`lib/case-domain-registry.js`
 
-## 8. 지금부터의 개발 우선순위
+5개 Case의 Case id, UI/intake/report/document path와 create/get/update/report/document service를 중앙 등록한다. `case-routes.js`의 반복 route wiring을 제거했다.
 
-### P0 — 운영 데이터 영속성
+### Legal Registry — ✅ 기반 구축
 
-현재 운영 저장소는 SQLite이고 Render 무료 파일시스템은 영속 저장을 보장하지 않는다.
+`lib/legal-registry.js`
 
-남은 결정:
+- 5개 Case legal-context 진입점 등록
+- 공식 source metadata 공통 조회
+- shared statute source canonical dedupe
+- source metadata conflict validation
 
-1. Render persistent disk 등 영속 스토리지 사용 여부
-2. `DB_PATH`를 영속 경로로 고정
-3. 백업/복구 runbook
-4. 복구 테스트
+기존 계산식을 한 번에 옮기지 않고 adapter registry부터 구축했다.
 
-**비용이 발생할 수 있는 인프라는 자동 활성화하지 않는다.** 코드에서는 `REQUIRE_PERSISTENT_DB=1` release guard를 사용할 수 있다.
+### Runtime Readiness — ✅
 
-### P1 — Case / Legal 공통화
+`GET /api/cases/readiness`
 
-1. Case descriptor/registry 도입
-2. 반복되는 Case route 연결을 공통 router contract로 축소
-3. 법률 source metadata 공통 registry
-4. rule version/result contract 통일
-5. 계산 결과의 `result/formula/assumptions/legalBasis/validFrom/warnings` 형태 정리
+확인 항목:
 
-### P1 — 프론트 공통화
+- 실행 중 배포 commit
+- SQLite query 가능 여부
+- foreign keys
+- 필수 앱 테이블
+- 5개 Case registry
+- Legal registry
+- persistence requirement 상태
+- AI mode
 
-1. 5개 Case Workspace 공통 shell/token/api/document/report 유틸 추출
-2. 공통 CSS를 별도 파일로 이동
-3. 메인 launcher를 data-driven registry로 전환하되 회귀 contract 유지
-4. 메인 `index.html` 책임 축소
+민감한 DB 경로는 반환하지 않는다.
 
-### P1 — Server 책임 분리
-
-Case router 패턴을 기준으로 다음을 점진 분리한다.
-
-- chat
-- documents
-- experts
-- bookings/leads
-- admin
-
-endpoint contract는 유지한다.
-
-### P2 — Content Source 분리
-
-- 가이드/계산기/법률 원본을 `content/`로 이동
-- UI와 SEO build가 같은 원본을 사용
-- 생성물과 원본을 명확히 구분
+Render 자체 liveness는 rate-limit 밖의 `/api/health`를 유지하고, 상세 readiness는 main production smoke에서 검증한다.
 
 ---
 
-## 9. 운영상 남은 리스크
+## 6. CI / Release 검증
 
-### 영속 DB — 🔴
+### PR
 
-무료 Render 인스턴스 재시작/재배포 시 SQLite 파일 유실 가능성이 있다. 실제 사용자 사건을 장기간 보관하려면 반드시 해결해야 한다.
+```text
+check
+├─ Node 전체 회귀
+├─ build
+└─ Release gate
 
-### 메인 SPA 크기 — 🟡
+browser-e2e
+├─ Chromium 실제 실행
+├─ 임금체불
+├─ 해고·권고사직
+├─ 퇴직급여
+├─ 근로시간
+├─ 연차
+└─ 390×844 모바일 viewport
+```
 
-`index.html`과 `server.js`에 Legacy 책임이 많이 남아 있다. 현재 테스트 안전망이 있으므로 이후 작은 PR 단위로 분리한다.
+### main
 
-### 법률 데이터 중복 — 🟡
+```text
+merge
+→ check
+→ Chromium E2E
+→ Render auto deploy
+→ runtime readiness exact commit 확인
+→ 5개 synthetic Case production smoke
+→ 문서 / Report 확인
+→ synthetic Case 삭제
+```
 
-핵심 5개 Case의 법률 규칙은 결정론 모듈로 분리됐지만 Legacy 계산기·프롬프트·가이드에는 동일 숫자/설명이 남아 있을 수 있다. 공통 Legal registry가 다음 핵심 작업이다.
-
-### 법률 버전 유지보수 — 🟡
-
-Case별 `verifiedAt`과 유효일을 관리하고 있으나, 전체 법률 source registry와 정기 검증 프로세스는 아직 공통화되지 않았다.
+최신 RC 기준 전체 체인이 통과했다.
 
 ---
 
-## 10. 인사야 1.0 출시 기준 현황
+## 7. SQLite Backup / Restore — ✅ 코드 준비
 
-| 출시 기준 | 상태 |
+운영 도구:
+
+```bash
+npm run db:backup
+npm run db:restore-check -- --source <backup.db>
+```
+
+백업 성공 조건:
+
+- SQLite online backup
+- `PRAGMA integrity_check = ok`
+- foreign key violation 0건
+- 필수 앱 테이블 존재
+- 실패 backup 자동 제거
+- 기존 backup 덮어쓰기 기본 거부
+
+Restore check는 실제 운영 DB를 자동 덮어쓰지 않고 별도 DB로 복원해 재검증한다.
+
+Runbook: `docs/OPERATIONS.md`
+
+---
+
+## 8. 기존 제품 기능
+
+| 영역 | 상태 |
 |---|---|
-| 핵심 5개 Case가 끝까지 해결 흐름을 제공 | ✅ |
-| 계산/법률 판단의 핵심 부분이 결정론적 | ✅ |
-| 공식 근거와 기준일 표시 | ✅ 핵심 Case |
-| 문서/공식기관 경로 연결 | ✅ |
-| Case access 보호 | ✅ |
-| 실제 브라우저 회귀 | ✅ |
-| 실제 운영 배포 smoke | ✅ |
-| 영속 데이터 저장 | ❌ 인프라 결정 필요 |
-| 백업/복구 검증 | ❌ |
-| Legal/Calculator single source | 🟡 부분 완료 |
-| Legacy SPA/Server 책임 축소 | 🟡 부분 완료 |
+| AI 노무 상담 | 🟢 유지 |
+| 구조화 상담 요약 | 🟢 유지 |
+| 기존 계산기 | 🟡 Legacy 유지 |
+| 문서센터 / 문서팩 | 🟢 유지 |
+| 노동 가이드 / SEO | 🟢 유지 |
+| 노무사 정보 | 🟢 유지 |
+| 상담 요청 / 전문가 전달 | 🟢 유지 |
+| Admin / 운영 기능 | 🟡 Legacy 유지 |
 
-**제품 기능 기준으로 핵심 5개 사건은 1.0 vertical slice 완료. 실제 장기 운영 출시의 가장 큰 차단 요소는 영속 DB/백업과 공통 모듈 정리다.**
+핵심 1.0 출시 판단은 Legacy 기능 개수가 아니라 5개 Case 해결 흐름을 기준으로 한다.
+
+---
+
+## 9. 남은 P0 — 영속 데이터 저장
+
+현재 Production은 Render 무료 플랜의 파일 기반 SQLite를 사용한다.
+
+코드와 backup tooling은 준비됐지만 **무료 파일시스템 자체가 장기 사용자 데이터의 영속성을 보장하는 운영 구조는 아니다.**
+
+실제 장기 운영 전 해야 할 일:
+
+```text
+[ ] Render persistent disk 또는 외부 영속 DB 선택
+[ ] DB_PATH를 영속 경로로 설정
+[ ] REQUIRE_PERSISTENT_DB=1
+[ ] 재시작 후 데이터 유지 확인
+[ ] 재배포 후 데이터 유지 확인
+[ ] db:backup 실행
+[ ] backup을 별도 안전 저장소에 보관
+[ ] db:restore-check 실행
+[ ] 실제 restore rehearsal 1회
+```
+
+이 단계에는 비용/인프라 선택이 포함될 수 있어 코드 개발과 분리한다.
+
+---
+
+## 10. P1 이후 — RC 이후 리팩터링
+
+아래는 제품 1.0 핵심 출시 차단 요소가 아니라 후속 기술부채다.
+
+- 5개 Case client의 token/API/document/report/delete 공통 유틸 추출
+- 공통 Workspace CSS 정리
+- 메인 `index.html` 축소
+- chat/documents/experts/bookings/admin을 `server.js`에서 점진 분리
+- registry 기반 rule result contract 통일
+- Legacy 계산기·가이드·프롬프트의 중복 법정 수치 제거
+- `content/` source of truth 분리
+
+대형 전면 재작성은 하지 않는다.
+
+---
+
+## 11. 1.0 RC 출시 기준
+
+| 기준 | 상태 |
+|---|---|
+| 핵심 5개 Case 끝까지 해결 | ✅ |
+| 핵심 법률/계산 결정론화 | ✅ |
+| 공식 근거 / 기준일 | ✅ |
+| 문서 / 공식기관 연결 | ✅ |
+| Case access 보호 | ✅ |
+| 실제 Chromium 회귀 | ✅ |
+| exact-commit Render smoke | ✅ |
+| runtime readiness | ✅ |
+| Case API registry | ✅ |
+| Legal registry 기반 | ✅ |
+| verified DB backup tooling | ✅ |
+| non-destructive restore check | ✅ |
+| 영속 운영 DB | ❌ 운영 결정 필요 |
+| 실제 off-host backup / restore rehearsal | ❌ 영속 저장소 결정 후 수행 |
+
+**결론: 인사야 1.0은 코드·제품 기능 기준 RC 완료. 장기 사용자 데이터 저장을 보장하는 영속 인프라만 출시 전 운영 P0로 남아 있다.**
