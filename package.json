@@ -1,7 +1,7 @@
 {
   "name": "nomu-ai",
-  "version": "1.0.0-rc.1",
-  "description": "인사야 — AI 노동문제 해결 서비스",
+  "version": "0.1.0",
+  "description": "인사·노무 AI 상담 플랫폼 (MVP)",
   "type": "module",
   "engines": {
     "node": ">=22.13.0"
