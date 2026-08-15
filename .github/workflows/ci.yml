@@ -58,11 +58,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
-      - name: Verify deployed commit and production flow
+      - name: Verify deployed commit, runtime readiness and production flow
         env:
           PRODUCTION_URL: https://insaya.onrender.com
           EXPECTED_COMMIT: ${{ github.sha }}
           DEPLOY_TIMEOUT_MS: 480000
         run: |
+          node scripts/readiness-production-smoke.mjs
           node scripts/production-smoke.mjs
           node scripts/annual-leave-production-smoke.mjs
