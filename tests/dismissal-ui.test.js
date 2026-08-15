@@ -14,20 +14,31 @@ test("dismissal page loads dedicated client and responsive styles", () => {
   assert.match(html, /dismissal-intake-client\.js/);
 });
 
-test("dismissal client keeps case access session-only and uses protected endpoints", () => {
+test("dismissal client delegates protected Case transport to shared core", () => {
   const js = read("dismissal-intake-client.js");
-  assert.match(js, /sessionStorage/);
+  const core = read("case-client-core.js");
+  assert.match(js, /from "\.\/case-client-core\.js"/);
+  assert.match(js, /slug: "dismissal"/);
+  assert.match(js, /\/api\/cases\/dismissal-intake/);
+  assert.doesNotMatch(js, /sessionStorage/);
   assert.doesNotMatch(js, /localStorage/);
-  assert.match(js, /x-case-token/);
-  assert.match(js, /dismissal-intake/);
-  assert.match(js, /dismissal-document/);
-  assert.match(js, /dismissal-report/);
+  assert.match(core, /sessionStorage/);
+  assert.doesNotMatch(core, /localStorage/);
+  assert.match(core, /x-case-token/);
+  assert.match(core, /\$\{slug\}-document/);
+  assert.match(core, /\$\{slug\}-report/);
 });
 
-test("dismissal document preview renders server output as plain text", () => {
+test("shared dismissal document preview keeps server output plain-text and preserves prior UX", () => {
   const js = read("dismissal-intake-client.js");
-  assert.match(js, /querySelector\("pre"\)\.textContent/);
-  assert.doesNotMatch(js, /innerHTML\s*=\s*result\.document/);
+  const core = read("case-client-core.js");
+  assert.match(core, /querySelector\("pre"\)\.textContent/);
+  assert.doesNotMatch(core, /innerHTML\s*=\s*result\.document/);
+  assert.match(js, /closePreviewOnBackdrop: true/);
+  assert.match(js, /reportResetMs: 1400/);
+  assert.match(js, /disableReportWhileCopying: true/);
+  assert.match(js, /unauthorized/);
+  assert.match(js, /not_found/);
 });
 
 test("home launcher exposes separate wage and dismissal case entries", () => {

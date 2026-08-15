@@ -1,5 +1,23 @@
+import {
+  booleanSelect as boolSelect,
+  controlValue,
+  createCaseClientCore,
+  escapeHtml as esc,
+  formatWon as won,
+} from "./case-client-core.js";
+
 const ROOT = document.getElementById("retirementApp");
 const STORAGE_KEY = "insaya:retirement-case-session";
+let client;
+
+const api = (...args) => client.api(...args);
+const setSession = (...args) => client.setSession(...args);
+const showError = (text) => client.showError(text);
+const patchFacts = (...args) => client.patchFacts(...args);
+const saveEvidence = (event) => client.saveEvidence(event);
+const previewDocument = (templateKey) => client.previewDocument(templateKey);
+const copyReport = (event) => client.copyReport(event);
+const deleteCase = () => client.deleteCase();
 
 const TYPE_LABELS = {
   severance_pay: "퇴직금제도",
@@ -14,33 +32,6 @@ const EVIDENCE_LABELS = {
   retirementPlanStatement: "퇴직연금 가입·운용 명세서",
   attendanceRecord: "근무시간 기록",
 };
-
-function esc(value) {
-  return String(value ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-}
-function getSession() {
-  try { const v = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null"); return v?.id && v?.token ? v : null; } catch { return null; }
-}
-function setSession(id, token) { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ id, token })); }
-function clearSession() { sessionStorage.removeItem(STORAGE_KEY); }
-async function api(path, options = {}, token = null) {
-  const headers = { ...(options.headers || {}) };
-  if (options.body) headers["content-type"] = "application/json";
-  const accessToken = token || getSession()?.token;
-  if (accessToken) headers["x-case-token"] = accessToken;
-  const response = await fetch(path, { ...options, headers });
-  const body = response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok) throw new Error(body?.error || `http_${response.status}`);
-  return body;
-}
-const won = (v) => Number.isFinite(Number(v)) ? `${Math.round(Number(v)).toLocaleString("ko-KR")}원` : "추가 확인 필요";
-function boolSelect(name, value) {
-  return `<select class="case-select" name="${esc(name)}"><option value="">선택</option><option value="true" ${value === true ? "selected" : ""}>예</option><option value="false" ${value === false ? "selected" : ""}>아니오</option></select>`;
-}
-function showError(text) {
-  ROOT.querySelector(".retirement-error")?.remove();
-  const box = document.createElement("div"); box.className = "retirement-error"; box.textContent = text; ROOT.prepend(box);
-}
 
 function renderStart() {
   ROOT.innerHTML = `<form class="retirement-start" data-start-form>
@@ -59,22 +50,34 @@ function renderStart() {
 }
 
 async function createCase(event) {
-  event.preventDefault(); const form = event.currentTarget; const data = new FormData(form);
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
   if (!data.get("hadUnder15HourPeriods")) return showError("주 15시간 미만 근무기간 여부를 선택해 주세요.");
   const facts = {
-    benefitType: data.get("benefitType"), employmentStartDate: data.get("employmentStartDate"), retirementDate: data.get("retirementDate"),
-    averageWeeklyScheduledHours: Number(data.get("averageWeeklyScheduledHours")), hadUnder15HourPeriods: data.get("hadUnder15HourPeriods") === "true",
+    benefitType: data.get("benefitType"),
+    employmentStartDate: data.get("employmentStartDate"),
+    retirementDate: data.get("retirementDate"),
+    averageWeeklyScheduledHours: Number(data.get("averageWeeklyScheduledHours")),
+    hadUnder15HourPeriods: data.get("hadUnder15HourPeriods") === "true",
   };
-  const button = form.querySelector("button[type=submit]"); if (button) button.disabled = true;
-  try { const result = await api("/api/cases/retirement-intake", { method:"POST", body:JSON.stringify({ facts }) }); setSession(result.case.id, result.accessToken); renderWorkspace(result); }
-  catch { if (button) button.disabled = false; showError("사건을 만들지 못했습니다. 다시 시도해 주세요."); }
+  const button = form.querySelector("button[type=submit]");
+  if (button) button.disabled = true;
+  try {
+    const result = await api("/api/cases/retirement-intake", { method: "POST", body: JSON.stringify({ facts }) });
+    setSession(result.case.id, result.accessToken);
+    renderWorkspace(result);
+  } catch {
+    if (button) button.disabled = false;
+    showError("사건을 만들지 못했습니다. 다시 시도해 주세요.");
+  }
 }
 
-function moneyFields(facts, legal) {
+function moneyFields(facts) {
   if (facts.benefitType === "dc_pension") return `
     <label><span>회사 납입의무 총액</span><input class="case-input" type="number" min="0" name="dcExpectedContributionsTotal" value="${esc(facts.dcExpectedContributionsTotal ?? "")}" placeholder="명세서 기준"></label>
     <label><span>실제 납입된 총액</span><input class="case-input" type="number" min="0" name="dcPaidContributionsTotal" value="${esc(facts.dcPaidContributionsTotal ?? "")}" placeholder="명세서 기준"></label>`;
-  if (!["severance_pay","db_pension"].includes(facts.benefitType)) return `<div class="retirement-warning">퇴직급여 유형을 확인해야 계산할 수 있습니다.</div>`;
+  if (!["severance_pay", "db_pension"].includes(facts.benefitType)) return `<div class="retirement-warning">퇴직급여 유형을 확인해야 계산할 수 있습니다.</div>`;
   const excluded = facts.hasAverageWageExcludedPeriod;
   return `
     <label><span>평균임금 산정 제외기간이 있나요?</span>${boolSelect("hasAverageWageExcludedPeriod", excluded)}</label>
@@ -89,47 +92,55 @@ function moneyFields(facts, legal) {
 }
 
 function renderWorkspace(result) {
-  const facts = result.case?.facts || {}; const legal = result.legal || {}; const m = legal.money || {}; const avg = legal.averageWage || {};
+  const facts = result.case?.facts || {};
+  const legal = result.legal || {};
+  const money = legal.money || {};
+  const averageWage = legal.averageWage || {};
   ROOT.innerHTML = `<div class="retirement-workspace">
     <section class="retirement-card"><div class="resource-head"><div><span class="case-kicker">${esc(TYPE_LABELS[facts.benefitType] || "퇴직급여")}</span><h2>퇴직금·퇴직연금 사건</h2><p>${esc(facts.employmentStartDate || "?")} ~ ${esc(facts.retirementDate || "?")} · 주 ${esc(facts.averageWeeklyScheduledHours ?? "?")}시간</p></div><span class="retirement-pill">${esc(result.case?.status || "intake")}</span></div><div class="next-action"><b>${esc(result.nextAction?.title || "다음 정보를 확인하세요.")}</b><p>${esc(result.nextAction?.description || "")}</p></div></section>
     <div class="retirement-grid">
       <section class="retirement-card wide" id="retirement-money"><div class="resource-head"><div><h3>퇴직급여 계산</h3><p>제도 유형과 평균임금/부담금 기준을 분리해 계산합니다.</p></div></div>
-        <div class="retirement-summary"><div class="retirement-stat"><span>1일 평균임금</span><b>${esc(won(avg.amount))}</b></div><div class="retirement-stat"><span>예상 법정액</span><b>${esc(won(m.statutoryEstimate))}</b></div><div class="retirement-stat"><span>기지급액</span><b>${esc(won(m.paidAmount))}</b></div><div class="retirement-stat"><span>예상 미지급액</span><b>${esc(won(m.outstandingEstimate))}</b></div></div>
-        <div class="retirement-assessment"><div class="retirement-row"><span>적용 baseline</span><b>${esc(legal.eligibility?.status || "미확인")}</b></div><div class="retirement-row"><span>재직일수</span><b>${esc(legal.eligibility?.serviceDays ?? "미확인")}일</b></div><div class="retirement-row"><span>기본 지급기한</span><b>${esc(legal.payment?.dueDate || "미확인")}${legal.payment?.late ? " · 경과 가능" : ""}</b></div>${avg.period ? `<div class="retirement-row"><span>평균임금 산정기간</span><b>${esc(avg.period.start)} ~ ${esc(avg.period.end)} · ${esc(avg.period.days)}일</b></div>` : ""}</div>
-        <form data-money-form><div class="retirement-money-fields">${moneyFields(facts, legal)}</div><div class="case-actions"><button class="btn primary" type="submit">계산 정보 저장·재계산</button></div></form>
+        <div class="retirement-summary"><div class="retirement-stat"><span>1일 평균임금</span><b>${esc(won(averageWage.amount))}</b></div><div class="retirement-stat"><span>예상 법정액</span><b>${esc(won(money.statutoryEstimate))}</b></div><div class="retirement-stat"><span>기지급액</span><b>${esc(won(money.paidAmount))}</b></div><div class="retirement-stat"><span>예상 미지급액</span><b>${esc(won(money.outstandingEstimate))}</b></div></div>
+        <div class="retirement-assessment"><div class="retirement-row"><span>적용 baseline</span><b>${esc(legal.eligibility?.status || "미확인")}</b></div><div class="retirement-row"><span>재직일수</span><b>${esc(legal.eligibility?.serviceDays ?? "미확인")}일</b></div><div class="retirement-row"><span>기본 지급기한</span><b>${esc(legal.payment?.dueDate || "미확인")}${legal.payment?.late ? " · 경과 가능" : ""}</b></div>${averageWage.period ? `<div class="retirement-row"><span>평균임금 산정기간</span><b>${esc(averageWage.period.start)} ~ ${esc(averageWage.period.end)} · ${esc(averageWage.period.days)}일</b></div>` : ""}</div>
+        <form data-money-form><div class="retirement-money-fields">${moneyFields(facts)}</div><div class="case-actions"><button class="btn primary" type="submit">계산 정보 저장·재계산</button></div></form>
         ${(legal.warnings || []).length ? `<div class="retirement-warning">재검토: ${(legal.warnings || []).map(esc).join(", ")}</div>` : ""}
       </section>
-      <section class="retirement-card wide" id="retirement-evidence"><div class="resource-head"><div><h3>증거 상태</h3><p>평균임금과 지급내역을 확인할 자료를 체크하세요.</p></div></div><form data-evidence-form><div class="retirement-evidence">${Object.entries(EVIDENCE_LABELS).map(([key,label]) => `<label>${esc(label)}<select class="case-select" name="${key}"><option value="unknown" ${facts.evidence?.[key] === "unknown" ? "selected" : ""}>미확인</option><option value="have" ${facts.evidence?.[key] === "have" ? "selected" : ""}>보유</option><option value="planned" ${facts.evidence?.[key] === "planned" ? "selected" : ""}>확보 예정</option><option value="missing" ${facts.evidence?.[key] === "missing" ? "selected" : ""}>없음</option></select></label>`).join("")}</div><div class="case-actions"><button class="btn" type="submit">증거 상태 저장</button></div></form></section>
-      <section class="retirement-card wide" id="retirement-sources"><div class="resource-head"><div><h3>공식 근거</h3><p>현재 계산에 사용한 법령과 공식 계산 기준입니다.</p></div></div><div class="source-list">${(legal.sources||[]).map(s => `<a class="source-row" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer"><span><b>${esc(s.article||s.title)}</b><small>${esc(s.authority)} · 확인 ${esc(s.verifiedAt||legal.verifiedAt)}</small></span><span>↗</span></a>`).join("")}</div></section>
-      <section class="retirement-card wide" id="retirement-documents"><div class="resource-head"><div><h3>이 사건의 문서</h3><p>미지급액이 계산되면 지급요청과 진정서 초안을 연결합니다.</p></div></div><div class="document-grid">${(result.documents||[]).map(d => `<button class="document-card" type="button" data-doc="${esc(d.templateKey)}"><span class="doc-state">초안 가능</span><b>${esc(d.title)}</b><small>${esc(d.description)}</small></button>`).join("") || '<div class="resource-empty">현재 계산 기준 추천 문서가 없습니다.</div>'}</div></section>
-      <section class="retirement-card wide" id="retirement-procedures"><div class="resource-head"><div><h3>공식 절차</h3><p>지급기한과 미지급액을 기준으로 고용노동부 절차를 연결합니다.</p></div></div><div class="procedure-stack">${(result.procedures||[]).map(p => `<div class="procedure-box"><div><b>${esc(p.title)}</b><small>${esc(p.description)}</small></div><a class="btn primary" href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">노동포털 ↗</a></div>`).join("") || '<div class="resource-empty">현재 자동 연결 절차가 없습니다.</div>'}</div></section>
+      <section class="retirement-card wide" id="retirement-evidence"><div class="resource-head"><div><h3>증거 상태</h3><p>평균임금과 지급내역을 확인할 자료를 체크하세요.</p></div></div><form data-evidence-form><div class="retirement-evidence">${Object.entries(EVIDENCE_LABELS).map(([key, label]) => `<label>${esc(label)}<select class="case-select" name="${key}"><option value="unknown" ${facts.evidence?.[key] === "unknown" ? "selected" : ""}>미확인</option><option value="have" ${facts.evidence?.[key] === "have" ? "selected" : ""}>보유</option><option value="planned" ${facts.evidence?.[key] === "planned" ? "selected" : ""}>확보 예정</option><option value="missing" ${facts.evidence?.[key] === "missing" ? "selected" : ""}>없음</option></select></label>`).join("")}</div><div class="case-actions"><button class="btn" type="submit">증거 상태 저장</button></div></form></section>
+      <section class="retirement-card wide" id="retirement-sources"><div class="resource-head"><div><h3>공식 근거</h3><p>현재 계산에 사용한 법령과 공식 계산 기준입니다.</p></div></div><div class="source-list">${(legal.sources || []).map((source) => `<a class="source-row" href="${esc(source.url)}" target="_blank" rel="noopener noreferrer"><span><b>${esc(source.article || source.title)}</b><small>${esc(source.authority)} · 확인 ${esc(source.verifiedAt || legal.verifiedAt)}</small></span><span>↗</span></a>`).join("")}</div></section>
+      <section class="retirement-card wide" id="retirement-documents"><div class="resource-head"><div><h3>이 사건의 문서</h3><p>미지급액이 계산되면 지급요청과 진정서 초안을 연결합니다.</p></div></div><div class="document-grid">${(result.documents || []).map((doc) => `<button class="document-card" type="button" data-doc="${esc(doc.templateKey)}"><span class="doc-state">초안 가능</span><b>${esc(doc.title)}</b><small>${esc(doc.description)}</small></button>`).join("") || '<div class="resource-empty">현재 계산 기준 추천 문서가 없습니다.</div>'}</div></section>
+      <section class="retirement-card wide" id="retirement-procedures"><div class="resource-head"><div><h3>공식 절차</h3><p>지급기한과 미지급액을 기준으로 고용노동부 절차를 연결합니다.</p></div></div><div class="procedure-stack">${(result.procedures || []).map((procedure) => `<div class="procedure-box"><div><b>${esc(procedure.title)}</b><small>${esc(procedure.description)}</small></div><a class="btn primary" href="${esc(procedure.url)}" target="_blank" rel="noopener noreferrer">노동포털 ↗</a></div>`).join("") || '<div class="resource-empty">현재 자동 연결 절차가 없습니다.</div>'}</div></section>
     </div><div class="workspace-foot"><button class="btn" type="button" data-report>사건 요약 복사</button><button class="btn danger" type="button" data-delete>사건 삭제</button></div>
   </div>`;
   ROOT.querySelector("[data-money-form]")?.addEventListener("submit", saveMoney);
   ROOT.querySelector("[data-evidence-form]")?.addEventListener("submit", saveEvidence);
-  ROOT.querySelectorAll("[data-doc]").forEach(b => b.addEventListener("click", () => previewDocument(b.dataset.doc)));
-  ROOT.querySelector("[data-report]")?.addEventListener("click", copyReport); ROOT.querySelector("[data-delete]")?.addEventListener("click", deleteCase);
+  ROOT.querySelectorAll("[data-doc]").forEach((button) => button.addEventListener("click", () => previewDocument(button.dataset.doc)));
+  ROOT.querySelector("[data-report]")?.addEventListener("click", copyReport);
+  ROOT.querySelector("[data-delete]")?.addEventListener("click", deleteCase);
 }
 
-function controlValue(c) {
-  if (!c?.name || c.value === "") return undefined;
-  if (c.value === "true" || c.value === "false") return c.value === "true";
-  if (c.type === "number") { const n = Number(c.value); return Number.isFinite(n) ? n : undefined; }
-  return c.value;
+async function saveMoney(event) {
+  event.preventDefault();
+  const patch = {};
+  for (const control of event.currentTarget.elements) {
+    const value = controlValue(control);
+    if (value !== undefined) patch[control.name] = value;
+  }
+  try {
+    await patchFacts(patch, event.currentTarget.querySelector("button[type=submit]"));
+  } catch {
+    // Shared client core already renders the user-facing error.
+  }
 }
-async function patchFacts(patch, button) {
-  const s = getSession(); if (!s) return renderStart(); if (button) button.disabled = true;
-  try { const result = await api(`/api/cases/${encodeURIComponent(s.id)}/retirement-intake`, { method:"PATCH", body:JSON.stringify({ facts:patch }) }); renderWorkspace(result); }
-  catch { if (button) button.disabled = false; showError("사건 정보를 저장하지 못했습니다."); }
-}
-async function saveMoney(event) { event.preventDefault(); const patch={}; for (const c of event.currentTarget.elements) { const v=controlValue(c); if(v!==undefined) patch[c.name]=v; } await patchFacts(patch,event.currentTarget.querySelector("button[type=submit]")); }
-async function saveEvidence(event) { event.preventDefault(); const evidence={}; for(const c of event.currentTarget.elements) if(c.name) evidence[c.name]=c.value; await patchFacts({evidence},event.currentTarget.querySelector("button[type=submit]")); }
-function closePreview(){document.getElementById("retirement-doc-preview")?.remove();}
-async function previewDocument(templateKey) {
-  const s=getSession(); if(!s)return;
-  try { const result=await api(`/api/cases/${encodeURIComponent(s.id)}/retirement-document/${encodeURIComponent(templateKey)}`,{method:"POST",body:JSON.stringify({values:{}})}); closePreview(); const o=document.createElement("div"); o.id="retirement-doc-preview"; o.className="doc-preview-overlay"; o.innerHTML=`<div class="doc-preview"><div class="doc-preview-head"><div><span>사건 정보 자동 반영</span><h3>${esc(result.document?.title||"문서 초안")}</h3></div><button class="btn" data-close>닫기</button></div><pre></pre><div class="doc-preview-actions"><button class="btn primary" data-copy>텍스트 복사</button></div></div>`; o.querySelector("pre").textContent=result.document?.text||""; o.querySelector("[data-close]").onclick=closePreview; o.querySelector("[data-copy]").onclick=async(e)=>{await navigator.clipboard.writeText(result.document?.text||"").catch(()=>{});e.currentTarget.textContent="복사됨";}; document.body.appendChild(o); } catch { showError("문서 초안을 만들지 못했습니다."); }
-}
-async function copyReport(event){const s=getSession();if(!s)return;const b=event.currentTarget;try{const r=await api(`/api/cases/${encodeURIComponent(s.id)}/retirement-report`);await navigator.clipboard.writeText(r.text||"");b.textContent="사건 요약 복사됨";}catch{b.textContent="복사 실패";}}
-async function deleteCase(){const s=getSession();if(!s)return renderStart();if(!window.confirm("이 퇴직급여 사건을 삭제할까요?"))return;try{await api(`/api/cases/${encodeURIComponent(s.id)}`,{method:"DELETE"});}finally{clearSession();renderStart();}}
-async function restore(){const s=getSession();if(!s)return renderStart();try{renderWorkspace(await api(`/api/cases/${encodeURIComponent(s.id)}/retirement-intake`));}catch{clearSession();renderStart();}}
-restore();
+
+client = createCaseClientCore({
+  root: ROOT,
+  storageKey: STORAGE_KEY,
+  slug: "retirement",
+  errorClass: "retirement-error",
+  previewId: "retirement-doc-preview",
+  deleteConfirm: "이 퇴직급여 사건을 삭제할까요?",
+  renderStart,
+  renderWorkspace,
+});
+
+client.restore();

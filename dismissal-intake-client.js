@@ -1,5 +1,23 @@
+import {
+  booleanSelect as boolOptions,
+  controlValue as valueFromControl,
+  createCaseClientCore,
+  escapeHtml as esc,
+  formatWon as money,
+} from "./case-client-core.js";
+
 const ROOT = document.getElementById("dismissalApp");
 const STORAGE_KEY = "insaya:dismissal-case-session";
+let client;
+
+const api = (...args) => client.api(...args);
+const setSession = (...args) => client.setSession(...args);
+const showError = (text) => client.showError(text);
+const patchFacts = (...args) => client.patchFacts(...args);
+const saveEvidence = (event) => client.saveEvidence(event);
+const previewDocument = (templateKey) => client.previewDocument(templateKey);
+const copyReport = (event) => client.copyReport(event);
+const deleteCase = () => client.deleteCase();
 
 const TYPE_LABELS = {
   dismissal: "회사가 일방적으로 해고 통보",
@@ -16,67 +34,8 @@ const EVIDENCE_LABELS = {
   payslip: "급여명세서",
 };
 
-function esc(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function getSession() {
-  try {
-    const value = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null");
-    return value?.id && value?.token ? value : null;
-  } catch {
-    return null;
-  }
-}
-
-function setSession(id, token) {
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ id, token }));
-}
-
-function clearSession() {
-  sessionStorage.removeItem(STORAGE_KEY);
-}
-
-async function api(path, options = {}, token = null) {
-  const headers = { ...(options.headers || {}) };
-  if (options.body) headers["content-type"] = "application/json";
-  const accessToken = token || getSession()?.token;
-  if (accessToken) headers["x-case-token"] = accessToken;
-  const response = await fetch(path, { ...options, headers });
-  const body = response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok) throw new Error(body?.error || `http_${response.status}`);
-  return body;
-}
-
-function money(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? `${Math.round(n).toLocaleString("ko-KR")}원` : "추가 확인 필요";
-}
-
 function yesNo(value) {
   return value === true ? "예" : value === false ? "아니오" : "미확인";
-}
-
-function boolOptions(name, value) {
-  return `<select class="case-select" name="${esc(name)}">
-    <option value="">선택</option>
-    <option value="true" ${value === true ? "selected" : ""}>예</option>
-    <option value="false" ${value === false ? "selected" : ""}>아니오</option>
-  </select>`;
-}
-
-function showError(message) {
-  const old = ROOT.querySelector(".dismissal-error");
-  if (old) old.remove();
-  const box = document.createElement("div");
-  box.className = "dismissal-error";
-  box.textContent = message;
-  ROOT.prepend(box);
 }
 
 function renderStart() {
@@ -230,32 +189,6 @@ function renderWorkspace(result) {
   ROOT.querySelector("[data-delete]")?.addEventListener("click", deleteCase);
 }
 
-function valueFromControl(control) {
-  if (!control || !control.name || control.value === "") return undefined;
-  if (["true", "false"].includes(control.value)) return control.value === "true";
-  if (control.type === "number") {
-    const n = Number(control.value);
-    return Number.isFinite(n) ? n : undefined;
-  }
-  return control.value;
-}
-
-async function patchFacts(patch, button) {
-  const current = getSession();
-  if (!current) return renderStart();
-  if (button) button.disabled = true;
-  try {
-    const result = await api(`/api/cases/${encodeURIComponent(current.id)}/dismissal-intake`, {
-      method: "PATCH",
-      body: JSON.stringify({ facts: patch }),
-    });
-    renderWorkspace(result);
-  } catch {
-    if (button) button.disabled = false;
-    showError("사건 정보를 저장하지 못했습니다. 다시 시도해 주세요.");
-  }
-}
-
 async function saveConditional(event) {
   event.preventDefault();
   const patch = {};
@@ -263,87 +196,32 @@ async function saveConditional(event) {
     const value = valueFromControl(control);
     if (value !== undefined) patch[control.name] = value;
   }
-  await patchFacts(patch, event.currentTarget.querySelector("button[type=submit]"));
-}
-
-async function saveEvidence(event) {
-  event.preventDefault();
-  const evidence = {};
-  for (const control of event.currentTarget.elements) {
-    if (control.name) evidence[control.name] = control.value;
-  }
-  await patchFacts({ evidence }, event.currentTarget.querySelector("button[type=submit]"));
-}
-
-function closePreview() {
-  document.getElementById("dismissal-doc-preview")?.remove();
-}
-
-async function previewDocument(templateKey) {
-  const current = getSession();
-  if (!current) return;
   try {
-    const result = await api(`/api/cases/${encodeURIComponent(current.id)}/dismissal-document/${encodeURIComponent(templateKey)}`, {
-      method: "POST",
-      body: JSON.stringify({ values: {} }),
-    });
-    closePreview();
-    const overlay = document.createElement("div");
-    overlay.id = "dismissal-doc-preview";
-    overlay.className = "doc-preview-overlay";
-    overlay.innerHTML = `<div class="doc-preview"><div class="doc-preview-head"><div><span>사건 정보 자동 반영</span><h3>${esc(result.document?.title || "문서 초안")}</h3></div><button class="btn" type="button" data-close>닫기</button></div><pre></pre><div class="doc-preview-actions"><button class="btn primary" type="button" data-copy>텍스트 복사</button></div></div>`;
-    overlay.querySelector("pre").textContent = result.document?.text || "";
-    overlay.querySelector("[data-close]")?.addEventListener("click", closePreview);
-    overlay.querySelector("[data-copy]")?.addEventListener("click", async (event) => {
-      await navigator.clipboard.writeText(result.document?.text || "").catch(() => {});
-      event.currentTarget.textContent = "복사됨";
-    });
-    overlay.addEventListener("click", (event) => { if (event.target === overlay) closePreview(); });
-    document.body.appendChild(overlay);
+    await patchFacts(patch, event.currentTarget.querySelector("button[type=submit]"));
   } catch {
-    showError("문서 초안을 만들지 못했습니다. 사건 정보를 확인해 주세요.");
+    // Shared client core already renders the configured user-facing error.
   }
 }
 
-async function copyReport(event) {
-  const current = getSession();
-  if (!current) return;
-  const button = event.currentTarget;
-  const original = button.textContent;
-  button.disabled = true;
-  try {
-    const result = await api(`/api/cases/${encodeURIComponent(current.id)}/dismissal-report`);
-    await navigator.clipboard.writeText(result.text || "");
-    button.textContent = "사건 요약 복사됨";
-    setTimeout(() => { button.textContent = original; button.disabled = false; }, 1400);
-  } catch {
-    button.textContent = "복사 실패 · 다시 시도";
-    button.disabled = false;
-  }
-}
+client = createCaseClientCore({
+  root: ROOT,
+  storageKey: STORAGE_KEY,
+  slug: "dismissal",
+  errorClass: "dismissal-error",
+  previewId: "dismissal-doc-preview",
+  deleteConfirm: "이 탭의 해고·권고사직 사건을 삭제할까요?",
+  patchErrorText: "사건 정보를 저장하지 못했습니다. 다시 시도해 주세요.",
+  previewErrorText: "문서 초안을 만들지 못했습니다. 사건 정보를 확인해 주세요.",
+  closePreviewOnBackdrop: true,
+  reportFailureText: "복사 실패 · 다시 시도",
+  reportResetMs: 1400,
+  disableReportWhileCopying: true,
+  shouldClearSessionOnRestoreError: (error) => {
+    const message = String(error?.message || "");
+    return message.includes("unauthorized") || message.includes("not_found");
+  },
+  renderStart,
+  renderWorkspace,
+});
 
-async function deleteCase() {
-  const current = getSession();
-  if (!current) return renderStart();
-  if (!window.confirm("이 탭의 해고·권고사직 사건을 삭제할까요?")) return;
-  try {
-    await api(`/api/cases/${encodeURIComponent(current.id)}`, { method: "DELETE" });
-  } finally {
-    clearSession();
-    renderStart();
-  }
-}
-
-async function restore() {
-  const current = getSession();
-  if (!current) return renderStart();
-  try {
-    const result = await api(`/api/cases/${encodeURIComponent(current.id)}/dismissal-intake`);
-    renderWorkspace(result);
-  } catch (error) {
-    if (String(error.message).includes("unauthorized") || String(error.message).includes("not_found")) clearSession();
-    renderStart();
-  }
-}
-
-restore();
+client.restore();
