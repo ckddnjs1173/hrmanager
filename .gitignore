@@ -12,6 +12,10 @@ data/app.db
 data/app.db-shm
 data/app.db-wal
 
+# DB 백업 (운영 개인정보가 포함될 수 있으므로 절대 커밋 금지)
+backups/
+*.db.backup
+
 # 로그·OS
 *.log
 .DS_Store
