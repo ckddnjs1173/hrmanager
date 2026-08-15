@@ -7,8 +7,8 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { AI_ENABLED, AI_INFO } from "./lib/ai.js";
-import { bookings, leads, nomusa, accessLogs, adminStats, retentionSweep, partners, feedback } from "./lib/repo.js";
-import { notifications, availableChannels } from "./lib/notify.js";
+import { bookings, accessLogs, retentionSweep, partners } from "./lib/repo.js";
+import { createAdminRouter } from "./lib/admin-routes.js";
 import { createAiRouter } from "./lib/ai-routes.js";
 import { createCaseRouter } from "./lib/case-routes.js";
 import { createDocumentRouter } from "./lib/document-routes.js";
@@ -98,74 +98,17 @@ app.use("/api", createDocumentRouter());
 const clean = (s) => (typeof s === "string" ? s.slice(0, 2000).trim() : "");
 app.use("/api", createPublicOperationRouter({ rateLimit, clean }));
 
-// ===== 운영자(관리자) 인증 — 서명 세션 쿠키 + CSRF (헤더 토큰도 호환) =====
-const STAT = ["received", "reviewed", "sent", "in_progress", "done", "canceled"];
-function tokenOk(t) {
-  if (!t || t.length !== ADMIN_TOKEN.length) return false;
-  try { return crypto.timingSafeEqual(Buffer.from(t), Buffer.from(ADMIN_TOKEN)); } catch { return false; }
-}
-app.post("/api/admin/login", rateLimit({ max: 10 }), (req, res) => {
-  if (!tokenOk(String(req.body?.token || ""))) return res.status(401).json({ error: "invalid_token" });
-  const csrf = crypto.randomBytes(16).toString("hex");
-  setSessionCookie(req, res, { exp: Date.now() + SESSION_TTL, csrf });
-  res.json({ ok: true, csrf });
-});
-app.post("/api/admin/logout", (req, res) => { clearSessionCookie(res); res.json({ ok: true }); });
-app.get("/api/admin/session", (req, res) => {
-  const sess = verifySession(parseCookies(req).nomu_sess);
-  if (!sess) return res.status(401).json({ error: "no_session" });
-  res.json({ ok: true, csrf: sess.csrf });
-});
-function adminAuth(req, res, next) {
-  if (tokenOk(req.get("x-admin-token") || "")) return next();
-  const sess = verifySession(parseCookies(req).nomu_sess);
-  if (!sess) return res.status(401).json({ error: "unauthorized" });
-  if (req.method !== "GET" && (req.get("x-csrf-token") || "") !== sess.csrf) return res.status(403).json({ error: "csrf" });
-  req.adminSession = sess;
-  next();
-}
-app.get("/api/admin/data", adminAuth, (req, res) => {
-  res.json({ bookings: bookings.all(), leads: leads.all(), origin: `${req.protocol}://${req.get("host")}` });
-});
-app.get("/api/admin/summary", adminAuth, (req, res) => res.json({ ...adminStats(), notifyPending: notifications.pendingCount(), notifyChannels: availableChannels(), feedbackNew: feedback.count() }));
-app.get("/api/admin/notifications", adminAuth, (req, res) => res.json(notifications.recent(30)));
-app.get("/api/admin/feedback", adminAuth, (req, res) => res.json(feedback.recent(50)));
-app.get("/api/admin/bookings", adminAuth, (req, res) => {
-  res.json(bookings.list({ status: req.query.status, q: clean(req.query.q), page: +req.query.page || 1, size: Math.min(200, +req.query.size || 50) }));
-});
-app.post("/api/admin/booking/:id", adminAuth, (req, res) => {
-  const fields = {};
-  if (req.body?.status && STAT.includes(req.body.status)) fields.status = req.body.status;
-  if (typeof req.body?.memo === "string") fields.memo = clean(req.body.memo);
-  if (typeof req.body?.assigned_nomusa_id === "string") {
-    fields.assigned_nomusa_id = clean(req.body.assigned_nomusa_id);
-    const n = fields.assigned_nomusa_id ? nomusa.get(fields.assigned_nomusa_id) : null;
-    fields.assigned = n ? (n.n || n.name || "") : "";
-  } else if (typeof req.body?.assigned === "string") {
-    fields.assigned = clean(req.body.assigned);
-  }
-  if (!bookings.update(req.params.id, fields)) return res.status(404).json({ error: "not_found" });
-  res.json({ ok: true });
-});
-app.get("/api/admin/booking/:id/events", adminAuth, (req, res) => {
-  const b = bookings.get(req.params.id);
-  if (!b) return res.status(404).json({ error: "not_found" });
-  res.json({ consent: !!b.consent, consentAt: b.at, events: bookings.events(req.params.id), views: accessLogs.forBooking(req.params.id) });
-});
-app.get("/api/admin/nomu", adminAuth, (req, res) => res.json(nomusa.adminList()));
-app.post("/api/admin/nomu/:id", adminAuth, (req, res) => {
-  let done = false;
-  if (typeof req.body?.opted_out === "boolean") done = nomusa.toggle(req.params.id, "opted_out", req.body.opted_out) || done;
-  if (typeof req.body?.featured === "boolean") done = nomusa.toggle(req.params.id, "featured", req.body.featured) || done;
-  if (!done) return res.status(404).json({ error: "not_found" });
-  res.json({ ok: true });
-});
-app.post("/api/admin/nomu/:id/token", adminAuth, (req, res) => {
-  const n = nomusa.get(req.params.id);
-  if (!n) return res.status(404).json({ error: "not_found" });
-  const token = partners.issue(req.params.id, n.n || n.name || "");
-  res.json({ ok: true, token, link: `${req.protocol}://${req.get("host")}/partner#token=${token}` });
-});
+// ===== 운영자(관리자) API =====
+app.use("/api", createAdminRouter({
+  rateLimit,
+  clean,
+  adminToken: ADMIN_TOKEN,
+  sessionTtl: SESSION_TTL,
+  parseCookies,
+  verifySession,
+  setSessionCookie,
+  clearSessionCookie,
+}));
 
 // ===== 노무사 대시보드 (운영자 발급 토큰 → 세션) =====
 function partnerAuth(req, res, next) {
