@@ -1,45 +1,13 @@
+import { createCaseAccessClient, escapeHtml as esc, formatWon as won } from "./case-client-core.js";
+
 const ROOT = document.getElementById("wageApp");
 const STORAGE_KEY = "insaya:wage-case-session";
 const MOUNT_ID = "wage-workspace-resources";
+const access = createCaseAccessClient({ storageKey: STORAGE_KEY });
 
 let rendering = false;
-
-function esc(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function session() {
-  try {
-    const parsed = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null");
-    return parsed?.id && parsed?.token ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-async function api(path, options = {}) {
-  const current = session();
-  if (!current) throw new Error("case_session_missing");
-  const headers = {
-    ...(options.headers || {}),
-    "x-case-token": current.token,
-  };
-  if (options.body) headers["content-type"] = "application/json";
-  const response = await fetch(path, { ...options, headers });
-  const body = response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok) throw new Error(body?.error || `http_${response.status}`);
-  return body;
-}
-
-function won(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? `${Math.round(n).toLocaleString("ko-KR")}원` : "추가 확인 필요";
-}
+const session = access.getSession;
+const api = access.api;
 
 function valueOrBlank(value) {
   return value === null || value === undefined ? "" : String(value);
@@ -141,7 +109,7 @@ async function saveMoney(event) {
       body: JSON.stringify({ facts: patch }),
     });
     location.reload();
-  } catch (error) {
+  } catch {
     if (button) button.disabled = false;
     alert("금액 정보를 저장하지 못했습니다. 다시 시도해 주세요.");
   }
