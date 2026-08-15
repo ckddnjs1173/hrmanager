@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import { createDocumentRouter } from "../lib/document-routes.js";
+
+const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
 async function withServer(run) {
   const app = express();
@@ -50,4 +55,15 @@ test("document router preserves pack catalog and unknown-pack contract", async (
     assert.equal(missing.status, 404);
     assert.deepEqual(await missing.json(), { error: "unknown_pack" });
   });
+});
+
+test("server delegates document endpoints to the extracted router", () => {
+  const server = readFileSync(path.join(ROOT, "server.js"), "utf8");
+  assert.match(server, /import \{ createDocumentRouter \} from "\.\/lib\/document-routes\.js"/);
+  assert.match(server, /app\.use\("\/api", createDocumentRouter\(\)\)/);
+  assert.doesNotMatch(server, /app\.get\("\/api\/docs"/);
+  assert.doesNotMatch(server, /app\.post\("\/api\/doc"/);
+  assert.doesNotMatch(server, /app\.get\("\/api\/docpacks"/);
+  assert.doesNotMatch(server, /app\.post\("\/api\/docpack"/);
+  assert.doesNotMatch(server, /from "\.\/lib\/docs\.js"/);
 });
