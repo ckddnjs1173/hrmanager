@@ -7,12 +7,13 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { AI_ENABLED, AI_INFO } from "./lib/ai.js";
-import { bookings, accessLogs, retentionSweep, partners } from "./lib/repo.js";
+import { bookings, accessLogs, retentionSweep } from "./lib/repo.js";
 import { createAdminRouter } from "./lib/admin-routes.js";
 import { createAiRouter } from "./lib/ai-routes.js";
 import { createCaseRouter } from "./lib/case-routes.js";
 import { createDocumentRouter } from "./lib/document-routes.js";
 import { createExpertRouter } from "./lib/expert-routes.js";
+import { createPartnerRouter } from "./lib/partner-routes.js";
 import { createPublicOperationRouter } from "./lib/public-operation-routes.js";
 import { createProductHomeHandler } from "./lib/product-home.js";
 
@@ -110,38 +111,16 @@ app.use("/api", createAdminRouter({
   clearSessionCookie,
 }));
 
-// ===== 노무사 대시보드 (운영자 발급 토큰 → 세션) =====
-function partnerAuth(req, res, next) {
-  const sess = verifySession(parseCookies(req).nomu_partner);
-  if (!sess || !sess.nomusa_id) return res.status(401).json({ error: "unauthorized" });
-  if (req.method !== "GET" && (req.get("x-csrf-token") || "") !== sess.csrf) return res.status(403).json({ error: "csrf" });
-  req.partner = sess;
-  next();
-}
-app.post("/api/partner/login", rateLimit({ max: 10 }), (req, res) => {
-  const acc = partners.verify(String(req.body?.token || ""));
-  if (!acc) return res.status(401).json({ error: "invalid_token" });
-  partners.touch(acc.id);
-  const csrf = crypto.randomBytes(16).toString("hex");
-  setSessionCookie(req, res, { exp: Date.now() + SESSION_TTL, csrf, nomusa_id: acc.nomusa_id, name: acc.name }, "nomu_partner");
-  res.json({ ok: true, csrf, name: acc.name });
-});
-app.post("/api/partner/logout", (req, res) => { clearSessionCookie(res, "nomu_partner"); res.json({ ok: true }); });
-app.get("/api/partner/me", (req, res) => {
-  const sess = verifySession(parseCookies(req).nomu_partner);
-  if (!sess || !sess.nomusa_id) return res.status(401).json({ error: "no_session" });
-  res.json({ ok: true, csrf: sess.csrf, name: sess.name, nomusa_id: sess.nomusa_id });
-});
-app.get("/api/partner/bookings", partnerAuth, (req, res) => res.json(bookings.byNomusa(req.partner.nomusa_id)));
-app.post("/api/partner/booking/:id", partnerAuth, (req, res) => {
-  const b = bookings.get(req.params.id);
-  if (!b || b.assigned_nomusa_id !== req.partner.nomusa_id) return res.status(404).json({ error: "not_found" });
-  const fields = {};
-  if (["in_progress", "done"].includes(req.body?.status)) fields.status = req.body.status;
-  if (typeof req.body?.memo === "string") fields.memo = clean(req.body.memo);
-  if (Object.keys(fields).length) bookings.update(req.params.id, fields, "partner:" + req.partner.nomusa_id);
-  res.json({ ok: true });
-});
+// ===== 노무사 파트너 대시보드 API =====
+app.use("/api", createPartnerRouter({
+  rateLimit,
+  clean,
+  sessionTtl: SESSION_TTL,
+  parseCookies,
+  verifySession,
+  setSessionCookie,
+  clearSessionCookie,
+}));
 
 // ===== 요약서 보안 열람 페이지 (노무사 전달용 링크) =====
 const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
