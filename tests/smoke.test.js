@@ -100,4 +100,10 @@ test("server boots and product entry points respond", { timeout: 12000 }, async 
   const dismissalHtml = await dismissalRes.text();
   assert.match(dismissalHtml, /id="dismissalApp"/);
   assert.match(dismissalHtml, /dismissal-intake-client\.js/);
+
+  const retirementRes = await fetch(`${base}/retirement-intake`);
+  assert.equal(retirementRes.status, 200, stderr);
+  const retirementHtml = await retirementRes.text();
+  assert.match(retirementHtml, /id="retirementApp"/);
+  assert.match(retirementHtml, /retirement-intake-client\.js/);
 });
