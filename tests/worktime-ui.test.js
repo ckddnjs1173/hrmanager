@@ -14,15 +14,19 @@ test("working-time page loads dedicated client and styles", () => {
   assert.match(html, /worktime-intake\.css/);
 });
 
-test("working-time client keeps Case access session-only and renders documents as text", () => {
+test("working-time client delegates protected Case transport to shared core", () => {
   const client = read("worktime-intake-client.js");
-  assert.match(client, /sessionStorage/);
-  assert.doesNotMatch(client, /localStorage/);
+  const core = read("case-client-core.js");
+  assert.match(client, /from "\.\/case-client-core\.js"/);
+  assert.match(client, /slug: "worktime"/);
   assert.match(client, /\/api\/cases\/worktime-intake/);
-  assert.match(client, /\/worktime-intake`/);
-  assert.match(client, /\/worktime-document\//);
-  assert.match(client, /\/worktime-report/);
-  assert.match(client, /querySelector\("pre"\)\.textContent/);
+  assert.doesNotMatch(client, /sessionStorage/);
+  assert.doesNotMatch(client, /localStorage/);
+  assert.match(core, /sessionStorage/);
+  assert.doesNotMatch(core, /localStorage/);
+  assert.match(core, /\$\{slug\}-document/);
+  assert.match(core, /\$\{slug\}-report/);
+  assert.match(core, /querySelector\("pre"\)\.textContent/);
 });
 
 test("home launcher exposes working-time while preserving existing Case routes", () => {
