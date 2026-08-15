@@ -14,15 +14,20 @@ test("retirement page loads dedicated client and styles", () => {
   assert.match(html, /retirement-intake-client\.js/);
 });
 
-test("retirement client keeps Case access session-only and renders documents as text", () => {
+test("retirement client delegates protected Case transport to shared core", () => {
   const js = read("retirement-intake-client.js");
-  assert.match(js, /sessionStorage/);
+  const core = read("case-client-core.js");
+  assert.match(js, /from "\.\/case-client-core\.js"/);
+  assert.match(js, /slug: "retirement"/);
+  assert.match(js, /\/api\/cases\/retirement-intake/);
+  assert.doesNotMatch(js, /sessionStorage/);
   assert.doesNotMatch(js, /localStorage/);
-  assert.match(js, /x-case-token/);
-  assert.match(js, /retirement-intake/);
-  assert.match(js, /retirement-document/);
-  assert.match(js, /retirement-report/);
-  assert.match(js, /querySelector\("pre"\)\.textContent/);
+  assert.match(core, /sessionStorage/);
+  assert.doesNotMatch(core, /localStorage/);
+  assert.match(core, /x-case-token/);
+  assert.match(core, /\$\{slug\}-document/);
+  assert.match(core, /\$\{slug\}-report/);
+  assert.match(core, /querySelector\("pre"\)\.textContent/);
 });
 
 test("home launcher exposes retirement while preserving wage and dismissal routes", () => {
