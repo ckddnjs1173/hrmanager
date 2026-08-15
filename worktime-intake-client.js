@@ -1,5 +1,24 @@
+import {
+  booleanSelect as boolSelect,
+  controlValue,
+  createCaseClientCore,
+  escapeHtml as esc,
+  formatWon as won,
+} from "./case-client-core.js";
+
 const ROOT = document.getElementById("worktimeApp");
 const STORAGE_KEY = "insaya:worktime-case-session";
+let client;
+
+const api = (...args) => client.api(...args);
+const getSession = () => client.getSession();
+const setSession = (...args) => client.setSession(...args);
+const showError = (text) => client.showError(text);
+const patchFacts = (...args) => client.patchFacts(...args);
+const saveEvidence = (event) => client.saveEvidence(event);
+const previewDocument = (templateKey) => client.previewDocument(templateKey);
+const copyReport = (event) => client.copyReport(event);
+const deleteCase = () => client.deleteCase();
 
 const EVIDENCE_LABELS = {
   employmentContract: "근로계약서",
@@ -17,33 +36,6 @@ const HOUR_LABELS = {
   holidayNightOver8Hours: "휴일 8시간 초과+야간",
 };
 
-function esc(value) {
-  return String(value ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-}
-function getSession() {
-  try { const value = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null"); return value?.id && value?.token ? value : null; } catch { return null; }
-}
-function setSession(id, token) { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ id, token })); }
-function clearSession() { sessionStorage.removeItem(STORAGE_KEY); }
-async function api(path, options = {}, token = null) {
-  const headers = { ...(options.headers || {}) };
-  if (options.body) headers["content-type"] = "application/json";
-  const accessToken = token || getSession()?.token;
-  if (accessToken) headers["x-case-token"] = accessToken;
-  const response = await fetch(path, { ...options, headers });
-  const body = response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok) throw new Error(body?.error || `http_${response.status}`);
-  return body;
-}
-const won = (value) => Number.isFinite(Number(value)) ? `${Math.round(Number(value)).toLocaleString("ko-KR")}원` : "추가 확인 필요";
-function boolSelect(name, value) {
-  return `<select class="case-select" name="${esc(name)}"><option value="">선택</option><option value="true" ${value === true ? "selected" : ""}>예</option><option value="false" ${value === false ? "selected" : ""}>아니오</option></select>`;
-}
-function showError(text) {
-  ROOT.querySelector(".worktime-error")?.remove();
-  const box = document.createElement("div"); box.className = "worktime-error"; box.textContent = text; ROOT.prepend(box);
-}
-
 function renderStart() {
   ROOT.innerHTML = `<form class="worktime-start" data-start-form>
     <section class="worktime-card"><h2>먼저 적용범위를 확인할게요.</h2><p>기준일과 상시근로자 수, 근로시간제 유형에 따라 법정 가산과 자동계산 가능 범위가 달라집니다.</p><div class="worktime-fields">
@@ -57,15 +49,24 @@ function renderStart() {
 }
 
 async function createCase(event) {
-  event.preventDefault(); const form = event.currentTarget; const data = new FormData(form);
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
   const facts = {
     referenceDate: data.get("referenceDate"),
     workplaceEmployeeCount: Number(data.get("workplaceEmployeeCount")),
     standardWorkSystem: data.get("standardWorkSystem") === "true",
   };
-  const button = form.querySelector("button[type=submit]"); if (button) button.disabled = true;
-  try { const result = await api("/api/cases/worktime-intake", { method:"POST", body:JSON.stringify({ facts }) }); setSession(result.case.id, result.accessToken); renderWorkspace(result); }
-  catch { if (button) button.disabled = false; showError("사건을 만들지 못했습니다. 다시 시도해 주세요."); }
+  const button = form.querySelector("button[type=submit]");
+  if (button) button.disabled = true;
+  try {
+    const result = await api("/api/cases/worktime-intake", { method: "POST", body: JSON.stringify({ facts }) });
+    setSession(result.case.id, result.accessToken);
+    renderWorkspace(result);
+  } catch {
+    if (button) button.disabled = false;
+    showError("사건을 만들지 못했습니다. 다시 시도해 주세요.");
+  }
 }
 
 function hourInput(key, facts) {
@@ -73,7 +74,9 @@ function hourInput(key, facts) {
 }
 
 function moneyFields(facts) {
-  if (facts.standardWorkSystem === false) return `<div class="worktime-regime-stop"><b>현재 자동계산 범위 밖의 근로시간제입니다.</b><p>근로시간제 유형과 서면합의·취업규칙을 확인한 뒤 별도 검토해야 합니다. 일반 고정근로시간제로 단정하여 계산하지 않습니다.</p></div>`;
+  if (facts.standardWorkSystem === false) {
+    return `<div class="worktime-regime-stop"><b>현재 자동계산 범위 밖의 근로시간제입니다.</b><p>근로시간제 유형과 서면합의·취업규칙을 확인한 뒤 별도 검토해야 합니다. 일반 고정근로시간제로 단정하여 계산하지 않습니다.</p></div>`;
+  }
   return `
     <label><span>통상시급</span><input class="case-input" type="number" min="0" name="ordinaryHourlyWage" value="${esc(facts.ordinaryHourlyWage ?? "")}" placeholder="예: 20000"></label>
     <label><span>추가근로 시간의 기본임금은 이미 받았나요?</span>${boolSelect("baseWageForExtraHoursPaid", facts.baseWageForExtraHoursPaid)}</label>
@@ -87,11 +90,16 @@ function moneyFields(facts) {
 
 function componentRows(components = []) {
   if (!components.length) return "";
-  return `<div class="worktime-component-list">${components.filter((item) => Number(item.hours) > 0).map((item) => `<div class="worktime-component"><span>${esc(HOUR_LABELS[item.key] || item.key)} · ${esc(item.hours)}시간</span><b>× ${esc(item.multiplier)}</b><b>${esc(won(item.amount))}</b></div>`).join("")}</div>`;
+  return `<div class="worktime-component-list">${components
+    .filter((item) => Number(item.hours) > 0)
+    .map((item) => `<div class="worktime-component"><span>${esc(HOUR_LABELS[item.key] || item.key)} · ${esc(item.hours)}시간</span><b>× ${esc(item.multiplier)}</b><b>${esc(won(item.amount))}</b></div>`)
+    .join("")}</div>`;
 }
 
 function renderWorkspace(result) {
-  const facts = result.case?.facts || {}; const legal = result.legal || {}; const premium = legal.premium || {};
+  const facts = result.case?.facts || {};
+  const legal = result.legal || {};
+  const premium = legal.premium || {};
   const fivePlusLabel = legal.fivePlus === true ? "상시 5명 이상" : legal.fivePlus === false ? "상시 4명 이하" : "규모 미확인";
   ROOT.innerHTML = `<div class="worktime-workspace">
     <section class="worktime-card"><div class="resource-head"><div><span class="case-kicker">근로시간·수당</span><h2>근로시간·연장/야간/휴일수당 사건</h2><p>기준일 ${esc(facts.referenceDate || "?")} · ${esc(fivePlusLabel)}</p></div><span class="worktime-pill">${esc(result.case?.status || "intake")}</span></div><div class="next-action"><b>${esc(result.nextAction?.title || "다음 정보를 확인하세요.")}</b><p>${esc(result.nextAction?.description || "")}</p></div></section>
@@ -105,9 +113,9 @@ function renderWorkspace(result) {
         ${(legal.warnings || []).length ? `<div class="worktime-warning">재검토: ${(legal.warnings || []).map(esc).join(", ")}</div>` : ""}
       </section>
       <section class="worktime-card wide" id="worktime-evidence"><div class="resource-head"><div><h3>증거 상태</h3><p>실제 근로시간과 임금 지급내역을 확인할 자료를 체크하세요.</p></div></div><form data-evidence-form><div class="worktime-evidence">${Object.entries(EVIDENCE_LABELS).map(([key,label]) => `<label>${esc(label)}<select class="case-select" name="${key}"><option value="unknown" ${facts.evidence?.[key] === "unknown" ? "selected" : ""}>미확인</option><option value="have" ${facts.evidence?.[key] === "have" ? "selected" : ""}>보유</option><option value="planned" ${facts.evidence?.[key] === "planned" ? "selected" : ""}>확보 예정</option><option value="missing" ${facts.evidence?.[key] === "missing" ? "selected" : ""}>없음</option></select></label>`).join("")}</div><div class="case-actions"><button class="btn" type="submit">증거 상태 저장</button></div></form></section>
-      <section class="worktime-card wide" id="worktime-sources"><div class="resource-head"><div><h3>공식 근거</h3><p>현재 판단과 계산에 사용한 근로기준법 및 시행령 근거입니다.</p></div></div><div class="source-list">${(legal.sources||[]).map((source) => `<a class="source-row" href="${esc(source.url)}" target="_blank" rel="noopener noreferrer"><span><b>${esc(source.article||source.title)}</b><small>${esc(source.authority)} · 확인 ${esc(source.verifiedAt||legal.verifiedAt)}</small></span><span>↗</span></a>`).join("")}</div></section>
-      <section class="worktime-card wide" id="worktime-documents"><div class="resource-head"><div><h3>이 사건의 문서</h3><p>미지급액이 계산되면 지급요청과 진정서 초안을 연결합니다.</p></div></div><div class="document-grid">${(result.documents||[]).map((doc) => `<button class="document-card" type="button" data-doc="${esc(doc.templateKey)}"><span class="doc-state">초안 가능</span><b>${esc(doc.title)}</b><small>${esc(doc.description)}</small></button>`).join("") || '<div class="resource-empty">현재 계산 기준 추천 문서가 없습니다.</div>'}</div></section>
-      <section class="worktime-card wide" id="worktime-procedures"><div class="resource-head"><div><h3>공식 절차</h3><p>수당 미지급·연장한도·휴게 위반 가능성을 기준으로 고용노동부 절차를 연결합니다.</p></div></div><div class="procedure-stack">${(result.procedures||[]).map((procedure) => `<div class="procedure-box"><div><b>${esc(procedure.title)}</b><small>${esc(procedure.description)}</small></div><a class="btn primary" href="${esc(procedure.url)}" target="_blank" rel="noopener noreferrer">노동포털 ↗</a></div>`).join("") || '<div class="resource-empty">현재 자동 연결 절차가 없습니다.</div>'}</div></section>
+      <section class="worktime-card wide" id="worktime-sources"><div class="resource-head"><div><h3>공식 근거</h3><p>현재 판단과 계산에 사용한 근로기준법 및 시행령 근거입니다.</p></div></div><div class="source-list">${(legal.sources || []).map((source) => `<a class="source-row" href="${esc(source.url)}" target="_blank" rel="noopener noreferrer"><span><b>${esc(source.article || source.title)}</b><small>${esc(source.authority)} · 확인 ${esc(source.verifiedAt || legal.verifiedAt)}</small></span><span>↗</span></a>`).join("")}</div></section>
+      <section class="worktime-card wide" id="worktime-documents"><div class="resource-head"><div><h3>이 사건의 문서</h3><p>미지급액이 계산되면 지급요청과 진정서 초안을 연결합니다.</p></div></div><div class="document-grid">${(result.documents || []).map((doc) => `<button class="document-card" type="button" data-doc="${esc(doc.templateKey)}"><span class="doc-state">초안 가능</span><b>${esc(doc.title)}</b><small>${esc(doc.description)}</small></button>`).join("") || '<div class="resource-empty">현재 계산 기준 추천 문서가 없습니다.</div>'}</div></section>
+      <section class="worktime-card wide" id="worktime-procedures"><div class="resource-head"><div><h3>공식 절차</h3><p>수당 미지급·연장한도·휴게 위반 가능성을 기준으로 고용노동부 절차를 연결합니다.</p></div></div><div class="procedure-stack">${(result.procedures || []).map((procedure) => `<div class="procedure-box"><div><b>${esc(procedure.title)}</b><small>${esc(procedure.description)}</small></div><a class="btn primary" href="${esc(procedure.url)}" target="_blank" rel="noopener noreferrer">노동포털 ↗</a></div>`).join("") || '<div class="resource-empty">현재 자동 연결 절차가 없습니다.</div>'}</div></section>
     </div><div class="workspace-foot"><button class="btn" type="button" data-report>사건 요약 복사</button><button class="btn danger" type="button" data-delete>사건 삭제</button></div>
   </div>`;
   ROOT.querySelector("[data-money-form]")?.addEventListener("submit", saveMoney);
@@ -117,25 +125,29 @@ function renderWorkspace(result) {
   ROOT.querySelector("[data-delete]")?.addEventListener("click", deleteCase);
 }
 
-function controlValue(control) {
-  if (!control?.name || control.value === "") return undefined;
-  if (control.value === "true" || control.value === "false") return control.value === "true";
-  if (control.type === "number") { const n = Number(control.value); return Number.isFinite(n) ? n : undefined; }
-  return control.value;
+async function saveMoney(event) {
+  event.preventDefault();
+  const patch = {};
+  for (const control of event.currentTarget.elements) {
+    const value = controlValue(control);
+    if (value !== undefined) patch[control.name] = value;
+  }
+  try {
+    await patchFacts(patch, event.currentTarget.querySelector("button[type=submit]"));
+  } catch {
+    // Shared client core already renders the user-facing error.
+  }
 }
-async function patchFacts(patch, button) {
-  const session = getSession(); if (!session) return renderStart(); if (button) button.disabled = true;
-  try { const result = await api(`/api/cases/${encodeURIComponent(session.id)}/worktime-intake`, { method:"PATCH", body:JSON.stringify({ facts:patch }) }); renderWorkspace(result); }
-  catch { if (button) button.disabled = false; showError("사건 정보를 저장하지 못했습니다."); }
-}
-async function saveMoney(event) { event.preventDefault(); const patch={}; for (const control of event.currentTarget.elements) { const value=controlValue(control); if(value!==undefined) patch[control.name]=value; } await patchFacts(patch,event.currentTarget.querySelector("button[type=submit]")); }
-async function saveEvidence(event) { event.preventDefault(); const evidence={}; for(const control of event.currentTarget.elements) if(control.name) evidence[control.name]=control.value; await patchFacts({evidence},event.currentTarget.querySelector("button[type=submit]")); }
-function closePreview(){document.getElementById("worktime-doc-preview")?.remove();}
-async function previewDocument(templateKey) {
-  const session=getSession(); if(!session)return;
-  try { const result=await api(`/api/cases/${encodeURIComponent(session.id)}/worktime-document/${encodeURIComponent(templateKey)}`,{method:"POST",body:JSON.stringify({values:{}})}); closePreview(); const overlay=document.createElement("div"); overlay.id="worktime-doc-preview"; overlay.className="doc-preview-overlay"; overlay.innerHTML=`<div class="doc-preview"><div class="doc-preview-head"><div><span>사건 정보 자동 반영</span><h3>${esc(result.document?.title||"문서 초안")}</h3></div><button class="btn" data-close>닫기</button></div><pre></pre><div class="doc-preview-actions"><button class="btn primary" data-copy>텍스트 복사</button></div></div>`; overlay.querySelector("pre").textContent=result.document?.text||""; overlay.querySelector("[data-close]").onclick=closePreview; overlay.querySelector("[data-copy]").onclick=async(event)=>{await navigator.clipboard.writeText(result.document?.text||"").catch(()=>{});event.currentTarget.textContent="복사됨";}; document.body.appendChild(overlay); } catch { showError("문서 초안을 만들지 못했습니다."); }
-}
-async function copyReport(event){const session=getSession();if(!session)return;const button=event.currentTarget;try{const result=await api(`/api/cases/${encodeURIComponent(session.id)}/worktime-report`);await navigator.clipboard.writeText(result.text||"");button.textContent="사건 요약 복사됨";}catch{button.textContent="복사 실패";}}
-async function deleteCase(){const session=getSession();if(!session)return renderStart();if(!window.confirm("이 근로시간 사건을 삭제할까요?"))return;try{await api(`/api/cases/${encodeURIComponent(session.id)}`,{method:"DELETE"});}finally{clearSession();renderStart();}}
-async function restore(){const session=getSession();if(!session)return renderStart();try{renderWorkspace(await api(`/api/cases/${encodeURIComponent(session.id)}/worktime-intake`));}catch{clearSession();renderStart();}}
-restore();
+
+client = createCaseClientCore({
+  root: ROOT,
+  storageKey: STORAGE_KEY,
+  slug: "worktime",
+  errorClass: "worktime-error",
+  previewId: "worktime-doc-preview",
+  deleteConfirm: "이 근로시간 사건을 삭제할까요?",
+  renderStart,
+  renderWorkspace,
+});
+
+client.restore();
