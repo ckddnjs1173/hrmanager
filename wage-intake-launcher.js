@@ -2,6 +2,7 @@ const WAGE_TARGET = "/wage-intake";
 const DISMISSAL_TARGET = "/dismissal-intake";
 const RETIREMENT_TARGET = "/retirement-intake";
 const WORKTIME_TARGET = "/worktime-intake";
+const ANNUAL_LEAVE_TARGET = "/annual-leave-intake";
 
 function goToWageIntake() {
   window.location.assign(WAGE_TARGET);
@@ -19,6 +20,10 @@ function goToWorktimeIntake() {
   window.location.assign(WORKTIME_TARGET);
 }
 
+function goToAnnualLeaveIntake() {
+  window.location.assign(ANNUAL_LEAVE_TARGET);
+}
+
 function injectStyles() {
   if (document.getElementById("wageIntakeLauncherStyle")) return;
   const style = document.createElement("style");
@@ -29,11 +34,13 @@ function injectStyles() {
     .case-launcher.dismissal{background:linear-gradient(135deg,#fffaf5 0%,#f5f7fb 100%)}
     .case-launcher.retirement{background:linear-gradient(135deg,#f7fff9 0%,#f3f7f5 100%)}
     .case-launcher.worktime{background:linear-gradient(135deg,#f5f9ff 0%,#f4f7fb 100%)}
+    .case-launcher.annual{background:linear-gradient(135deg,#fbfff6 0%,#f5f8f1 100%)}
     .case-launcher-copy{min-width:0}
     .case-launcher-kicker{font-size:.72rem;font-weight:800;letter-spacing:.02em;color:#1b3a5b;margin-bottom:4px}
     .case-launcher.dismissal .case-launcher-kicker{color:#825a21}
     .case-launcher.retirement .case-launcher-kicker{color:#356449}
     .case-launcher.worktime .case-launcher-kicker{color:#275d91}
+    .case-launcher.annual .case-launcher-kicker{color:#577b39}
     .case-launcher-title{font-size:1.06rem;font-weight:800;color:#0b0d12;line-height:1.35}
     .case-launcher-desc{font-size:.82rem;color:#6b7280;margin-top:4px;line-height:1.55}
     .case-launcher-btn{flex-shrink:0;border:0;border-radius:12px;background:#1b3a5b;color:#fff;padding:12px 16px;font:inherit;font-size:.86rem;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(27,58,91,.16)}
@@ -44,6 +51,8 @@ function injectStyles() {
     .case-launcher.retirement .case-launcher-btn:hover{background:#294f39}
     .case-launcher.worktime .case-launcher-btn{background:#275d91;box-shadow:0 6px 16px rgba(39,93,145,.16)}
     .case-launcher.worktime .case-launcher-btn:hover{background:#1e4b77}
+    .case-launcher.annual .case-launcher-btn{background:#577b39;box-shadow:0 6px 16px rgba(87,123,57,.16)}
+    .case-launcher.annual .case-launcher-btn:hover{background:#46652e}
     @media(max-width:700px){.case-launcher{align-items:stretch;flex-direction:column}.case-launcher-btn{width:100%;padding:13px 16px}}
   `;
   document.head.appendChild(style);
@@ -89,11 +98,21 @@ function injectHomeEntries() {
       </div>
       <button class="case-launcher-btn" type="button" data-open-worktime>근로시간 사건 시작하기</button>
     </div>
+    <div class="case-launcher annual" data-annual-leave-case-launcher>
+      <div class="case-launcher-copy">
+        <div class="case-launcher-kicker">내 사건 · 연차</div>
+        <div class="case-launcher-title">연차가 몇 일 생겼고 미사용수당이 남았나요?</div>
+        <div class="case-launcher-desc">근속기간·출근율·사업장 적용범위·사용촉진을 나눠 연차 발생과 미사용수당을 정리합니다.</div>
+      </div>
+      <button class="case-launcher-btn" type="button" data-open-annual-leave>연차 사건 시작하기</button>
+    </div>
   `;
+
   stack.querySelector("[data-open-wage]")?.addEventListener("click", goToWageIntake);
   stack.querySelector("[data-open-dismissal]")?.addEventListener("click", goToDismissalIntake);
   stack.querySelector("[data-open-retirement]")?.addEventListener("click", goToRetirementIntake);
   stack.querySelector("[data-open-worktime]")?.addEventListener("click", goToWorktimeIntake);
+  stack.querySelector("[data-open-annual-leave]")?.addEventListener("click", goToAnnualLeaveIntake);
 
   const before = greeting.querySelector(".he-label");
   if (before) greeting.insertBefore(stack, before);
@@ -109,6 +128,7 @@ function connectSolveFlow() {
     if (["fire", "dismissal"].includes(key)) return goToDismissalIntake();
     if (["retirement", "severance"].includes(key)) return goToRetirementIntake();
     if (["worktime", "overtime", "premium_pay"].includes(key)) return goToWorktimeIntake();
+    if (["annual", "annual_leave", "leave"].includes(key)) return goToAnnualLeaveIntake();
     return original.call(this, key, ...rest);
   }
   wrapped.__caseWorkspaceWrapped = true;
@@ -136,6 +156,11 @@ function enhanceExistingButtons() {
     if (worktime) {
       event.preventDefault();
       return goToWorktimeIntake();
+    }
+    const annualLeave = event.target?.closest?.("[data-annual-leave-intake]");
+    if (annualLeave) {
+      event.preventDefault();
+      return goToAnnualLeaveIntake();
     }
   });
 }
