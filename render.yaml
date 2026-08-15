@@ -7,7 +7,9 @@ services:
     plan: free                 # 무료 플랜(일정 시간 미사용 시 절전 → 첫 접속 시 콜드스타트)
     buildCommand: npm install && npm run build   # 의존성 설치 + 정적 SEO 페이지 생성
     startCommand: npm start
-    healthCheckPath: /api/cases/readiness
+    # /api/health는 rate limit 바깥의 가벼운 liveness probe.
+    # 상세 DB/Case/Legal readiness는 main 배포 후 GitHub production smoke가 /api/cases/readiness에서 검증한다.
+    healthCheckPath: /api/health
     autoDeploy: true
     envVars:
       - key: NODE_VERSION
