@@ -18,14 +18,21 @@ test("wage intake page loads dedicated client and styles", () => {
   assert.match(html, /Case Workspace/);
 });
 
-test("wage intake client uses protected API and session-only token storage", () => {
+test("wage intake client delegates protected API and session-only token storage to shared access", () => {
   const js = read("wage-intake-client.js");
+  const core = read("case-client-core.js");
 
+  assert.match(js, /createCaseAccessClient/);
+  assert.match(js, /from "\.\/case-client-core\.js"/);
   assert.match(js, /\/api\/cases\/wage-intake/);
   assert.match(js, /\/wage-intake`/);
-  assert.match(js, /x-case-token/);
-  assert.match(js, /sessionStorage/);
+  assert.doesNotMatch(js, /x-case-token/);
+  assert.doesNotMatch(js, /sessionStorage/);
   assert.doesNotMatch(js, /localStorage/);
+  assert.match(core, /createCaseAccessClient/);
+  assert.match(core, /x-case-token/);
+  assert.match(core, /sessionStorage/);
+  assert.doesNotMatch(core, /localStorage/);
   assert.doesNotMatch(js, /accessToken=.*URL|searchParams\.set\([^)]*token/i);
 });
 

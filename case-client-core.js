@@ -28,6 +28,48 @@ export function controlValue(control) {
   return control.value;
 }
 
+export function createCaseAccessClient({ storageKey }) {
+  if (!storageKey) throw new Error("case_access_storage_key_required");
+
+  function getSession() {
+    try {
+      const value = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+      return value?.id && value?.token ? value : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function setSession(id, token) {
+    if (!id || !token) throw new Error("case_access_session_required");
+    sessionStorage.setItem(storageKey, JSON.stringify({ id, token }));
+  }
+
+  function clearSession() {
+    sessionStorage.removeItem(storageKey);
+  }
+
+  async function api(path, options = {}, token = null) {
+    const headers = { ...(options.headers || {}) };
+    if (options.body && !headers["content-type"]) headers["content-type"] = "application/json";
+    const accessToken = token || getSession()?.token;
+    if (accessToken) headers["x-case-token"] = accessToken;
+
+    const response = await fetch(path, { ...options, headers });
+    if (response.status === 204) return null;
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      const error = new Error(body?.error || `http_${response.status}`);
+      error.status = response.status;
+      error.body = body;
+      throw error;
+    }
+    return body;
+  }
+
+  return { api, clearSession, getSession, setSession };
+}
+
 export function createCaseClientCore({
   root,
   storageKey,
@@ -47,43 +89,17 @@ export function createCaseClientCore({
   renderWorkspace,
 }) {
   if (!root) throw new Error("case_client_root_required");
-  if (!storageKey) throw new Error("case_client_storage_key_required");
   if (!slug) throw new Error("case_client_slug_required");
   if (typeof renderStart !== "function" || typeof renderWorkspace !== "function") {
     throw new Error("case_client_renderers_required");
   }
 
-  function getSession() {
-    try {
-      const value = JSON.parse(sessionStorage.getItem(storageKey) || "null");
-      return value?.id && value?.token ? value : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function setSession(id, token) {
-    sessionStorage.setItem(storageKey, JSON.stringify({ id, token }));
-  }
-
-  function clearSession() {
-    sessionStorage.removeItem(storageKey);
-  }
-
-  async function api(path, options = {}, token = null) {
-    const headers = { ...(options.headers || {}) };
-    if (options.body) headers["content-type"] = "application/json";
-    const accessToken = token || getSession()?.token;
-    if (accessToken) headers["x-case-token"] = accessToken;
-
-    const response = await fetch(path, { ...options, headers });
-    const body = response.status === 204 ? null : await response.json().catch(() => null);
-    if (!response.ok) throw new Error(body?.error || `http_${response.status}`);
-    return body;
-  }
+  const access = createCaseAccessClient({ storageKey });
+  const { api, clearSession, getSession, setSession } = access;
+  const errorSelector = `.${String(errorClass).trim().split(/\s+/).join(".")}`;
 
   function showError(text) {
-    root.querySelector(`.${errorClass}`)?.remove();
+    root.querySelector(errorSelector)?.remove();
     const box = document.createElement("div");
     box.className = errorClass;
     box.textContent = text;

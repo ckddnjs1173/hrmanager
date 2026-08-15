@@ -1,27 +1,18 @@
+import { createCaseAccessClient } from "./case-client-core.js";
+
 const ROOT = document.getElementById("wageApp");
 const STORAGE_KEY = "insaya:wage-case-session";
 const BUTTON_ID = "wage-report-copy";
-
-function session() {
-  try {
-    const parsed = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null");
-    return parsed?.id && parsed?.token ? parsed : null;
-  } catch {
-    return null;
-  }
-}
+const access = createCaseAccessClient({ storageKey: STORAGE_KEY });
 
 async function copyReport(button) {
-  const current = session();
+  const current = access.getSession();
   if (!current) return;
   const original = button.textContent;
   button.disabled = true;
   try {
-    const response = await fetch(`/api/cases/${encodeURIComponent(current.id)}/wage-report`, {
-      headers: { "x-case-token": current.token },
-    });
-    const result = await response.json().catch(() => null);
-    if (!response.ok || !result?.text) throw new Error(result?.error || `http_${response.status}`);
+    const result = await access.api(`/api/cases/${encodeURIComponent(current.id)}/wage-report`);
+    if (!result?.text) throw new Error("report_text_missing");
     await navigator.clipboard.writeText(result.text);
     button.textContent = "사건 요약 복사됨";
     setTimeout(() => { button.textContent = original; button.disabled = false; }, 1400);

@@ -7,11 +7,20 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const read = (file) => readFileSync(path.join(ROOT, file), "utf8");
 
-test("shared Case client core owns session-only access and protected API transport", () => {
+test("shared Case access client owns session-only access and protected API transport", () => {
   const core = read("case-client-core.js");
+  assert.match(core, /export function createCaseAccessClient/);
   assert.match(core, /sessionStorage/);
   assert.doesNotMatch(core, /localStorage/);
   assert.match(core, /x-case-token/);
+  assert.match(core, /error\.status = response\.status/);
+  assert.match(core, /error\.body = body/);
+  assert.match(core, /response\.status === 204/);
+});
+
+test("full shared Case client composes the access adapter", () => {
+  const core = read("case-client-core.js");
+  assert.match(core, /createCaseAccessClient\(\{ storageKey \}\)/);
   assert.match(core, /encodeURIComponent\(session\.id\)/);
   assert.match(core, /\$\{slug\}-intake/);
 });

@@ -1,5 +1,8 @@
+import { createCaseAccessClient, escapeHtml as esc } from "./case-client-core.js";
+
 const ROOT = document.getElementById("wageApp");
 const STORAGE_KEY = "insaya:wage-case-session";
+const access = createCaseAccessClient({ storageKey: STORAGE_KEY });
 
 const STEP_LABELS = {
   case: "1 · 사건 구분",
@@ -35,50 +38,15 @@ const EXTRA_LABELS = {
   unusedAnnualLeave: "미사용 연차 문제가 있나요?",
 };
 
-let session = loadSession();
+let session = access.getSession();
 let current = null;
 let busy = false;
-
-function esc(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function loadSession() {
-  try {
-    const parsed = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null");
-    if (parsed?.id && parsed?.token) return parsed;
-  } catch {}
-  return null;
-}
+const api = access.api;
 
 function saveSession(next) {
   session = next;
-  if (!next) sessionStorage.removeItem(STORAGE_KEY);
-  else sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-}
-
-async function api(path, options = {}) {
-  const headers = { ...(options.headers || {}) };
-  if (options.body && !headers["content-type"]) headers["content-type"] = "application/json";
-  if (session?.token) headers["x-case-token"] = session.token;
-
-  const response = await fetch(path, { ...options, headers });
-  if (response.status === 204) return null;
-
-  let body = null;
-  try { body = await response.json(); } catch {}
-  if (!response.ok) {
-    const error = new Error(body?.error || `http_${response.status}`);
-    error.status = response.status;
-    error.body = body;
-    throw error;
-  }
-  return body;
+  if (!next) access.clearSession();
+  else access.setSession(next.id, next.token);
 }
 
 function setBusy(next) {
