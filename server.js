@@ -10,10 +10,10 @@ import { fileURLToPath } from "node:url";
 import { AI_ENABLED, AI_INFO, streamChat, createSummary, classifyTopicsAI } from "./lib/ai.js";
 import { buildKnowledgeFromIds, classifyTopics } from "./lib/knowledge.js";
 import { SYSTEM_PROMPT, SUMMARY_SCHEMA, SUMMARY_INSTRUCTION } from "./lib/prompt.js";
-import { listDocs, renderDoc, listPacks, renderPack } from "./lib/docs.js";
 import { bookings, leads, nomusa, accessLogs, adminStats, privacy, retentionSweep, events, EVENT_TYPES, partners, feedback } from "./lib/repo.js";
 import { notify, notifications, availableChannels } from "./lib/notify.js";
 import { createCaseRouter } from "./lib/case-routes.js";
+import { createDocumentRouter } from "./lib/document-routes.js";
 import { createProductHomeHandler } from "./lib/product-home.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -176,23 +176,8 @@ app.get("/api/nomu", (req, res) => {
   res.json(nomusa.publicList({ region: (req.query.region || "").toString().trim() }));
 });
 
-// ===== 문서센터 (AI 미사용 · 템플릿 치환) =====
-app.get("/api/docs", (req, res) => res.json(listDocs()));
-app.post("/api/doc", (req, res) => {
-  const { key, values } = req.body || {};
-  const doc = renderDoc(key, values || {});
-  if (!doc) return res.status(404).json({ error: "unknown_doc" });
-  res.json(doc);
-});
-
-// ===== 상황별 문서팩 (여러 문서를 1회 입력으로 묶음 생성) =====
-app.get("/api/docpacks", (req, res) => res.json(listPacks()));
-app.post("/api/docpack", (req, res) => {
-  const { key, values } = req.body || {};
-  const pack = renderPack(key, values || {});
-  if (!pack) return res.status(404).json({ error: "unknown_pack" });
-  res.json(pack);
-});
+// ===== 문서센터 + 상황별 문서팩 =====
+app.use("/api", createDocumentRouter());
 
 // ===== 리드 / 예약 (SQLite 저장 — lib/repo.js) =====
 const clean = (s) => (typeof s === "string" ? s.slice(0, 2000).trim() : "");
