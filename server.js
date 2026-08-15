@@ -7,11 +7,10 @@ import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { AI_ENABLED, AI_INFO, streamChat, createSummary, classifyTopicsAI } from "./lib/ai.js";
-import { buildKnowledgeFromIds, classifyTopics } from "./lib/knowledge.js";
-import { SYSTEM_PROMPT, SUMMARY_SCHEMA, SUMMARY_INSTRUCTION } from "./lib/prompt.js";
+import { AI_ENABLED, AI_INFO } from "./lib/ai.js";
 import { bookings, leads, nomusa, accessLogs, adminStats, privacy, retentionSweep, events, EVENT_TYPES, partners, feedback } from "./lib/repo.js";
 import { notify, notifications, availableChannels } from "./lib/notify.js";
+import { createAiRouter } from "./lib/ai-routes.js";
 import { createCaseRouter } from "./lib/case-routes.js";
 import { createDocumentRouter } from "./lib/document-routes.js";
 import { createProductHomeHandler } from "./lib/product-home.js";
@@ -90,76 +89,8 @@ if (!AI_ENABLED) {
   console.warn("⚠️  AI 키 미설정(ANTHROPIC_API_KEY/GEMINI_API_KEY) → 데모 모드로 동작합니다(프론트가 목업 응답 사용).");
 }
 
-// 사안 분류 → 노무 지식 주입 문자열 결정.
-// 쿼터 절약: 키워드로 먼저 분류하고, 키워드가 잡으면 AI 호출을 생략한다(상담 1건당 AI 1회 유지).
-// 키워드가 비었을 때(돌려 말한 질문 등)만 AI 의미 분류를 호출. AI 실패 시 일반 안내로 폴백.
-async function resolveKnowledge(messages) {
-  const users = messages.filter((m) => m.role === "user").map((m) => m.content);
-  const text = (users.slice(-1)[0] || "") + " " + users.join(" ");
-  const kwIds = classifyTopics(text);
-  if (kwIds.length) return buildKnowledgeFromIds(kwIds); // 키워드 적중 → AI 분류 생략(쿼터 절약)
-  const aiIds = await classifyTopicsAI(text); // 키워드 미적중 시에만 AI 의미 분류
-  return buildKnowledgeFromIds(aiIds || []); // null/[] → GENERIC
-}
-
-// 대화 메시지 정규화 (안전): role/content만 통과
-function sanitizeMessages(messages) {
-  if (!Array.isArray(messages)) return [];
-  return messages
-    .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
-    .slice(-30) // 최근 30턴까지만 (비용/컨텍스트 보호)
-    .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
-}
-
-// ===== AI 상담 (스트리밍) =====
-// rateLimit: AI 호출은 비용/쿼터가 걸려 있어 반드시 제한(루프 남용·쿼터 소진 방지)
-app.post("/api/chat", rateLimit({ windowMs: 60000, max: 12 }), async (req, res) => {
-  if (!AI_ENABLED) return res.status(503).json({ error: "no_api_key" });
-  const messages = sanitizeMessages(req.body?.messages);
-  if (!messages.length || messages[0].role !== "user") {
-    return res.status(400).json({ error: "first message must be user" });
-  }
-  res.setHeader("Content-Type", "text/plain; charset=utf-8");
-  res.setHeader("Cache-Control", "no-cache");
-  try {
-    // 사안 분류(AI+키워드) → 2026 노무 지식을 시스템 프롬프트에 주입
-    const system = SYSTEM_PROMPT + await resolveKnowledge(messages);
-    await streamChat({
-      system,
-      messages,
-      maxTokens: 1600, // 상담 답변 길이 상한 (비용 통제). thinking off라 전량 답변에 사용
-      onText: (delta) => res.write(delta),
-    });
-    res.end();
-  } catch (err) {
-    console.error("chat error:", err?.message || err);
-    // 무료 등급 분당 한도(429)는 사용자에게 친절한 안내로 구분
-    const rateLimited = /\b429\b|quota|rate/i.test(String(err?.message || ""));
-    if (!res.headersSent) res.status(rateLimited ? 429 : 500).json({ error: rateLimited ? "rate_limited" : "ai_error" });
-    else res.end(rateLimited ? "\n\n(지금 이용자가 많아 잠시 후 다시 시도해 주세요.)" : "\n\n(일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.)");
-  }
-});
-
-// ===== 상담 요약서 (구조화 출력) =====
-app.post("/api/summary", rateLimit({ windowMs: 60000, max: 10 }), async (req, res) => {
-  if (!AI_ENABLED) return res.status(503).json({ error: "no_api_key" });
-  const messages = sanitizeMessages(req.body?.messages);
-  if (!messages.length) return res.status(400).json({ error: "no_messages" });
-  try {
-    const system = SYSTEM_PROMPT + await resolveKnowledge(messages);
-    const summary = await createSummary({
-      system,
-      messages,
-      instruction: SUMMARY_INSTRUCTION,
-      schema: SUMMARY_SCHEMA,
-      maxTokens: 1500,
-    });
-    res.json(summary);
-  } catch (err) {
-    console.error("summary error:", err?.message || err);
-    res.status(500).json({ error: "ai_error" });
-  }
-});
+// ===== AI 상담 + 상담 요약 =====
+app.use("/api", createAiRouter({ rateLimit }));
 
 // ===== 노무사 목록 (공공데이터 + 직접등록) =====
 // 최초 1회 자동 시드: nomusa 테이블이 비어 있고 nomusa.json이 있으면 가져온다.
