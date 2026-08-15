@@ -4,7 +4,6 @@
 import "./lib/env.js"; // ⚠️ 반드시 첫 import — 이후 모듈들이 process.env를 읽기 전에 .env 로드
 import express from "express";
 import path from "node:path";
-import fs from "node:fs";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { AI_ENABLED, AI_INFO } from "./lib/ai.js";
@@ -13,6 +12,7 @@ import { notify, notifications, availableChannels } from "./lib/notify.js";
 import { createAiRouter } from "./lib/ai-routes.js";
 import { createCaseRouter } from "./lib/case-routes.js";
 import { createDocumentRouter } from "./lib/document-routes.js";
+import { createExpertRouter } from "./lib/expert-routes.js";
 import { createProductHomeHandler } from "./lib/product-home.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -92,20 +92,8 @@ if (!AI_ENABLED) {
 // ===== AI 상담 + 상담 요약 =====
 app.use("/api", createAiRouter({ rateLimit }));
 
-// ===== 노무사 목록 (공공데이터 + 직접등록) =====
-// 최초 1회 자동 시드: nomusa 테이블이 비어 있고 nomusa.json이 있으면 가져온다.
-(function seedNomusa() {
-  try {
-    if (nomusa.count() === 0) {
-      const arr = JSON.parse(fs.readFileSync(path.join(__dirname, "data", "nomusa.json"), "utf-8"));
-      if (Array.isArray(arr) && arr.length) { nomusa.replaceAll(arr); console.log(`   노무사 ${arr.length}건 DB 시드 완료`); }
-    }
-  } catch { /* nomusa.json 없으면 무시 */ }
-})();
-// 공개: 옵트아웃 제외 + featured 우선 정렬
-app.get("/api/nomu", (req, res) => {
-  res.json(nomusa.publicList({ region: (req.query.region || "").toString().trim() }));
-});
+// ===== 공개 노무사 검색 =====
+app.use("/api", createExpertRouter({ rootDir: __dirname }));
 
 // ===== 문서센터 + 상황별 문서팩 =====
 app.use("/api", createDocumentRouter());
