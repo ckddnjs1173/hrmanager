@@ -220,6 +220,66 @@ async function completeRetirementJourney(browser) {
   await context.close();
 }
 
+async function completeWorktimeJourney(browser) {
+  const context = await browser.newContext({ viewport: { width: 1365, height: 900 }, permissions: ["clipboard-read", "clipboard-write"] });
+  const page = await context.newPage();
+  const consoleErrors = collectConsoleErrors(page);
+  await page.goto(`${BASE}/worktime-intake`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "근로시간 사건 만들기" }).waitFor();
+
+  await page.locator('[name="referenceDate"]').fill("2026-08-16");
+  await page.locator('[name="workplaceEmployeeCount"]').fill("8");
+  await page.locator('[name="standardWorkSystem"]').selectOption("true");
+  await page.getByRole("button", { name: "근로시간 사건 만들기" }).click();
+  await page.locator(".worktime-workspace").waitFor();
+
+  await page.locator('[name="ordinaryHourlyWage"]').fill("20000");
+  await page.locator('[name="baseWageForExtraHoursPaid"]').selectOption("true");
+  await page.locator('[name="amountAlreadyPaid"]').fill("0");
+  await page.locator('[name="maxWeeklyOvertimeHours"]').fill("13");
+  await page.locator('[name="representativeDailyWorkHours"]').fill("9");
+  await page.locator('[name="representativeBreakMinutes"]').fill("30");
+  const hours = {
+    weekdayOvertimeDayHours: "10",
+    weekdayOvertimeNightHours: "2",
+    holidayDayUpTo8Hours: "0",
+    holidayNightUpTo8Hours: "0",
+    holidayDayOver8Hours: "0",
+    holidayNightOver8Hours: "0",
+  };
+  for (const [name, value] of Object.entries(hours)) await page.locator(`[name="${name}"]`).fill(value);
+  await page.getByRole("button", { name: "계산 정보 저장·재계산" }).click();
+  await page.waitForTimeout(100);
+
+  const moneyText = await page.locator("#worktime-money").innerText();
+  assert.match(moneyText, /140,000원/);
+  assert.match(moneyText, /13시간/);
+  assert.match(moneyText, /30분 \/ 필요 60분/);
+  const sourceText = await page.locator("#worktime-sources").innerText();
+  assert.match(sourceText, /근로기준법 제56조/);
+  assert.match(sourceText, /근로기준법 제54조/);
+
+  await page.locator('select[name="attendanceRecord"]').selectOption("have");
+  await page.locator('select[name="workSchedule"]').selectOption("have");
+  await page.locator('select[name="payslip"]').selectOption("planned");
+  await page.getByRole("button", { name: "증거 상태 저장" }).click();
+
+  await page.locator("#worktime-documents").waitFor();
+  await page.getByRole("button", { name: /연장·야간·휴일수당 지급 요청 내용증명/ }).click();
+  await page.locator("#worktime-doc-preview").waitFor();
+  assert.match(await page.locator("#worktime-doc-preview pre").innerText(), /140,000원/);
+  await page.locator("#worktime-doc-preview [data-close]").click();
+
+  await page.getByRole("button", { name: "사건 요약 복사" }).click();
+  await page.getByRole("button", { name: "사건 요약 복사됨" }).waitFor();
+  const report = await page.evaluate(() => navigator.clipboard.readText());
+  assert.match(report, /근로시간·연장\/야간\/휴일수당 사건 요약/);
+  assert.match(report, /140,000원/);
+  assert.match(await page.locator("#worktime-procedures").innerText(), /노동포털/);
+  assert.deepEqual(consoleErrors, [], `working-time browser console errors:\n${consoleErrors.join("\n")}`);
+  await context.close();
+}
+
 async function verifyMobileLayout(browser, path, buttonName) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
   const page = await context.newPage();
@@ -238,10 +298,12 @@ try {
   await completeWageJourney(browser);
   await completeDismissalJourney(browser);
   await completeRetirementJourney(browser);
+  await completeWorktimeJourney(browser);
   await verifyMobileLayout(browser, "/wage-intake", "사건 만들고 계속하기");
   await verifyMobileLayout(browser, "/dismissal-intake", "사건 만들고 적용범위 확인");
   await verifyMobileLayout(browser, "/retirement-intake", "퇴직급여 사건 만들기");
-  console.log("✅ Chromium E2E passed: wage + dismissal + retirement desktop journeys and mobile viewports");
+  await verifyMobileLayout(browser, "/worktime-intake", "근로시간 사건 만들기");
+  console.log("✅ Chromium E2E passed: wage + dismissal + retirement + working-time desktop journeys and mobile viewports");
 } finally {
   if (browser) await browser.close().catch(() => {});
   server.kill("SIGTERM");
