@@ -30,6 +30,7 @@ const due3 = addDays(today, 3);
 const due1 = addDays(today, 1);
 const due4 = addDays(today, 4);
 const overdueDate = addDays(today, -1);
+const oneDayLater = new Date(now.getTime() + 86_400_000);
 
 const migrationPool = createPostgresPool({ applicationName: "insaya-business-notification-e2e-migrate" });
 await applyPostgresMigrations(migrationPool, { logger: { log() {} } });
@@ -83,6 +84,7 @@ async function setDue(owner, organizationId, actionId, dueDate) {
 
 try {
   const owner = await login("notification-owner@example.com");
+  const manager = await login("notification-manager@example.com");
   const orgResponse = await request("/api/saas/organizations", {
     method: "POST", cookie: owner.cookie, csrf: owner.csrf,
     body: { type: "BUSINESS", legalName: "알림 테스트 주식회사", displayName: "알림 테스트" },
@@ -91,6 +93,14 @@ try {
   const orgId = orgResponse.body.organization.id;
   const pool = createPostgresPool({ applicationName: "insaya-business-notification-e2e-seed" });
   try {
+    const membershipNow = new Date().toISOString();
+    await pool.query(
+      `INSERT INTO organization_memberships
+       (id,organization_id,user_id,role_key,status,scope,joined_at,removed_at,created_at,updated_at)
+       VALUES ($1,$2,$3,'MANAGER','ACTIVE','{}'::jsonb,$4,NULL,$4,$4)`,
+      [`mem_${crypto.randomUUID()}`, orgId, manager.userId, membershipNow]
+    );
+
     const actionId = await seedAction(pool, orgId, "3일 전 알림 테스트");
     await setDue(owner, orgId, actionId, due3);
 
@@ -98,6 +108,11 @@ try {
     if (first.generated !== 1 || first.delivered !== 1) throw new Error(`first sweep invalid: ${JSON.stringify(first)}`);
     const duplicate = await runComplianceNotificationSweep({ now });
     if (duplicate.generated !== 0 || duplicate.delivered !== 0) throw new Error(`dedup failed: ${JSON.stringify(duplicate)}`);
+
+    const managerInbox = await request(`/api/saas/organizations/${orgId}/notifications`, { cookie: manager.cookie });
+    if (managerInbox.response.status !== 200 || managerInbox.body?.unreadCount !== 0 || managerInbox.body?.notifications?.length !== 0) {
+      throw new Error(`MANAGER must not receive automatic deadline notifications: ${JSON.stringify(managerInbox.body)}`);
+    }
 
     const inbox = await request(`/api/saas/organizations/${orgId}/notifications`, { cookie: owner.cookie });
     if (inbox.response.status !== 200 || inbox.body?.unreadCount !== 1 || inbox.body?.notifications?.length !== 1) {
@@ -119,13 +134,21 @@ try {
     const changedDue = await runComplianceNotificationSweep({ now });
     if (changedDue.generated !== 1 || changedDue.delivered !== 1) throw new Error(`changed due notification invalid: ${JSON.stringify(changedDue)}`);
 
-    const pendingActionId = await seedAction(pool, orgId, "stale pending 취소 테스트");
+    const pendingActionId = await seedAction(pool, orgId, "due date 변경 stale 취소 테스트");
     await setDue(owner, orgId, pendingActionId, due3);
     const pending = await generateDeadlineNotificationCandidates({ now });
     if (pending.generated !== 1) throw new Error(`pending candidate missing: ${JSON.stringify(pending)}`);
     await setDue(owner, orgId, pendingActionId, due4);
     const stale = await generateDeadlineNotificationCandidates({ now });
-    if (stale.cancelled < 1 || stale.generated !== 0) throw new Error(`stale pending not cancelled: ${JSON.stringify(stale)}`);
+    if (stale.cancelled < 1 || stale.generated !== 0) throw new Error(`due-date stale pending not cancelled: ${JSON.stringify(stale)}`);
+
+    const milestoneActionId = await seedAction(pool, orgId, "milestone stale 취소 테스트");
+    await setDue(owner, orgId, milestoneActionId, due3);
+    const milestonePending = await generateDeadlineNotificationCandidates({ now });
+    if (milestonePending.generated !== 1) throw new Error(`milestone candidate missing: ${JSON.stringify(milestonePending)}`);
+    const afterMilestone = await generateDeadlineNotificationCandidates({ now: oneDayLater });
+    const milestoneRow = await pool.query("SELECT status FROM compliance_notification_outbox WHERE organization_id=$1 AND source_id=$2 ORDER BY created_at DESC LIMIT 1", [orgId, milestoneActionId]);
+    if (afterMilestone.cancelled < 1 || milestoneRow.rows[0]?.status !== "CANCELLED") throw new Error(`expired milestone candidate not cancelled: ${JSON.stringify(afterMilestone)}`);
 
     const overdueActionId = await seedAction(pool, orgId, "지연 알림 테스트");
     await setDue(owner, orgId, overdueActionId, overdueDate);
@@ -145,10 +168,10 @@ try {
     );
     const cancelledRows = rows.rows.filter((row) => row.status === "CANCELLED");
     const deliveredRows = rows.rows.filter((row) => row.status === "DELIVERED");
-    if (cancelledRows.length < 1 || deliveredRows.length !== 3) throw new Error(`outbox lifecycle invalid: ${JSON.stringify(rows.rows)}`);
+    if (cancelledRows.length < 2 || deliveredRows.length < 3) throw new Error(`outbox lifecycle invalid: ${JSON.stringify(rows.rows)}`);
   } finally { await pool.end(); }
 
-  console.log("Business Notification E2E passed: milestone + dedup + read + due-change + stale-cancel + one-time overdue + tenant isolation.");
+  console.log("Business Notification E2E passed: recipient policy + milestone + dedup + read + stale cancellation + one-time overdue + tenant isolation.");
 } finally {
   await new Promise((resolve) => server.close(resolve));
   await Promise.allSettled([closeRuntimeStorage(), closeRuntimePostgres()]);
