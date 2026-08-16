@@ -2,6 +2,8 @@
 
 > **기준일:** 2026-08-16
 > **현재 판정:** Code/Product RC
+> **마지막 배포 검증 main:** `65c50f5de89260f8db33cf27f0e64fde0f211325`
+> **CI run:** `31921056734`
 > **GA blocker:** durable user-data persistence + 실제 restore rehearsal
 
 ---
@@ -15,36 +17,29 @@
 - [x] 퇴직금·퇴직연금 Case end-to-end
 - [x] 근로시간·연장/야간/휴일수당 Case end-to-end
 - [x] 연차유급휴가·미사용수당 Case end-to-end
-- [x] 증거 상태
-- [x] 다음 행동
-- [x] 공식 근거
-- [x] 사건 문서
-- [x] 공식기관 절차
-- [x] Case Report
-- [x] Case 삭제
+- [x] 증거 상태 / 다음 행동
+- [x] 공식 근거 / 문서 / 공식기관 절차
+- [x] Case Report / Case 삭제
 
 ### Legal / Calculation
 
 - [x] Core Case 결정론 계산/판단
-- [x] Case 기준일/법률 경계 관리
+- [x] 사건 기준일/법률 경계 관리
 - [x] Case Registry
 - [x] Legal Registry
 - [x] 공식 source contract 테스트
-- [x] unknown/missing fact를 임의 추정하지 않는 구조
+- [x] unknown/missing fact 임의 추정 방지
 
 ### Privacy / Security
 
 - [x] opaque Case access token
 - [x] token 원문 DB 미저장
-- [x] browser sessionStorage only
-- [x] Case token expiry
-- [x] delete/revoke lifecycle
-- [x] retention sweep
+- [x] browser `sessionStorage` only
+- [x] Case token expiry / revoke / retention
 - [x] Case document plain-text preview
-- [x] Admin signed session
-- [x] Partner signed session
+- [x] Admin / Partner signed session
 - [x] CSRF 보호
-- [x] timing-safe token/session verification
+- [x] timing-safe verification
 - [x] API rate limit
 - [x] security headers / CSP
 - [x] secure expert summary expiry / escape / noindex / access log
@@ -53,16 +48,9 @@
 
 - [x] shared Case client transport
 - [x] shared Case workspace CSS
-- [x] document router 분리
-- [x] AI router 분리
-- [x] expert router 분리
-- [x] public operation router 분리
-- [x] admin router 분리
-- [x] partner router 분리
-- [x] secure summary router 분리
-- [x] session security module
-- [x] rate-limit module
-- [x] HTTP security middleware
+- [x] Case / AI / Document / Expert / Public Operation router 분리
+- [x] Admin / Partner / Secure Summary router 분리
+- [x] session security / rate-limit / HTTP security 모듈
 - [x] retention scheduler
 - [x] `server.js` bootstrap only
 - [x] `lib/application.js` application composition
@@ -75,41 +63,67 @@
 - [x] actual Chromium desktop journey
 - [x] 390×844 mobile check
 - [x] annual leave dedicated browser journey
-- [x] exact-SHA Render deployment verification
-- [x] runtime readiness
-- [x] synthetic production Cases
+- [x] exact-SHA Render verification
+- [x] synthetic production Core Cases
 - [x] production document / report verification
 - [x] synthetic Case cleanup
-- [x] date-dependent wage-interest assertions 제거
+- [x] date-dependent wage assertions 제거
 
 ---
 
-## B. Latest Verified Code Baseline
-
-Code baseline before final documentation:
+## B. Last Verified Production Baseline
 
 ```text
-main SHA: 2de40069dea23c8d33d28f632aec7676e98ff132
-CI run:   31920757600
-```
+main SHA: 65c50f5de89260f8db33cf27f0e64fde0f211325
+CI run:   31921056734
 
-Result:
-
-```text
 check             ✅ success
 browser-e2e       ✅ success
 production-smoke  ✅ success
 ```
 
-Final documentation merge must also pass the same main chain before the RC documentation is considered fully synchronized.
+`fix/1.0-rc-finalization`은 배포 전 후보 브랜치다. 이 브랜치가 PR CI를 통과해도 `main`에 병합하기 전에는 Production에 반영되지 않는다.
 
 ---
 
-## C. GA Required — Durable Storage
+## C. Readiness Contract — RC Finalization
 
-이 섹션은 코드만으로 완료할 수 없다. 실제 운영 storage 선택이 필요하다.
+Canonical endpoint:
 
-### Infrastructure Decision
+```text
+GET /api/readiness
+```
+
+Compatibility alias:
+
+```text
+GET /api/cases/readiness
+```
+
+두 개념을 분리한다.
+
+```text
+ready
+= 서버·DB·Case Registry·Legal Registry가 현재 요청을 처리할 수 있는가
+
+readyForSensitiveCaseStorage
+= 민감한 사용자 Case를 장기 보관할 durable storage가 검증됐는가
+```
+
+무료/ephemeral baseline에서는 정상 상태가 다음과 같다.
+
+```text
+ready = true
+readyForSensitiveCaseStorage = false
+```
+
+`DB_PATH=:memory:`는 어떤 환경변수 조합에서도 durable storage로 인정하지 않는다.
+
+---
+
+## D. GA Required — Durable Storage
+
+### 1. Infrastructure Decision
 
 - [ ] durable storage 방식 선택
   - Render Persistent Disk + SQLite
@@ -117,13 +131,14 @@ Final documentation merge must also pass the same main chain before the RC docum
 - [ ] 비용/운영 책임 확인
 - [ ] production mount / connection 방식 확정
 
-### Persistence Configuration
+### 2. Initial Configuration
 
-- [ ] durable `DB_PATH` 설정
+- [ ] durable mount 아래 `DB_PATH` 설정
 - [ ] `REQUIRE_PERSISTENT_DB=1`
-- [ ] readiness가 persistence requirement를 통과하는지 확인
+- [ ] `PERSISTENT_STORAGE=0` 유지
+- [ ] `/api/readiness`가 아직 sensitive-storage-ready를 주장하지 않는지 확인
 
-### Survival Test
+### 3. Survival Test
 
 - [ ] marker record 생성
 - [ ] service restart
@@ -131,7 +146,16 @@ Final documentation merge must also pass the same main chain before the RC docum
 - [ ] redeploy
 - [ ] marker record 유지 확인
 
-### Backup
+### 4. Durable Storage Attestation
+
+위 survival test를 통과한 **뒤에만**:
+
+- [ ] `PERSISTENT_STORAGE=1`
+- [ ] `/api/readiness` → `ready=true`
+- [ ] `/api/readiness` → `readyForSensitiveCaseStorage=true`
+- [ ] persistence requirement satisfied 확인
+
+### 5. Backup
 
 - [ ] `npm run db:backup` 성공
 - [ ] `integrity_check` 성공
@@ -140,17 +164,18 @@ Final documentation merge must also pass the same main chain before the RC docum
 - [ ] backup을 application host 외부 안전 저장소로 복사
 - [ ] backup 접근권한/암호화 확인
 
-### Restore
+### 6. Restore
 
 - [ ] `npm run db:restore-check -- --source <backup.db>` 성공
 - [ ] 별도 target DB 생성 확인
 - [ ] 실제 restore rehearsal 1회
 - [ ] 복원 후 admin/core read 확인
 
-### Final GA Verification
+### 7. Final GA Verification
 
 - [ ] `/api/health` green
-- [ ] `/api/cases/readiness` green
+- [ ] `/api/readiness` green
+- [ ] `readyForSensitiveCaseStorage=true`
 - [ ] exact deployed SHA 확인
 - [ ] Core 5 production synthetic flow green
 - [ ] synthetic data cleanup green
@@ -160,9 +185,7 @@ Final documentation merge must also pass the same main chain before the RC docum
 
 ---
 
-## D. GA를 막지 않는 후속 작업
-
-아래는 중요하지만 1.0 GA 직접 blocker로 사용하지 않는다.
+## E. GA를 막지 않는 후속 작업
 
 - [ ] `TOPICS` external content source 이동
 - [ ] `ARTICLES` external content source 이동
@@ -182,9 +205,9 @@ Final documentation merge must also pass the same main chain before the RC docum
 
 ---
 
-## E. 1.0 Scope Freeze
+## F. 1.0 Scope Freeze
 
-GA 직전에는 아래 변경을 새 필수범위로 추가하지 않는다.
+GA 직전에는 아래를 새 필수범위로 추가하지 않는다.
 
 ```text
 새 Core Case
@@ -200,30 +223,28 @@ GA 직전에는 아래 변경을 새 필수범위로 추가하지 않는다.
 
 ---
 
-## F. Infrastructure Safety Rule
+## G. Infrastructure Safety Rule
 
-**비용이 발생할 수 있는 Render Persistent Disk, 외부 DB 또는 기타 유료 서비스는 자동으로 활성화하지 않는다.**
+**비용이 발생할 수 있는 Render Persistent Disk, 외부 DB 또는 기타 유료 서비스는 자동 활성화하지 않는다.**
 
-코드와 runbook은 준비해 두되 실제 구매/활성화/플랜 변경은 운영자의 명시적 선택 후 수행한다.
+코드와 runbook은 준비하되 실제 구매/활성화/플랜 변경은 운영자의 명시적 선택 후 수행한다.
 
 ---
 
-## G. Release Decision
-
-현재 판단:
+## H. Release Decision
 
 ```text
-Product scope        ✅
-Core implementation  ✅
-Architecture          ✅
-Security baseline     ✅
-Automated release     ✅
-Production smoke      ✅
-Backup tooling        ✅
-Durable persistence   ❌
-Real restore rehearsal❌
+Product scope                 ✅
+Core implementation           ✅
+Architecture                  ✅
+Security baseline             ✅
+Automated PR/browser release  ✅
+Production smoke baseline     ✅
+Backup tooling                ✅
+Durable persistence           ❌
+Real restore rehearsal        ❌
 
 => Insaya 1.0 Code/Product RC
 ```
 
-**다음 출시 작업은 기능 개발이 아니라 durable storage 결정과 복구 검증이다.**
+**다음 GA 작업은 기능 개발이 아니라 durable storage 결정·생존 검증·복구 검증이다.**

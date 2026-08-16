@@ -8,7 +8,7 @@ services:
     buildCommand: npm install && npm run build   # 의존성 설치 + 정적 SEO 페이지 생성
     startCommand: npm start
     # /api/health는 rate limit 바깥의 가벼운 liveness probe.
-    # 상세 DB/Case/Legal readiness는 main 배포 후 GitHub production smoke가 /api/cases/readiness에서 검증한다.
+    # 상세 DB/Case/Legal readiness는 /api/readiness가 제공하며 main production smoke가 exact SHA와 함께 검증한다.
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
@@ -34,7 +34,9 @@ services:
       - key: SITE_URL
         sync: false            # 비워두면 빌드 시 RENDER_EXTERNAL_URL 자동 사용
       - key: REQUIRE_PERSISTENT_DB
-        value: "0"             # 무료 플랜에서는 경고만 표시. 영속 디스크 전환 시 1로 변경
+        value: "0"             # 무료 플랜에서는 영속 저장을 강제하지 않음. GA durable storage 전환 시 1
+      - key: PERSISTENT_STORAGE
+        value: "0"             # restart/redeploy 데이터 유지 검증을 끝낸 뒤에만 1
 
 # 중요: 현재 무료 플랜의 파일시스템은 장기 영속 저장을 전제로 하지 않습니다.
 # Case·예약·리드 등 운영 데이터는 SQLite DB 파일에 저장되므로 장기 운영 전 영속 저장소가 필요합니다.
@@ -46,4 +48,5 @@ services:
 # 그리고 환경변수:
 #   DB_PATH=/opt/render/project/src/data/app.db
 #   REQUIRE_PERSISTENT_DB=1
+#   PERSISTENT_STORAGE=1   # 실제 restart/redeploy survival test를 통과한 뒤에만 설정
 # 전환 후 npm run db:backup / db:restore-check 및 재시작·재배포 데이터 유지 검증을 수행하세요.

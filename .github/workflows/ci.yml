@@ -4,7 +4,14 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
@@ -45,6 +52,7 @@ jobs:
         run: |
           node scripts/browser-e2e.mjs
           node scripts/annual-leave-browser-e2e.mjs
+          node scripts/case-a11y-browser-e2e.mjs
 
   production-smoke:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

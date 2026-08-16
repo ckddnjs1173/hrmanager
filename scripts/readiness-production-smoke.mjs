@@ -14,7 +14,7 @@ async function waitForReadiness() {
   let last = "no response";
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(`${BASE}/api/cases/readiness?t=${Date.now()}`, {
+      const response = await fetch(`${BASE}/api/readiness?t=${Date.now()}`, {
         headers: { "cache-control": "no-cache" },
       });
       const body = await response.json().catch(() => null);
@@ -30,6 +30,7 @@ async function waitForReadiness() {
 
 const readiness = await waitForReadiness();
 assert.equal(readiness.ready, true);
+assert.equal(readiness.readyForSensitiveCaseStorage, false, "free Render baseline must not claim durable Case storage");
 assert.equal(readiness.build.commit, EXPECTED_COMMIT);
 assert.equal(readiness.database?.ok, true);
 assert.equal(readiness.database?.engine, "sqlite");
@@ -40,8 +41,21 @@ assert.deepEqual(readiness.cases?.ids, ["wage", "dismissal", "retirement", "work
 assert.equal(readiness.legal?.ok, true);
 assert.deepEqual(readiness.legal?.errors, []);
 assert.equal(readiness.persistence?.required, false, "free Render deployment should not pretend persistent storage is enforced");
+assert.equal(readiness.persistence?.durableStorageDeclared, false, "free Render deployment must not attest durable storage");
 assert.equal(readiness.persistence?.requirementSatisfied, true);
+assert.equal(readiness.persistence?.readyForSensitiveCaseStorage, false);
 assert.ok(readiness.warnings?.includes("persistent_storage_not_enforced"));
+assert.ok(readiness.warnings?.includes("persistent_storage_not_verified"));
 assert.doesNotMatch(JSON.stringify(readiness), /\/opt\/render|data\/app\.db|DB_PATH/i, "readiness must not expose database paths or env names");
+
+// Backward compatibility: existing operational clients may still call the Case-scoped alias.
+const aliasResponse = await fetch(`${BASE}/api/cases/readiness?t=${Date.now()}`, {
+  headers: { "cache-control": "no-cache" },
+});
+assert.equal(aliasResponse.status, 200);
+const alias = await aliasResponse.json();
+assert.equal(alias.build?.commit, EXPECTED_COMMIT);
+assert.equal(alias.ready, readiness.ready);
+assert.equal(alias.readyForSensitiveCaseStorage, readiness.readyForSensitiveCaseStorage);
 
 console.log(`✅ runtime readiness passed · ${EXPECTED_COMMIT.slice(0, 12)} · ${BASE}`);

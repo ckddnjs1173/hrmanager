@@ -50,7 +50,7 @@ test("event and privacy validation contracts remain unchanged", async () => {
 
     const privacy = await fetch(`${base}/api/privacy/delete`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
     assert.equal(privacy.status, 400);
-    assert.deepEqual(await privacy.json(), { error: "token_or_contact_required" });
+    assert.deepEqual(await privacy.json(), { error: "contact_required" });
   });
 });
 

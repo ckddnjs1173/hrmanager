@@ -28,6 +28,21 @@ export function controlValue(control) {
   return control.value;
 }
 
+export function isTerminalCaseRestoreError(error) {
+  return [401, 404, 410].includes(Number(error?.status));
+}
+
+export function caseRestoreErrorText(error) {
+  const status = Number(error?.status);
+  if (status === 401) {
+    return "사건 접근 정보가 만료되었거나 유효하지 않습니다. 새 사건을 시작해 주세요.";
+  }
+  if (status === 404 || status === 410) {
+    return "저장된 사건을 찾을 수 없습니다. 삭제되었거나 보존 기간이 끝났을 수 있습니다.";
+  }
+  return "사건을 잠시 불러올 수 없습니다. 접근 정보는 이 탭에 그대로 보관했습니다.";
+}
+
 export function createCaseAccessClient({ storageKey }) {
   if (!storageKey) throw new Error("case_access_storage_key_required");
 
@@ -70,6 +85,61 @@ export function createCaseAccessClient({ storageKey }) {
   return { api, clearSession, getSession, setSession };
 }
 
+export function openAccessibleDocumentPreview({
+  previewId,
+  title = "문서 초안",
+  text = "",
+  closeOnBackdrop = false,
+  copyLabel = "텍스트 복사",
+  copiedLabel = "복사됨",
+}) {
+  if (!previewId) throw new Error("case_preview_id_required");
+
+  document.getElementById(previewId)?.remove();
+  const previousFocus = document.activeElement && typeof document.activeElement.focus === "function"
+    ? document.activeElement
+    : null;
+  const titleId = `${previewId}-title`;
+  const overlay = document.createElement("div");
+  overlay.id = previewId;
+  overlay.className = "doc-preview-overlay";
+  overlay.innerHTML = `<div class="doc-preview" role="dialog" aria-modal="true" aria-labelledby="${escapeHtml(titleId)}"><div class="doc-preview-head"><div><span>사건 정보 자동 반영</span><h3 id="${escapeHtml(titleId)}">${escapeHtml(title)}</h3></div><button class="btn" type="button" data-close aria-label="문서 미리보기 닫기">닫기</button></div><pre tabindex="0"></pre><div class="doc-preview-actions"><button class="btn primary" type="button" data-copy>${escapeHtml(copyLabel)}</button></div></div>`;
+  overlay.querySelector("pre").textContent = text || "";
+
+  let closed = false;
+  const onKeydown = (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    close();
+  };
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    document.removeEventListener("keydown", onKeydown);
+    overlay.remove();
+    if (previousFocus && typeof previousFocus.focus === "function" && previousFocus.isConnected !== false) {
+      previousFocus.focus();
+    }
+  };
+
+  const closeButton = overlay.querySelector("[data-close]");
+  closeButton.addEventListener("click", close);
+  overlay.querySelector("[data-copy]").addEventListener("click", async (event) => {
+    await navigator.clipboard.writeText(text || "").catch(() => {});
+    event.currentTarget.textContent = copiedLabel;
+  });
+  if (closeOnBackdrop) {
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) close();
+    });
+  }
+
+  document.addEventListener("keydown", onKeydown);
+  document.body.appendChild(overlay);
+  closeButton.focus();
+  return close;
+}
+
 export function createCaseClientCore({
   root,
   storageKey,
@@ -77,6 +147,7 @@ export function createCaseClientCore({
   errorClass = "case-error",
   previewId = `${slug}-doc-preview`,
   deleteConfirm = "이 사건을 삭제할까요?",
+  deleteErrorText = "사건을 삭제하지 못했습니다. 접근 정보는 유지했습니다. 다시 시도해 주세요.",
   patchErrorText = "사건 정보를 저장하지 못했습니다.",
   previewErrorText = "문서 초안을 만들지 못했습니다.",
   closePreviewOnBackdrop = false,
@@ -84,7 +155,7 @@ export function createCaseClientCore({
   reportFailureText = "복사 실패",
   reportResetMs = 0,
   disableReportWhileCopying = false,
-  shouldClearSessionOnRestoreError = () => true,
+  shouldClearSessionOnRestoreError = isTerminalCaseRestoreError,
   renderStart,
   renderWorkspace,
 }) {
@@ -97,11 +168,14 @@ export function createCaseClientCore({
   const access = createCaseAccessClient({ storageKey });
   const { api, clearSession, getSession, setSession } = access;
   const errorSelector = `.${String(errorClass).trim().split(/\s+/).join(".")}`;
+  let closeActivePreview = null;
 
   function showError(text) {
     root.querySelector(errorSelector)?.remove();
     const box = document.createElement("div");
     box.className = errorClass;
+    box.setAttribute("role", "alert");
+    box.setAttribute("aria-live", "assertive");
     box.textContent = text;
     root.prepend(box);
   }
@@ -138,6 +212,12 @@ export function createCaseClientCore({
   }
 
   function closePreview() {
+    if (closeActivePreview) {
+      const close = closeActivePreview;
+      closeActivePreview = null;
+      close();
+      return;
+    }
     document.getElementById(previewId)?.remove();
   }
 
@@ -150,22 +230,12 @@ export function createCaseClientCore({
         body: JSON.stringify({ values: {} }),
       });
       closePreview();
-      const overlay = document.createElement("div");
-      overlay.id = previewId;
-      overlay.className = "doc-preview-overlay";
-      overlay.innerHTML = `<div class="doc-preview"><div class="doc-preview-head"><div><span>사건 정보 자동 반영</span><h3>${escapeHtml(result.document?.title || "문서 초안")}</h3></div><button class="btn" type="button" data-close>닫기</button></div><pre></pre><div class="doc-preview-actions"><button class="btn primary" type="button" data-copy>텍스트 복사</button></div></div>`;
-      overlay.querySelector("pre").textContent = result.document?.text || "";
-      overlay.querySelector("[data-close]").onclick = closePreview;
-      overlay.querySelector("[data-copy]").onclick = async (event) => {
-        await navigator.clipboard.writeText(result.document?.text || "").catch(() => {});
-        event.currentTarget.textContent = "복사됨";
-      };
-      if (closePreviewOnBackdrop) {
-        overlay.addEventListener("click", (event) => {
-          if (event.target === overlay) closePreview();
-        });
-      }
-      document.body.appendChild(overlay);
+      closeActivePreview = openAccessibleDocumentPreview({
+        previewId,
+        title: result.document?.title || "문서 초안",
+        text: result.document?.text || "",
+        closeOnBackdrop: closePreviewOnBackdrop,
+      });
     } catch {
       showError(previewErrorText);
     }
@@ -201,11 +271,32 @@ export function createCaseClientCore({
     if (!window.confirm(deleteConfirm)) return;
     try {
       await api(`/api/cases/${encodeURIComponent(session.id)}`, { method: "DELETE" });
-    } finally {
       clearSession();
       closePreview();
       renderStart();
+    } catch (error) {
+      if (isTerminalCaseRestoreError(error)) {
+        clearSession();
+        closePreview();
+        renderStart();
+        showError(caseRestoreErrorText(error));
+        return;
+      }
+      showError(deleteErrorText);
     }
+  }
+
+  function renderRecoverableRestoreFailure(error) {
+    root.innerHTML = `<section class="case-system-state" role="alert" aria-live="polite"><div class="case-system-state-icon" aria-hidden="true">↻</div><h2>사건을 불러오지 못했습니다.</h2><p>${escapeHtml(caseRestoreErrorText(error))}</p><div class="case-system-state-actions"><button class="btn primary" type="button" data-case-retry>다시 시도</button><button class="btn" type="button" data-case-start-new>새 사건 시작</button></div></section>`;
+    const retry = root.querySelector("[data-case-retry]");
+    retry?.addEventListener("click", restore);
+    root.querySelector("[data-case-start-new]")?.addEventListener("click", () => {
+      if (!window.confirm("현재 탭에 보관된 사건 접근 정보를 지우고 새 사건을 시작할까요?")) return;
+      clearSession();
+      closePreview();
+      renderStart();
+    });
+    retry?.focus();
   }
 
   async function restore() {
@@ -214,8 +305,14 @@ export function createCaseClientCore({
     try {
       renderWorkspace(await api(`/api/cases/${encodeURIComponent(session.id)}/${slug}-intake`));
     } catch (error) {
-      if (shouldClearSessionOnRestoreError(error)) clearSession();
-      renderStart();
+      if (shouldClearSessionOnRestoreError(error)) {
+        clearSession();
+        closePreview();
+        renderStart();
+        showError(caseRestoreErrorText(error));
+        return;
+      }
+      renderRecoverableRestoreFailure(error);
     }
   }
 
