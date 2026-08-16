@@ -57,13 +57,15 @@ test("document router preserves pack catalog and unknown-pack contract", async (
   });
 });
 
-test("server delegates document endpoints to the extracted router", () => {
+test("application composition delegates document endpoints to the extracted router", () => {
+  const application = readFileSync(path.join(ROOT, "lib/application.js"), "utf8");
   const server = readFileSync(path.join(ROOT, "server.js"), "utf8");
-  assert.match(server, /import \{ createDocumentRouter \} from "\.\/lib\/document-routes\.js"/);
-  assert.match(server, /app\.use\("\/api", createDocumentRouter\(\)\)/);
-  assert.doesNotMatch(server, /app\.get\("\/api\/docs"/);
-  assert.doesNotMatch(server, /app\.post\("\/api\/doc"/);
-  assert.doesNotMatch(server, /app\.get\("\/api\/docpacks"/);
-  assert.doesNotMatch(server, /app\.post\("\/api\/docpack"/);
-  assert.doesNotMatch(server, /from "\.\/lib\/docs\.js"/);
+  assert.match(application, /import \{ createDocumentRouter \} from "\.\/document-routes\.js"/);
+  assert.match(application, /app\.use\("\/api", createDocumentRouter\(\)\)/);
+  assert.doesNotMatch(application, /app\.get\("\/api\/docs"/);
+  assert.doesNotMatch(application, /app\.post\("\/api\/doc"/);
+  assert.doesNotMatch(application, /app\.get\("\/api\/docpacks"/);
+  assert.doesNotMatch(application, /app\.post\("\/api\/docpack"/);
+  assert.doesNotMatch(application, /from "\.\/docs\.js"/);
+  assert.match(server, /createApplication/);
 });
