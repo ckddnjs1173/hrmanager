@@ -7,22 +7,31 @@ import express from "express";
 import { once } from "node:events";
 
 import {
+  PRODUCT_GUIDE_CATALOG_SCRIPT,
   PRODUCT_HOME_CONTENT_SCRIPT,
   PRODUCT_HOME_SCRIPT,
   createProductHomeHandler,
+  injectProductGuideCatalogScript,
   injectProductHomeContentScript,
   injectProductHomeScript,
   prepareProductHomeHtml,
+  replaceLegacyGuideCatalogSource,
   replaceLegacyHomeNavigationSource,
 } from "../lib/product-home.js";
 
 test("product home script injection is idempotent", () => {
   const source = "<!doctype html><html><head></head><body><main>home</main></body></html>";
-  const onceInjected = injectProductHomeScript(injectProductHomeContentScript(source));
-  const twiceInjected = injectProductHomeScript(injectProductHomeContentScript(onceInjected));
+  const onceInjected = injectProductHomeScript(
+    injectProductGuideCatalogScript(injectProductHomeContentScript(source)),
+  );
+  const twiceInjected = injectProductHomeScript(
+    injectProductGuideCatalogScript(injectProductHomeContentScript(onceInjected)),
+  );
 
   assert.equal(onceInjected.includes(PRODUCT_HOME_CONTENT_SCRIPT), true);
+  assert.equal(onceInjected.includes(PRODUCT_GUIDE_CATALOG_SCRIPT), true);
   assert.equal(onceInjected.indexOf(PRODUCT_HOME_CONTENT_SCRIPT) < onceInjected.indexOf("</head>"), true);
+  assert.equal(onceInjected.indexOf(PRODUCT_GUIDE_CATALOG_SCRIPT) < onceInjected.indexOf("</head>"), true);
   assert.equal(onceInjected.includes(PRODUCT_HOME_SCRIPT), true);
   assert.equal(onceInjected.indexOf(PRODUCT_HOME_SCRIPT) < onceInjected.indexOf("</body>"), true);
   assert.equal(twiceInjected, onceInjected);
@@ -39,9 +48,19 @@ test("legacy home navigation definitions are replaced by canonical content bindi
   assert.match(migrated, /let currentSite=null/);
 });
 
-test("product home handler serves transformed index with content source and Case launcher", async (t) => {
+test("legacy guide topic definitions are replaced by the canonical catalog binding", () => {
+  const source = `<script>\nconst TOPICS={\n  worker:[{k:'wage'}],\n  employer:[{k:'emp_risk'}]\n};\nfunction renderHub(which){}\n</script>`;
+  const migrated = replaceLegacyGuideCatalogSource(source);
+
+  assert.doesNotMatch(migrated, /const TOPICS=\{\s*worker:/);
+  assert.match(migrated, /window\.INSAYA_GUIDE_CATALOG\?\.TOPICS/);
+  assert.match(migrated, /worker:\[\],employer:\[\]/);
+  assert.match(migrated, /function renderHub\(which\)/);
+});
+
+test("product home handler serves transformed index with canonical content sources and Case launcher", async (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "insaya-home-"));
-  fs.writeFileSync(path.join(dir, "index.html"), `<!doctype html><html><head></head><body><h1>인사야</h1><script>\nconst SITES={\n worker:{wm:'근로자'}\n};\nconst CATS={\n worker:[], employer:[]\n};\nlet currentSite=null;\n</script></body></html>`);
+  fs.writeFileSync(path.join(dir, "index.html"), `<!doctype html><html><head></head><body><h1>인사야</h1><script>\nconst SITES={\n worker:{wm:'근로자'}\n};\nconst CATS={\n worker:[], employer:[]\n};\nlet currentSite=null;\nconst TOPICS={\n worker:[{k:'wage'}], employer:[]\n};\nfunction renderHub(which){}\n</script></body></html>`);
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
   const app = express();
@@ -58,15 +77,19 @@ test("product home handler serves transformed index with content source and Case
   assert.match(response.headers.get("content-type") || "", /text\/html/);
   assert.match(response.headers.get("cache-control") || "", /no-cache/);
   assert.equal(html.includes(PRODUCT_HOME_CONTENT_SCRIPT), true);
+  assert.equal(html.includes(PRODUCT_GUIDE_CATALOG_SCRIPT), true);
   assert.equal(html.includes(PRODUCT_HOME_SCRIPT), true);
   assert.match(html, /window\.INSAYA_HOME_NAV/);
+  assert.match(html, /window\.INSAYA_GUIDE_CATALOG/);
 });
 
-test("prepareProductHomeHtml applies content migration and both injections once", () => {
-  const source = `<!doctype html><html><head></head><body><script>\nconst SITES={};\nconst CATS={\n worker:[], employer:[]\n};\nlet currentSite=null;\n</script></body></html>`;
+test("prepareProductHomeHtml applies content migrations and injections once", () => {
+  const source = `<!doctype html><html><head></head><body><script>\nconst SITES={};\nconst CATS={\n worker:[], employer:[]\n};\nlet currentSite=null;\nconst TOPICS={\n worker:[], employer:[]\n};\nfunction renderHub(which){}\n</script></body></html>`;
   const first = prepareProductHomeHtml(source);
   const second = prepareProductHomeHtml(first);
+
   assert.equal(second, first);
   assert.equal((first.match(/home-navigation\.js/g) || []).length, 1);
+  assert.equal((first.match(/guide-catalog\.js/g) || []).length, 1);
   assert.equal((first.match(/wage-intake-launcher\.js/g) || []).length, 1);
 });
