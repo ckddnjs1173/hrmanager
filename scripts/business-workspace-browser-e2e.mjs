@@ -116,12 +116,13 @@ try {
     assert.match(await page.locator("#dashboard-findings").innerText(), /2026년 최저임금보다 낮음/);
 
     await page.locator('.nav-item[data-view="actions"]').click();
-    const wageAction = page.locator(".action-card", { hasText: "최저임금 기준으로 시급 검토" });
+    const actionList = page.locator("#action-list");
+    const wageAction = actionList.locator(".action-card", { hasText: "최저임금 기준으로 시급 검토" });
     await wageAction.waitFor();
     await wageAction.locator('button[data-action-status="IN_PROGRESS"]').click();
     await page.getByText("조치 상태를 변경했습니다.").waitFor();
 
-    const inProgressAction = page.locator(".action-card", { hasText: "최저임금 기준으로 시급 검토" });
+    const inProgressAction = actionList.locator(".action-card", { hasText: "최저임금 기준으로 시급 검토" });
     assert.match(await inProgressAction.innerText(), /IN_PROGRESS/);
     await inProgressAction.locator('button[data-action-status="DONE"]').click();
     await page.getByText(/다음 Risk Scan에서 실제 해소 여부/).waitFor();
