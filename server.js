@@ -5,15 +5,20 @@ import "./lib/env.js"; // 반드시 첫 import — 이후 모듈들이 process.e
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createApplication } from "./lib/application.js";
+import { createGracefulShutdown } from "./lib/graceful-shutdown.js";
 import { startRetentionScheduler } from "./lib/retention-scheduler.js";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const { app, runtime } = createApplication({ rootDir });
-startRetentionScheduler();
+const stopRetentionScheduler = startRetentionScheduler();
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   const { aiEnabled, aiInfo } = runtime;
   console.log(`\n✅ 노무 AI 서버 실행: http://localhost:${PORT}`);
   console.log(`   모델: ${aiEnabled ? `${aiInfo.provider} · ${aiInfo.model}${aiInfo.fallbacks?.length ? `  (폴백: ${aiInfo.fallbacks.join(", ")})` : ""}` : "데모 모드(키 없음)"}\n`);
 });
+
+const shutdown = createGracefulShutdown({ server, stopJobs: [stopRetentionScheduler] });
+process.once("SIGTERM", () => shutdown("SIGTERM"));
+process.once("SIGINT", () => shutdown("SIGINT"));
