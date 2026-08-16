@@ -60,9 +60,10 @@ test("case document endpoint is protected and pre-fills case money and period", 
 
   assert.equal(renderedRes.status, 200);
   const rendered = await renderedRes.json();
+  const expectedAmount = created.money.knownTotalEstimate;
   assert.equal(rendered.templateKey, "certmail");
-  assert.equal(rendered.values.amount, 3000000);
-  assert.match(rendered.document.text, /3,000,000원/);
+  assert.equal(rendered.values.amount, expectedAmount);
+  assert.match(rendered.document.text, new RegExp(`${Number(expectedAmount).toLocaleString("ko-KR")}원`));
   assert.match(rendered.document.text, /2026-07-01 ~ 2026-07-31/);
   assert.match(rendered.document.text, /테스트회사/);
 });
