@@ -98,6 +98,12 @@ Employee:
 - employee.salary.view
 - employee.export
 
+Compliance:
+
+- compliance.action.status
+- compliance.action.due_date
+- risk.scan
+
 Case:
 
 - case.create
