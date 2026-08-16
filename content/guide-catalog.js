@@ -1,0 +1,43 @@
+// Canonical runtime source for the legacy guide topic catalog.
+// index.html keeps a fallback copy while the monolith is migrated incrementally.
+window.INSAYA_GUIDE_CATALOG = Object.freeze({
+  TOPICS: Object.freeze({
+    worker: Object.freeze([
+      { k: "wage", em: "💰", t: "임금체불", d: "밀린 월급·수당, 이렇게 받으세요" },
+      { k: "jobscam", em: "🚨", t: "취업사기 예방", d: "통장·개인정보 탈취, 수거책 신호와 신고처" },
+      { k: "jobsupport", em: "🤝", t: "국민취업지원", d: "실업급여 사각지대 구직지원" },
+      { k: "pension", em: "🏦", t: "퇴직연금", d: "DB·DC·IRP, 퇴직금과 뭐가 다를까" },
+      { k: "equality", em: "⚖️", t: "고용상 차별", d: "채용·임금·승진·정년 차별 대응" },
+      { k: "procedure", em: "🧭", t: "노동 행정절차", d: "진정·구제신청·산재, 어디에 어떻게" },
+      { k: "fire", em: "⚖️", t: "부당해고", d: "갑작스런 해고 통보 대응법" },
+      { k: "severance", em: "📄", t: "퇴직금", d: "받을 자격과 계산·청구 방법" },
+      { k: "holiday", em: "🕐", t: "주휴수당", d: "알바도 받는 주휴수당 기준" },
+      { k: "harass", em: "😟", t: "직장 내 괴롭힘", d: "신고 절차와 증거 확보" },
+      { k: "contract", em: "📝", t: "근로계약서", d: "안 쓰면 누구 책임일까" },
+      { k: "unemployment", em: "🧾", t: "실업급여", d: "수급 요건·금액·신청 절차" },
+      { k: "payslip", em: "📃", t: "임금명세서", d: "필수 기재사항·미교부 대응" },
+      { k: "maternity", em: "🤰", t: "출산·육아휴직", d: "출산휴가·육아휴직·단축 총정리" },
+      { k: "injury", em: "🩹", t: "산재보상", d: "다쳤을 때 치료비·휴업급여" },
+      { k: "worktime", em: "⏰", t: "근로시간·주52시간", d: "연장한도·유연근로·포괄임금" },
+      { k: "smallbiz", em: "🏪", t: "5인 미만 사업장", d: "받는 것과 안 되는 것" },
+      { k: "probation", em: "🐣", t: "수습·본채용 거부", d: "90% 감액과 수습 해고" },
+      { k: "nonreg", em: "🔀", t: "비정규직 보호", d: "계약직·단시간·파견의 권리와 2년룰" },
+      { k: "sexharass", em: "🚫", t: "직장 내 성희롱", d: "괴롭힘과 다른 대응·구제 절차" },
+      { k: "daebul", em: "🏛️", t: "대지급금(체당금)", d: "회사가 못 준 임금·퇴직금, 국가가 대신" },
+      { k: "youthjob", em: "🎒", t: "청소년 알바", d: "만 15~18세, 내 권리 지키기" },
+      { k: "layoff", em: "🏭", t: "정리해고", d: "경영상 해고 4요건과 구제" },
+    ]),
+    employer: Object.freeze([
+      { k: "emp_risk", em: "🛡️", t: "노무 리스크 진단", d: "우리 사업장 취약점 점검" },
+      { k: "emp_annual", em: "🌴", t: "연차 관리", d: "발생·사용촉진·수당 정산" },
+      { k: "emp_minor", em: "👦", t: "연소근로자", d: "미성년 고용 필수 절차" },
+      { k: "emp_contract", em: "📝", t: "근로계약서 작성", d: "유형별 필수 기재사항" },
+      { k: "emp_fire", em: "⚖️", t: "해고 전 체크", d: "정당성·서면통지·예고" },
+      { k: "emp_pay", em: "🧮", t: "급여·수당 계산", d: "연장·야간·휴일·주휴" },
+      { k: "emp_rule", em: "📋", t: "취업규칙", d: "작성 의무와 기본 항목" },
+      { k: "emp_doc", em: "🗂️", t: "인사문서", d: "경고장·시말서·권고사직" },
+      { k: "severeaccident", em: "🏭", t: "중대재해처벌법", d: "사업주·경영책임자 안전의무와 처벌" },
+      { k: "empsubsidy", em: "💰", t: "고용장려금", d: "청년채용·육아·전환·유지 지원금" },
+    ]),
+  }),
+});
