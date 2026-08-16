@@ -28,6 +28,21 @@ export function controlValue(control) {
   return control.value;
 }
 
+export function isTerminalCaseRestoreError(error) {
+  return [401, 404, 410].includes(Number(error?.status));
+}
+
+export function caseRestoreErrorText(error) {
+  const status = Number(error?.status);
+  if (status === 401) {
+    return "사건 접근 정보가 만료되었거나 유효하지 않습니다. 새 사건을 시작해 주세요.";
+  }
+  if (status === 404 || status === 410) {
+    return "저장된 사건을 찾을 수 없습니다. 삭제되었거나 보존 기간이 끝났을 수 있습니다.";
+  }
+  return "사건을 잠시 불러올 수 없습니다. 접근 정보는 이 탭에 그대로 보관했습니다.";
+}
+
 export function createCaseAccessClient({ storageKey }) {
   if (!storageKey) throw new Error("case_access_storage_key_required");
 
@@ -84,7 +99,7 @@ export function createCaseClientCore({
   reportFailureText = "복사 실패",
   reportResetMs = 0,
   disableReportWhileCopying = false,
-  shouldClearSessionOnRestoreError = () => true,
+  shouldClearSessionOnRestoreError = isTerminalCaseRestoreError,
   renderStart,
   renderWorkspace,
 }) {
@@ -208,14 +223,33 @@ export function createCaseClientCore({
     }
   }
 
+  function renderRecoverableRestoreFailure(error) {
+    root.innerHTML = `<section class="case-system-state" role="alert" aria-live="polite"><div class="case-system-state-icon" aria-hidden="true">↻</div><h2>사건을 불러오지 못했습니다.</h2><p>${escapeHtml(caseRestoreErrorText(error))}</p><div class="case-system-state-actions"><button class="btn primary" type="button" data-case-retry>다시 시도</button><button class="btn" type="button" data-case-start-new>새 사건 시작</button></div></section>`;
+    const retry = root.querySelector("[data-case-retry]");
+    retry?.addEventListener("click", restore);
+    root.querySelector("[data-case-start-new]")?.addEventListener("click", () => {
+      if (!window.confirm("현재 탭에 보관된 사건 접근 정보를 지우고 새 사건을 시작할까요?")) return;
+      clearSession();
+      closePreview();
+      renderStart();
+    });
+    retry?.focus();
+  }
+
   async function restore() {
     const session = getSession();
     if (!session) return renderStart();
     try {
       renderWorkspace(await api(`/api/cases/${encodeURIComponent(session.id)}/${slug}-intake`));
     } catch (error) {
-      if (shouldClearSessionOnRestoreError(error)) clearSession();
-      renderStart();
+      if (shouldClearSessionOnRestoreError(error)) {
+        clearSession();
+        closePreview();
+        renderStart();
+        showError(caseRestoreErrorText(error));
+        return;
+      }
+      renderRecoverableRestoreFailure(error);
     }
   }
 
