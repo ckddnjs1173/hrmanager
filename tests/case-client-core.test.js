@@ -36,6 +36,21 @@ test("shared Case client core renders server documents as text and centralizes r
   assert.match(core, /async function restore/);
 });
 
+test("shared Case client exposes one accessible document preview helper", () => {
+  const core = read("case-client-core.js");
+  assert.match(core, /export function openAccessibleDocumentPreview/);
+  assert.match(core, /role="dialog"/);
+  assert.match(core, /aria-modal="true"/);
+  assert.match(core, /aria-labelledby=/);
+  assert.match(core, /aria-label="문서 미리보기 닫기"/);
+  assert.match(core, /event\.key !== "Escape"/);
+  assert.match(core, /document\.addEventListener\("keydown", onKeydown\)/);
+  assert.match(core, /document\.removeEventListener\("keydown", onKeydown\)/);
+  assert.match(core, /previousFocus/);
+  assert.match(core, /closeButton\.focus\(\)/);
+  assert.match(core, /setAttribute\("aria-live", "assertive"\)/);
+});
+
 test("shared Case client core has no Case-domain-specific endpoint", () => {
   const core = read("case-client-core.js");
   for (const domain of ["worktime-intake", "annual-leave-intake", "retirement-intake", "dismissal-intake", "wage-intake"]) {
