@@ -31,14 +31,16 @@ test("server.js remains a small bootstrap instead of owning application routes",
   assert.doesNotMatch(server, /createHmac|timingSafeEqual|Content-Security-Policy/);
 });
 
-test("application composition owns all extracted route domains", () => {
+test("application composition owns all extracted route domains and operational probes", () => {
   const application = fs.readFileSync(path.join(root, "lib/application.js"), "utf8");
   for (const contract of [
     "createCaseRouter", "createAiRouter", "createExpertRouter", "createDocumentRouter",
     "createPublicOperationRouter", "createAdminRouter", "createPartnerRouter", "createSecureSummaryRouter",
     "createSessionSecurity", "createRateLimiter", "createHttpSecurityMiddleware", "createProductHomeHandler",
+    "getRuntimeReadiness",
   ]) assert.match(application, new RegExp(contract), `application composition missing ${contract}`);
-  assert.match(application, /\/api\/health/);
+  assert.match(application, /app\.get\("\/api\/health"/);
+  assert.match(application, /app\.get\("\/api\/readiness"/);
   assert.match(application, /express\.static/);
   assert.match(application, /renderBrandedPage/);
 });
