@@ -87,8 +87,10 @@ test("server bootstrap wires SIGTERM/SIGINT and scheduler/storage cleanup to gra
   assert.match(source, /createGracefulShutdown/);
   assert.match(source, /import \{ startRetentionScheduler \} from "\.\/lib\/retention-scheduler\.js"/);
   assert.match(source, /import \{ startComplianceNotificationScheduler \} from "\.\/lib\/notification-scheduler\.js"/);
+  assert.match(source, /import \{ startLegalSourceMonitorScheduler \} from "\.\/lib\/legal-source-monitor-scheduler\.js"/);
   assert.match(source, /const stopRetentionScheduler = startRetentionScheduler\(\)/);
   assert.match(source, /const stopComplianceNotificationScheduler = startComplianceNotificationScheduler\(\)/);
+  assert.match(source, /const legalSourceMonitorScheduler = startLegalSourceMonitorScheduler\(\)/);
   assert.match(source, /import \{ closeRuntimeStorage \} from "\.\/lib\/runtime-repo\.js"/);
   assert.match(source, /import \{ closeRuntimePostgres \} from "\.\/lib\/runtime-postgres\.js"/);
   assert.match(source, /const server = app\.listen/);
@@ -96,6 +98,6 @@ test("server bootstrap wires SIGTERM/SIGINT and scheduler/storage cleanup to gra
   assert.match(source, /process\.once\("SIGINT"/);
   assert.match(
     source,
-    /stopJobs:\s*\[\s*stopRetentionScheduler,\s*stopComplianceNotificationScheduler,\s*closeRuntimeStorage,\s*closeRuntimePostgres,?\s*\]/
+    /stopJobs:\s*\[\s*stopRetentionScheduler,\s*stopComplianceNotificationScheduler,\s*\(\) => legalSourceMonitorScheduler\.stop\(\),\s*closeRuntimeStorage,\s*closeRuntimePostgres,?\s*\]/
   );
 });
