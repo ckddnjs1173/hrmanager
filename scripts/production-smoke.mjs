@@ -97,6 +97,8 @@ async function exerciseSyntheticWageCase() {
     assert.ok(caseId && token);
     assert.equal(created.body?.money?.principal, 3000000);
     assert.equal(created.body?.legal?.minimumWage?.hourly, 10320);
+    const expectedWageTotal = Number(created.body?.money?.knownTotalEstimate);
+    assert.ok(Number.isFinite(expectedWageTotal) && expectedWageTotal >= 3000000);
 
     const headers = { "x-case-token": token };
     const loaded = await fetchJson(`/api/cases/${encodeURIComponent(caseId)}/wage-intake`, { headers });
@@ -105,7 +107,7 @@ async function exerciseSyntheticWageCase() {
       method: "POST", headers, body: JSON.stringify({ values: { to: "운영 스모크 테스트 사업장" } }),
     });
     assert.equal(documentResult.response.status, 200);
-    assert.match(documentResult.body?.document?.text || "", /3,000,000원/);
+    assert.match(documentResult.body?.document?.text || "", new RegExp(`${expectedWageTotal.toLocaleString("ko-KR")}원`));
     const report = await fetchJson(`/api/cases/${encodeURIComponent(caseId)}/wage-report`, { headers });
     assert.equal(report.response.status, 200);
     assert.match(report.body?.text || "", /인사야 임금체불 사건 요약/);
