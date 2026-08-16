@@ -1,4 +1,4 @@
-import { createCaseAccessClient, escapeHtml as esc, formatWon as won } from "./case-client-core.js";
+import { createCaseAccessClient, escapeHtml as esc, formatWon as won, openAccessibleDocumentPreview } from "./case-client-core.js";
 
 const ROOT = document.getElementById("wageApp");
 const STORAGE_KEY = "insaya:wage-case-session";
@@ -6,6 +6,7 @@ const MOUNT_ID = "wage-workspace-resources";
 const access = createCaseAccessClient({ storageKey: STORAGE_KEY });
 
 let rendering = false;
+let closeActivePreview = null;
 const session = access.getSession;
 const api = access.api;
 
@@ -116,6 +117,12 @@ async function saveMoney(event) {
 }
 
 function closePreview() {
+  if (closeActivePreview) {
+    const close = closeActivePreview;
+    closeActivePreview = null;
+    close();
+    return;
+  }
   document.getElementById("case-doc-preview")?.remove();
 }
 
@@ -128,18 +135,12 @@ async function previewDocument(templateKey) {
       body: JSON.stringify({ values: {} }),
     });
     closePreview();
-    const overlay = document.createElement("div");
-    overlay.id = "case-doc-preview";
-    overlay.className = "doc-preview-overlay";
-    overlay.innerHTML = `<div class="doc-preview"><div class="doc-preview-head"><div><span>사건 정보 자동 반영</span><h3>${esc(result.document?.title || "문서 초안")}</h3></div><button class="btn" type="button" data-close>닫기</button></div><pre></pre><div class="doc-preview-actions"><button class="btn primary" type="button" data-copy>텍스트 복사</button></div></div>`;
-    overlay.querySelector("pre").textContent = result.document?.text || "";
-    overlay.querySelector("[data-close]")?.addEventListener("click", closePreview);
-    overlay.addEventListener("click", (event) => { if (event.target === overlay) closePreview(); });
-    overlay.querySelector("[data-copy]")?.addEventListener("click", async (event) => {
-      await navigator.clipboard.writeText(result.document?.text || "").catch(() => {});
-      event.currentTarget.textContent = "복사됨";
+    closeActivePreview = openAccessibleDocumentPreview({
+      previewId: "case-doc-preview",
+      title: result.document?.title || "문서 초안",
+      text: result.document?.text || "",
+      closeOnBackdrop: true,
     });
-    document.body.appendChild(overlay);
   } catch {
     alert("문서 초안을 만들지 못했습니다. 사건 정보를 확인해 주세요.");
   }
