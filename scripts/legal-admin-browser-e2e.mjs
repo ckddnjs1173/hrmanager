@@ -105,7 +105,8 @@ try {
     await page.locator("#proposedEffectiveFrom").fill("2027-01-01");
     await page.locator("#proposedChange").fill(JSON.stringify({ category: "minimum_wage", hourly: 11000, sourceId: "source.minimum_wage_commission.annual" }));
     await page.locator("#proposalForm button[type=submit]").click();
-    await page.getByText("minimum_wage.2027").waitFor();
+    const proposalHeader = page.locator("#detailView .proposal-head b", { hasText: "minimum_wage.2027" }).first();
+    await proposalHeader.waitFor({ state: "visible" });
 
     const fixtures = [
       { name: "day-before-effective-date", input: { date: "2026-12-31" }, expected: { version: "2026" } },
