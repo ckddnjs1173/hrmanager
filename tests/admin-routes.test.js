@@ -82,13 +82,15 @@ test("admin protected endpoints preserve header-token authentication", async () 
   });
 });
 
-test("server delegates admin endpoints to the extracted router", () => {
+test("application composition delegates admin endpoints to the extracted router", () => {
+  const application = readFileSync(path.join(ROOT, "lib/application.js"), "utf8");
   const server = readFileSync(path.join(ROOT, "server.js"), "utf8");
-  assert.match(server, /import \{ createAdminRouter \} from "\.\/lib\/admin-routes\.js"/);
-  assert.match(server, /app\.use\("\/api", createAdminRouter\(\{/);
+  assert.match(application, /import \{ createAdminRouter \} from "\.\/admin-routes\.js"/);
+  assert.match(application, /app\.use\("\/api", createAdminRouter\(\{/);
   for (const route of ["login", "logout", "session", "data", "summary", "notifications", "feedback", "bookings", "nomu"]) {
+    assert.doesNotMatch(application, new RegExp(`app\\.(?:get|post)\\(\"/api/admin/${route}`));
     assert.doesNotMatch(server, new RegExp(`app\\.(?:get|post)\\(\"/api/admin/${route}`));
   }
-  assert.doesNotMatch(server, /function adminAuth/);
-  assert.doesNotMatch(server, /function tokenOk/);
+  assert.doesNotMatch(application, /function adminAuth|function tokenOk/);
+  assert.match(server, /createApplication/);
 });
