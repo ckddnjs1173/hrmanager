@@ -92,6 +92,8 @@ async function completeWageJourney(browser) {
 
   await page.locator("#money").waitFor();
   assert.match(await page.locator("#money").innerText(), /3,000,000원/);
+  const currentTotal = (await page.locator("#money .money-stat").nth(3).locator("b").innerText()).trim();
+  assert.match(currentTotal, /^\d[\d,]*원$/);
   assert.match(await page.locator("#sources").innerText(), /최저임금위원회/);
   await page.locator('select[name="payslip"]').selectOption("have");
   await page.locator('select[name="bankHistory"]').selectOption("planned");
@@ -100,7 +102,7 @@ async function completeWageJourney(browser) {
 
   await page.getByRole("button", { name: /내용증명/ }).click();
   await page.locator("#case-doc-preview").waitFor();
-  assert.match(await page.locator("#case-doc-preview pre").innerText(), /3,000,000원/);
+  assert.ok((await page.locator("#case-doc-preview pre").innerText()).includes(currentTotal));
   await page.locator("#case-doc-preview [data-close]").click();
   await page.getByRole("button", { name: "사건 요약 복사" }).click();
   await page.getByRole("button", { name: "사건 요약 복사됨" }).waitFor();
