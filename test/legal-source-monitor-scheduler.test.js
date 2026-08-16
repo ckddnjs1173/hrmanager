@@ -4,6 +4,7 @@ import {
   LEGAL_SOURCE_MONITOR_DEFAULT_INTERVAL_MS,
   LEGAL_SOURCE_MONITOR_MIN_INTERVAL_MS,
   clampLegalSourceMonitorIntervalMs,
+  getLegalSourceMonitorSchedulerStatus,
   resolveLegalSourceMonitorSchedulerConfig,
   startLegalSourceMonitorScheduler,
 } from "../lib/legal-source-monitor-scheduler.js";
@@ -144,4 +145,49 @@ test("stop clears timer and future manual tick is inert", async () => {
   const result = await scheduler.tick();
   assert.deepEqual(result, { skipped: true, reason: "stopped" });
   assert.equal(listCalls, 0);
+});
+
+test("read-only status reports scheduler lifecycle and aggregate batch result", async () => {
+  const timers = timerHarness();
+  const times = [
+    new Date("2026-08-17T00:00:00Z"),
+    new Date("2026-08-17T06:00:00Z"),
+    new Date("2026-08-17T06:00:03Z"),
+  ];
+  let timeIndex = 0;
+  const scheduler = startLegalSourceMonitorScheduler({
+    env: {
+      LEGAL_SOURCE_MONITOR_ENABLED: "1",
+      LEGAL_SOURCE_MONITOR_INTERVAL_MS: String(6 * 60 * 60 * 1000),
+      DATABASE_URL: "postgresql://test",
+    },
+    listWatches: async () => [{ id: "watch-a" }, { id: "watch-b" }],
+    runWatch: async ({ watchId }) => watchId === "watch-a" ? { status: "UNCHANGED" } : { status: "FAILED", errorCode: "http_503" },
+    nowFn: () => times[Math.min(timeIndex++, times.length - 1)],
+    ...timers,
+    logger: logger(),
+  });
+
+  const before = getLegalSourceMonitorSchedulerStatus();
+  assert.equal(before.started, true);
+  assert.equal(before.enabled, true);
+  assert.equal(before.reason, null);
+  assert.equal(before.running, false);
+  assert.equal(before.startedAt, "2026-08-17T00:00:00.000Z");
+  assert.equal(before.nextRunAt, "2026-08-17T06:00:00.000Z");
+  assert.equal(before.lastSummary, null);
+
+  await scheduler.tick();
+  const after = getLegalSourceMonitorSchedulerStatus();
+  assert.equal(after.running, false);
+  assert.equal(after.lastTickStartedAt, "2026-08-17T06:00:00.000Z");
+  assert.equal(after.lastTickFinishedAt, "2026-08-17T06:00:03.000Z");
+  assert.equal(after.nextRunAt, "2026-08-17T12:00:00.000Z");
+  assert.deepEqual(after.lastSummary, { skipped: false, reason: null, total: 2, completed: 1, failed: 1 });
+  assert.equal("results" in after.lastSummary, false, "observability endpoint must not expose per-watch scheduler result details");
+
+  scheduler.stop();
+  const stopped = getLegalSourceMonitorSchedulerStatus();
+  assert.equal(stopped.stopped, true);
+  assert.equal(stopped.nextRunAt, null);
 });
