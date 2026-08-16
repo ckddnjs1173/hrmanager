@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { once } from "node:events";
 import { createPostgresPool } from "../lib/postgres-client.js";
 import { applyPostgresMigrations } from "../lib/postgres-migrations.js";
+import { addDays, kstDateOnly } from "../lib/compliance-calendar-contract.js";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL required");
 Object.assign(process.env, {
@@ -18,6 +19,10 @@ Object.assign(process.env, {
   REQUIRE_PERSISTENT_DB: "0",
   PERSISTENT_STORAGE: "0",
 });
+
+const today = kstDateOnly(new Date());
+const dueDate = addDays(today, 4);
+const rangeTo = addDays(today, 30);
 
 const migrationPool = createPostgresPool({ applicationName: "insaya-business-calendar-e2e-migrate" });
 await applyPostgresMigrations(migrationPool, { logger: { log() {} } });
@@ -71,15 +76,16 @@ try {
   } finally { await pool.end(); }
 
   const setDue = await request(`/api/saas/organizations/${orgId}/actions/${actionId}/due-date`, {
-    method: "PATCH", cookie: owner.cookie, csrf: owner.csrf, body: { dueDate: "2026-08-20" },
+    method: "PATCH", cookie: owner.cookie, csrf: owner.csrf, body: { dueDate },
   });
-  if (setDue.response.status !== 200 || setDue.body?.action?.dueDate !== "2026-08-20" || setDue.body?.action?.dueDateSource !== "MANUAL_INTERNAL") {
+  if (setDue.response.status !== 200 || setDue.body?.action?.dueDate !== dueDate || setDue.body?.action?.dueDateSource !== "MANUAL_INTERNAL") {
     throw new Error(`due date set failed: ${JSON.stringify(setDue.body)}`);
   }
 
-  const calendar = await request(`/api/saas/organizations/${orgId}/compliance-calendar?from=2026-08-16&to=2026-08-31`, { cookie: owner.cookie });
+  const calendarPath = `/api/saas/organizations/${orgId}/compliance-calendar?from=${today}&to=${rangeTo}`;
+  const calendar = await request(calendarPath, { cookie: owner.cookie });
   const event = calendar.body?.events?.find((item) => item.sourceId === actionId);
-  if (calendar.response.status !== 200 || !event || event.dueDate !== "2026-08-20" || calendar.body?.range?.timeZone !== "Asia/Seoul") {
+  if (calendar.response.status !== 200 || !event || event.dueDate !== dueDate || event.timingStatus !== "NEXT_7_DAYS" || calendar.body?.range?.timeZone !== "Asia/Seoul") {
     throw new Error(`calendar projection invalid: ${JSON.stringify(calendar.body)}`);
   }
 
@@ -89,14 +95,14 @@ try {
   if (invalid.response.status !== 400 || invalid.body?.error !== "compliance_action_due_date_invalid") throw new Error("invalid due date must be rejected");
 
   const outsider = await login("calendar-outsider@example.com");
-  const isolated = await request(`/api/saas/organizations/${orgId}/compliance-calendar?from=2026-08-16&to=2026-08-31`, { cookie: outsider.cookie });
+  const isolated = await request(calendarPath, { cookie: outsider.cookie });
   if (isolated.response.status !== 404) throw new Error("cross-tenant calendar access must return not found");
 
   const cleared = await request(`/api/saas/organizations/${orgId}/actions/${actionId}/due-date`, {
     method: "PATCH", cookie: owner.cookie, csrf: owner.csrf, body: { dueDate: null },
   });
   if (cleared.response.status !== 200 || cleared.body?.action?.dueDate !== null) throw new Error("due date clear failed");
-  const calendarAfter = await request(`/api/saas/organizations/${orgId}/compliance-calendar?from=2026-08-16&to=2026-08-31`, { cookie: owner.cookie });
+  const calendarAfter = await request(calendarPath, { cookie: owner.cookie });
   if (calendarAfter.body?.events?.some((item) => item.sourceId === actionId)) throw new Error("cleared action remained in calendar");
 
   const verify = createPostgresPool({ applicationName: "insaya-business-calendar-e2e-verify" });
