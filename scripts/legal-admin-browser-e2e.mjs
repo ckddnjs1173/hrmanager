@@ -94,7 +94,9 @@ try {
 
     await page.locator("#reviewNote").fill("공식 출처, 공표일, 시행일, 변경값 수동 대조 완료");
     await page.getByRole("button", { name: "검증 완료" }).click();
-    await page.getByText("검증 완료").first().waitFor();
+    const verifiedStatus = page.locator("#detailView .status.VERIFIED").first();
+    await verifiedStatus.waitFor({ state: "visible" });
+    assert.equal((await verifiedStatus.innerText()).trim(), "검증 완료");
     await page.getByText("+ Rule 변경 제안 작성").click();
 
     await page.locator("#ruleKey").fill("minimum_wage.2027");
