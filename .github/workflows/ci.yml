@@ -27,7 +27,13 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
-      - name: Tests
+      - name: Bundle 13 focused tests
+        run: |
+          node --test tests/compliance-notification-contract.test.js
+          node --test tests/business-workspace-ui.test.js
+          node --test tests/access-billing-contract.test.js
+          node --test tests/application-bootstrap.test.js
+      - name: All tests
         run: npm test
       - name: Build
         run: npm run build
