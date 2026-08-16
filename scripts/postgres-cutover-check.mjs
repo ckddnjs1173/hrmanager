@@ -16,13 +16,10 @@ const inputPath = path.resolve(input);
 if (!fs.existsSync(inputPath)) throw new Error(`portable_input_not_found:${inputPath}`);
 const payload = JSON.parse(fs.readFileSync(inputPath, "utf8"));
 
-// Until the async repository bundle is merged, production must remain SQLite.
 const runtimeMode = resolveStorageRuntimeMode(process.env);
-if (runtimeMode === "postgres-shadow") {
-  console.log("Storage runtime: postgres-shadow (SQLite remains primary)");
-} else {
-  console.log("Storage runtime: sqlite");
-}
+if (runtimeMode === "postgres-shadow") console.log("Storage runtime: postgres-shadow (SQLite remains primary during rehearsal)");
+else if (runtimeMode === "postgres") console.log("Storage runtime: postgres");
+else console.log("Storage runtime: sqlite");
 
 const pool = createPostgresPool({ applicationName: "insaya-postgres-cutover-check" });
 try {
@@ -40,9 +37,9 @@ try {
   const validation = await validatePostgresAgainstPortable(pool, payload);
   if (!validation.ok) throw new Error(`postgres_data_validation_failed:${validation.errors.join(",")}`);
 
-  console.log("PostgreSQL shadow target is schema-complete and semantically equal to the portable SQLite export.");
-  console.log("READY_FOR_ASYNC_REPOSITORY_CUTOVER");
-  console.log("Production PostgreSQL is intentionally still blocked until the async repository bundle is merged.");
+  console.log("PostgreSQL target is schema-complete and semantically equal to the portable SQLite export.");
+  console.log("READY_FOR_POSTGRES_RUNTIME_CUTOVER");
+  console.log("This preflight never changes STORAGE_DRIVER; production cutover still requires the runbook write-freeze/final-import/redeploy sequence.");
 } finally {
   await pool.end();
 }

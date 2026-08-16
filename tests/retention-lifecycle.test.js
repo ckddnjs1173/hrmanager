@@ -22,12 +22,11 @@ test("Case access no longer owns retention lifecycle", () => {
 
 test("one server retention scheduler owns operational and Case sweeps", () => {
   const source = read("lib/retention-scheduler.js");
-  assert.match(source, /import \{ caseRetentionSweep \} from "\.\/case-retention\.js"/);
-  assert.match(source, /export function runRetentionSweep/);
-  assert.match(source, /export function runCaseRetentionSweep/);
-  assert.match(source, /const sweep = \(\) => \{/);
-  assert.match(source, /runRetentionSweep\(\{ log, warn \}\)/);
-  assert.match(source, /runCaseRetentionSweep\(\{ log, warn \}\)/);
+  assert.match(source, /import \{ runtimeCaseRetentionSweep \} from "\.\/runtime-case-repo\.js"/);
+  assert.match(source, /import \{ retentionSweep \} from "\.\/runtime-repo\.js"/);
+  assert.match(source, /export async function runRetentionSweep/);
+  assert.match(source, /export async function runCaseRetentionSweep/);
+  assert.match(source, /Promise\.all\(\[runRetentionSweep\(\{log,warn\}\),runCaseRetentionSweep\(\{log,warn\}\)\]\)/);
   assert.equal((source.match(/setInterval\s*\(/g) || []).length, 1);
 });
 

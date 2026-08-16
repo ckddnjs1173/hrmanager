@@ -48,7 +48,7 @@ test("portable importer uses one transaction and parameterized inserts", async (
   const nomusaInsert = inserts.find((entry) => /"nomusa"/.test(entry.sql));
   assert.ok(nomusaInsert);
   assert.equal(nomusaInsert.params.includes(true), true);
-  assert.equal(nomusaInsert.params.some((value) => value && typeof value === "object" && value.a === 1), true);
+  assert.equal(nomusaInsert.params.includes('{"a":1}'), true, "JSONB values must be sent as explicit JSON text, not PostgreSQL arrays");
 });
 
 test("portable importer refuses a non-empty target unless replace is explicit", async () => {

@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 import { createApplication } from "./lib/application.js";
 import { createGracefulShutdown } from "./lib/graceful-shutdown.js";
 import { startRetentionScheduler } from "./lib/retention-scheduler.js";
+import { closeRuntimeStorage } from "./lib/runtime-repo.js";
+import { closeRuntimePostgres } from "./lib/runtime-postgres.js";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const { app, runtime } = createApplication({ rootDir });
@@ -19,6 +21,9 @@ const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`   모델: ${aiEnabled ? `${aiInfo.provider} · ${aiInfo.model}${aiInfo.fallbacks?.length ? `  (폴백: ${aiInfo.fallbacks.join(", ")})` : ""}` : "데모 모드(키 없음)"}\n`);
 });
 
-const shutdown = createGracefulShutdown({ server, stopJobs: [stopRetentionScheduler] });
+const shutdown = createGracefulShutdown({
+  server,
+  stopJobs: [stopRetentionScheduler, closeRuntimeStorage, closeRuntimePostgres],
+});
 process.once("SIGTERM", () => shutdown("SIGTERM"));
 process.once("SIGINT", () => shutdown("SIGINT"));

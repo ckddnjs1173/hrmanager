@@ -32,10 +32,10 @@ test("public expert router preserves /api/nomu response shape", async () => {
   }
 });
 
-test("expert seed is fail-safe when source data is unavailable", () => {
+test("expert seed is fail-safe when source data is unavailable", async () => {
   const emptyRoot = mkdtempSync(path.join(os.tmpdir(), "insaya-expert-seed-"));
   try {
-    assert.deepEqual(seedNomusa({ rootDir: emptyRoot }), { seeded: 0, skipped: true });
+    assert.deepEqual(await seedNomusa({ rootDir: emptyRoot }), { seeded: 0, skipped: true });
   } finally {
     rmSync(emptyRoot, { recursive: true, force: true });
   }

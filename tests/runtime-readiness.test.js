@@ -10,8 +10,8 @@ process.env.PERSISTENT_STORAGE = "0";
 const { evaluatePersistenceStatus, getRuntimeReadiness } = await import("../lib/runtime-readiness.js");
 const { createCaseRouter } = await import("../lib/case-routes.js");
 
-test("runtime readiness verifies database, five Case domains and Legal registry", () => {
-  const result = getRuntimeReadiness();
+test("runtime readiness verifies database, five Case domains and Legal registry", async () => {
+  const result = await getRuntimeReadiness();
   assert.equal(result.ready, true);
   assert.equal(result.readyForSensitiveCaseStorage, false);
   assert.equal(result.database.ok, true);
@@ -31,8 +31,8 @@ test("runtime readiness verifies database, five Case domains and Legal registry"
   assert.ok(result.warnings.includes("persistent_storage_not_verified"));
 });
 
-test("readiness never exposes configured database path values", () => {
-  const result = getRuntimeReadiness({
+test("readiness never exposes configured database path values", async () => {
+  const result = await getRuntimeReadiness({
     env: {
       ...process.env,
       DB_PATH: "/very/secret/production/location/app.db",
