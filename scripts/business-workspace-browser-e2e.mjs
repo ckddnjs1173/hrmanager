@@ -68,6 +68,9 @@ try {
     await page.locator("#verify-magic").click();
 
     await page.locator("#workspace-view").waitFor({ state: "visible" });
+    // The initial anonymous /auth/me probe intentionally returns 401 before login.
+    // From this authenticated point forward, any console/page error remains a failure.
+    consoleErrors.length = 0;
     await page.locator("#org-dialog[open]").waitFor();
     await page.locator('#org-form input[name="legalName"]').fill("브라우저 테스트 주식회사");
     await page.locator('#org-form input[name="displayName"]').fill("브라우저테스트");
