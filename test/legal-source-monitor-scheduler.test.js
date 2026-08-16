@@ -61,32 +61,13 @@ test("default interval is six hours and scheduler does not run immediately", () 
 });
 
 test("interval clamp preserves requested value and enforces one-hour effective minimum", () => {
-  const clamp1000 = clampLegalSourceMonitorIntervalMs(1000);
   const config = resolveLegalSourceMonitorSchedulerConfig({
     LEGAL_SOURCE_MONITOR_ENABLED: "1",
     LEGAL_SOURCE_MONITOR_INTERVAL_MS: "1000",
     DATABASE_URL: "postgresql://test",
   });
-  const diagnostics = {
-    min: LEGAL_SOURCE_MONITOR_MIN_INTERVAL_MS,
-    defaultInterval: LEGAL_SOURCE_MONITOR_DEFAULT_INTERVAL_MS,
-    clamp1000,
-    requested: config.requestedIntervalMs,
-    effective: config.intervalMs,
-    enabled: config.enabled,
-    reason: config.reason,
-  };
-  if (
-    diagnostics.min !== 3_600_000 ||
-    diagnostics.clamp1000 !== 3_600_000 ||
-    diagnostics.requested !== 1000 ||
-    diagnostics.effective !== 3_600_000
-  ) {
-    console.log(`::error file=test/legal-source-monitor-scheduler.test.js,line=69::scheduler clamp diagnostics ${JSON.stringify(diagnostics)}`);
-  }
-
   assert.equal(LEGAL_SOURCE_MONITOR_MIN_INTERVAL_MS, 3_600_000);
-  assert.equal(clamp1000, 3_600_000);
+  assert.equal(clampLegalSourceMonitorIntervalMs(1000), 3_600_000);
   assert.equal(clampLegalSourceMonitorIntervalMs(3_600_000), 3_600_000);
   assert.equal(clampLegalSourceMonitorIntervalMs(7_200_000), 7_200_000);
   assert.equal(clampLegalSourceMonitorIntervalMs("invalid"), LEGAL_SOURCE_MONITOR_DEFAULT_INTERVAL_MS);
