@@ -68,6 +68,18 @@ test("shared Case restore state preserves retry and explicit abandon actions", (
   assert.match(core, /data-case-start-new/);
   assert.match(core, /접근 정보는 이 탭에 그대로 보관했습니다/);
   assert.match(core, /retry\?\.focus\(\)/);
+  assert.match(core, /setAttribute\("role", "alert"\)/);
   assert.match(css, /\.case-system-state/);
   assert.match(css, /\.case-system-state-actions/);
+});
+
+test("shared Case deletion keeps access on transient failure", () => {
+  const core = read("case-client-core.js");
+  const deleteBlock = core.match(/async function deleteCase\(\) \{([\s\S]*?)\n  \}\n\n  function renderRecoverableRestoreFailure/)?.[1] || "";
+
+  assert.match(deleteBlock, /await api/);
+  assert.match(deleteBlock, /isTerminalCaseRestoreError\(error\)/);
+  assert.match(deleteBlock, /showError\(deleteErrorText\)/);
+  assert.doesNotMatch(deleteBlock, /finally\s*\{/);
+  assert.match(core, /접근 정보는 유지했습니다/);
 });
