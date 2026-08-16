@@ -31,6 +31,26 @@ test("graceful shutdown stops jobs, closes HTTP server and exits cleanly once", 
   assert.ok(calls.includes("exit:0"));
 });
 
+test("shutdown awaits async storage cleanup before clean exit", async () => {
+  const calls = [];
+  let resolveCleanup;
+  const cleanup = new Promise((resolve) => { resolveCleanup = resolve; });
+  const shutdown = createGracefulShutdown({
+    server: { close(callback) { calls.push("server.close"); callback(); } },
+    stopJobs: [() => { calls.push("cleanup.start"); return cleanup.then(() => calls.push("cleanup.done")); }],
+    log: () => {},
+    warn: () => {},
+    exit: (code) => calls.push(`exit:${code}`),
+  });
+
+  shutdown("SIGTERM");
+  assert.deepEqual(calls, ["cleanup.start", "server.close"]);
+  resolveCleanup();
+  await cleanup;
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(calls, ["cleanup.start", "server.close", "cleanup.done", "exit:0"]);
+});
+
 test("shutdown job cleanup failure does not prevent HTTP close", () => {
   const warnings = [];
   const exits = [];
@@ -62,12 +82,14 @@ test("server close failure exits non-zero", () => {
   assert.deepEqual(exits, [1]);
 });
 
-test("server bootstrap wires SIGTERM and SIGINT to the graceful shutdown lifecycle", () => {
+test("server bootstrap wires SIGTERM/SIGINT and storage cleanup to graceful shutdown", () => {
   const source = fs.readFileSync(path.join(ROOT, "server.js"), "utf8");
   assert.match(source, /createGracefulShutdown/);
   assert.match(source, /const stopRetentionScheduler = startRetentionScheduler\(\)/);
+  assert.match(source, /import \{ closeRuntimeStorage \} from "\.\/lib\/runtime-repo\.js"/);
+  assert.match(source, /import \{ closeRuntimePostgres \} from "\.\/lib\/runtime-postgres\.js"/);
   assert.match(source, /const server = app\.listen/);
   assert.match(source, /process\.once\("SIGTERM"/);
   assert.match(source, /process\.once\("SIGINT"/);
-  assert.match(source, /stopJobs: \[stopRetentionScheduler\]/);
+  assert.match(source, /stopJobs: \[stopRetentionScheduler, closeRuntimeStorage, closeRuntimePostgres\]/);
 });
