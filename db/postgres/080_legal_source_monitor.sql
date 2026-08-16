@@ -30,9 +30,19 @@ CREATE TABLE IF NOT EXISTS legal_source_monitor_runs (
   finished_at TIMESTAMPTZ
 );
 
+ALTER TABLE legal_governance_events
+  ADD COLUMN IF NOT EXISTS watch_id TEXT REFERENCES legal_source_watches(id) ON DELETE CASCADE;
+ALTER TABLE legal_governance_events
+  DROP CONSTRAINT IF EXISTS legal_governance_events_check;
+ALTER TABLE legal_governance_events
+  ADD CONSTRAINT legal_governance_events_subject_check
+  CHECK (candidate_id IS NOT NULL OR proposal_id IS NOT NULL OR watch_id IS NOT NULL);
+
 CREATE INDEX IF NOT EXISTS legal_source_watches_enabled_idx
   ON legal_source_watches(enabled, updated_at DESC);
 CREATE INDEX IF NOT EXISTS legal_source_monitor_runs_watch_idx
   ON legal_source_monitor_runs(watch_id, started_at DESC);
 CREATE INDEX IF NOT EXISTS legal_source_monitor_runs_status_idx
   ON legal_source_monitor_runs(status, started_at DESC);
+CREATE INDEX IF NOT EXISTS legal_governance_events_watch_idx
+  ON legal_governance_events(watch_id, created_at);
