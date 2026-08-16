@@ -8,6 +8,7 @@ import { createApplication } from "./lib/application.js";
 import { createGracefulShutdown } from "./lib/graceful-shutdown.js";
 import { startRetentionScheduler } from "./lib/retention-scheduler.js";
 import { startComplianceNotificationScheduler } from "./lib/notification-scheduler.js";
+import { startLegalSourceMonitorScheduler } from "./lib/legal-source-monitor-scheduler.js";
 import { closeRuntimeStorage } from "./lib/runtime-repo.js";
 import { closeRuntimePostgres } from "./lib/runtime-postgres.js";
 
@@ -15,6 +16,7 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const { app, runtime } = createApplication({ rootDir });
 const stopRetentionScheduler = startRetentionScheduler();
 const stopComplianceNotificationScheduler = startComplianceNotificationScheduler();
+const legalSourceMonitorScheduler = startLegalSourceMonitorScheduler();
 
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, "0.0.0.0", () => {
@@ -28,6 +30,7 @@ const shutdown = createGracefulShutdown({
   stopJobs: [
     stopRetentionScheduler,
     stopComplianceNotificationScheduler,
+    () => legalSourceMonitorScheduler.stop(),
     closeRuntimeStorage,
     closeRuntimePostgres,
   ],
