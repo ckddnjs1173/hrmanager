@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>월간 노무점검 · 인사야 Business</title>
+  <link rel="stylesheet" href="/business-close.css">
+</head>
+<body>
+  <main class="close-shell">
+    <header class="close-header">
+      <div><a class="brand" href="/business.html">인사야 <span>Business</span></a><div class="eyebrow">MONTHLY COMPLIANCE CLOSE</div><h1>월간 노무점검</h1><p>매월 Risk·Action·기한 상태를 스냅샷으로 남깁니다. 이 기록은 법적 준수 인증이 아닙니다.</p></div>
+      <div class="header-controls"><label>회사<select id="close-org-picker"></select></label><label>점검 월<input id="close-month" type="month"></label></div>
+    </header>
+    <div id="close-message" class="message" hidden></div>
+    <section id="close-auth-required" class="panel" hidden><h2>Business 로그인이 필요합니다.</h2><p>먼저 Business Workspace에서 로그인한 뒤 다시 열어 주세요.</p><a class="primary-link" href="/business.html">Business 로그인</a></section>
+    <section id="close-disabled" class="panel" hidden><h2>Business 기능이 아직 열리지 않았습니다.</h2><p>현재 production SaaS feature gate는 비활성 상태입니다.</p></section>
+    <section id="close-workspace" hidden>
+      <div class="metric-grid">
+        <article class="metric"><span>활성 Risk</span><strong id="close-risk-count">0</strong></article>
+        <article class="metric"><span>활성 Action</span><strong id="close-action-count">0</strong></article>
+        <article class="metric danger"><span>기한 지연</span><strong id="close-overdue-count">0</strong></article>
+        <article class="metric"><span>이번 달 완료</span><strong id="close-completed-count">0</strong></article>
+      </div>
+      <div class="grid">
+        <section class="panel">
+          <div class="panel-head"><div><div class="eyebrow">CURRENT PERIOD</div><h2 id="close-period-title">점검 상태</h2></div><span id="close-status" class="badge">OPEN</span></div>
+          <div id="close-readiness" class="readiness"></div>
+          <div id="close-unresolved" class="unresolved"></div>
+          <div id="close-open-controls">
+            <button id="close-refresh" class="secondary" type="button">최신 상태 새로고침</button>
+            <form id="close-form">
+              <label id="close-ack-wrap" class="ack"><input id="close-ack" type="checkbox"> 미해결 Risk·Action이 남아 있음을 확인했습니다.</label>
+              <label>마감 메모<textarea id="close-note" rows="3" placeholder="미해결 고위험·지연 항목의 후속조치 계획을 기록합니다."></textarea></label>
+              <button class="primary" type="submit">이 상태로 월간 점검 마감</button>
+            </form>
+          </div>
+          <div id="close-closed-summary" hidden></div>
+        </section>
+        <section class="panel">
+          <div class="eyebrow">SNAPSHOT CONTEXT</div><h2>점검 기준</h2>
+          <dl class="context"><div><dt>직원</dt><dd id="close-employee-count">0</dd></div><div><dt>사업장</dt><dd id="close-workplace-count">0</dd></div><div><dt>적용범위</dt><dd id="close-scope-count">0</dd></div><div><dt>법률 Registry</dt><dd id="close-legal-version">-</dd></div><div><dt>Snapshot Hash</dt><dd id="close-hash">-</dd></div></dl>
+          <p class="disclaimer"><strong>중요:</strong> “마감”은 인사야 내부 운영기록을 확정하는 기능입니다. 법 위반이 없다는 확인서나 법률상 준수 인증서가 아닙니다.</p>
+        </section>
+      </div>
+      <section class="panel"><div class="panel-head"><div><div class="eyebrow">HISTORY</div><h2>월간 마감 기록</h2></div><button id="close-history-refresh" class="text-button" type="button">새로고침</button></div><div id="close-history" class="history"></div></section>
+    </section>
+  </main>
+  <script type="module" src="/business-close.js"></script>
+</body>
+</html>
