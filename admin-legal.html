@@ -25,18 +25,23 @@
 <div id="app" class="legal-shell" hidden>
   <header class="legal-top">
     <div class="brand">● 인사야 · 법령 변경 관리</div>
+    <nav class="legal-tabs" aria-label="법령 관리 기능">
+      <button id="candidateTab" class="legal-tab on" type="button" aria-selected="true">변경 후보 검토</button>
+      <button id="monitorTab" class="legal-tab" type="button" aria-selected="false">공식 출처 모니터</button>
+    </nav>
     <div class="grow"></div>
+    <div class="field operator-field">
+      <label for="operator">운영자명 · 감사로그</label>
+      <input id="operator" placeholder="예: 박창원" autocomplete="off" />
+    </div>
     <a class="muted-link small" href="/admin.html">기존 운영 대시보드</a>
     <button id="logoutButton" class="btn">로그아웃</button>
   </header>
-  <main class="legal-main">
+
+  <main id="candidateMain" class="legal-main">
     <section class="legal-queue" aria-label="법령 변경 후보 목록">
       <div class="notice">검토된 변경도 자동으로 운영 규칙에 반영되지 않습니다. 최종 상태는 <b>READY_FOR_IMPLEMENTATION</b>이며 코드 리뷰·테스트·배포가 별도로 필요합니다.</div>
       <div class="legal-toolbar">
-        <div class="field" style="flex:1;min-width:160px">
-          <label for="operator">운영자명 · 감사로그</label>
-          <input id="operator" placeholder="예: 박창원" autocomplete="off" />
-        </div>
         <div class="field">
           <label for="statusFilter">상태</label>
           <select id="statusFilter"><option value="">전체</option></select>
@@ -71,8 +76,54 @@
       <div id="detailView" hidden></div>
     </section>
   </main>
+
+  <main id="monitorMain" class="legal-main" hidden>
+    <section class="legal-queue" aria-label="공식 출처 모니터 목록">
+      <div class="notice"><b>감지만 자동화합니다.</b> 첫 성공 점검은 baseline만 저장하고 후보를 만들지 않습니다. 이후 본문 hash가 바뀌어도 후보는 <b>DRAFT</b>로만 생성되며 자동 검증·Rule 제안·운영 반영은 금지됩니다.</div>
+      <div class="legal-toolbar">
+        <div class="field">
+          <label for="monitorEnabledFilter">Watch 상태</label>
+          <select id="monitorEnabledFilter">
+            <option value="">전체</option>
+            <option value="true">활성</option>
+            <option value="false">중지</option>
+          </select>
+        </div>
+        <button id="monitorRefreshButton" class="btn" type="button">새로고침</button>
+      </div>
+      <details class="legal-card" id="createWatchBox">
+        <summary><b>+ 공식 출처 Watch 등록</b></summary>
+        <form id="watchForm" style="margin-top:14px">
+          <div class="form-grid">
+            <div class="field full">
+              <label for="watchCanonicalSourceId">Canonical Legal Source</label>
+              <select id="watchCanonicalSourceId" required><option value="">선택</option></select>
+            </div>
+            <div class="field full">
+              <label for="watchSourceType">출처 유형</label>
+              <select id="watchSourceType" required></select>
+            </div>
+            <div class="field full">
+              <label>점검 URL</label>
+              <div id="watchOfficialUrl" class="readonly-box">Canonical Source를 선택하면 공식 URL이 표시됩니다.</div>
+            </div>
+          </div>
+          <div class="muted small" style="margin-top:8px">임의 URL 입력은 지원하지 않습니다. 현재 Legal Registry에 등록된 공식 URL만 점검할 수 있습니다.</div>
+          <div id="watchFormError" class="error"></div>
+          <button class="btn primary" type="submit" style="margin-top:10px">Watch 등록</button>
+        </form>
+      </details>
+      <div id="watchList"></div>
+    </section>
+
+    <section class="legal-detail" aria-live="polite">
+      <div id="monitorDetailEmpty" class="empty">왼쪽에서 공식 출처 Watch를 선택하세요.</div>
+      <div id="monitorDetailView" hidden></div>
+    </section>
+  </main>
 </div>
 <div id="toast" class="toast"></div>
 <script src="admin-legal.js" defer></script>
+<script src="admin-legal-monitor.js" defer></script>
 </body>
 </html>
