@@ -30,8 +30,12 @@ test("workspace resource module renders money, sources, documents and official p
   assert.match(core, /sessionStorage/);
 });
 
-test("document preview uses server-rendered plain text instead of injecting document HTML", () => {
+test("wage document preview delegates to the shared accessible plain-text helper", () => {
   const js = read("wage-workspace.js");
-  assert.match(js, /querySelector\(\"pre\"\)\.textContent/);
-  assert.doesNotMatch(js, /innerHTML\s*=\s*result\.document\?*\.html/);
+  const core = read("case-client-core.js");
+  assert.match(js, /openAccessibleDocumentPreview/);
+  assert.match(js, /previewId: "case-doc-preview"/);
+  assert.doesNotMatch(js, /overlay\.innerHTML/);
+  assert.match(core, /querySelector\("pre"\)\.textContent/);
+  assert.doesNotMatch(core, /innerHTML\s*=\s*result\.document\?*\.html/);
 });
