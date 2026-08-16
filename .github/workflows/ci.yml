@@ -88,6 +88,10 @@ jobs:
         env:
           DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_test
         run: node scripts/business-notification-e2e.mjs
+      - name: Legal Change Governance E2E
+        env:
+          DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_test
+        run: node scripts/legal-governance-e2e.mjs
 
   business-browser-e2e:
     needs: [check, postgres-runtime]
