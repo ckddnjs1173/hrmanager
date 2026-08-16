@@ -75,6 +75,15 @@ async function seedAction(pool, organizationId, title) {
   return actionId;
 }
 
+async function finishSeededAction(pool, organizationId, actionId) {
+  await pool.query(
+    `UPDATE compliance_actions
+     SET status='DONE',completed_at=COALESCE(completed_at,NOW()),updated_at=NOW()
+     WHERE id=$1 AND organization_id=$2`,
+    [actionId, organizationId]
+  );
+}
+
 async function setDue(owner, organizationId, actionId, dueDate) {
   const result = await request(`/api/saas/organizations/${organizationId}/actions/${actionId}/due-date`, {
     method: "PATCH", cookie: owner.cookie, csrf: owner.csrf, body: { dueDate },
@@ -133,6 +142,7 @@ try {
     await setDue(owner, orgId, actionId, due1);
     const changedDue = await runComplianceNotificationSweep({ now });
     if (changedDue.generated !== 1 || changedDue.delivered !== 1) throw new Error(`changed due notification invalid: ${JSON.stringify(changedDue)}`);
+    await finishSeededAction(pool, orgId, actionId);
 
     const pendingActionId = await seedAction(pool, orgId, "due date 변경 stale 취소 테스트");
     await setDue(owner, orgId, pendingActionId, due3);
@@ -141,6 +151,7 @@ try {
     await setDue(owner, orgId, pendingActionId, due4);
     const stale = await generateDeadlineNotificationCandidates({ now });
     if (stale.cancelled < 1 || stale.generated !== 0) throw new Error(`due-date stale pending not cancelled: ${JSON.stringify(stale)}`);
+    await finishSeededAction(pool, orgId, pendingActionId);
 
     const milestoneActionId = await seedAction(pool, orgId, "milestone stale 취소 테스트");
     await setDue(owner, orgId, milestoneActionId, due3);
@@ -149,13 +160,14 @@ try {
     const afterMilestone = await generateDeadlineNotificationCandidates({ now: oneDayLater });
     const milestoneRow = await pool.query("SELECT status FROM compliance_notification_outbox WHERE organization_id=$1 AND source_id=$2 ORDER BY created_at DESC LIMIT 1", [orgId, milestoneActionId]);
     if (afterMilestone.cancelled < 1 || milestoneRow.rows[0]?.status !== "CANCELLED") throw new Error(`expired milestone candidate not cancelled: ${JSON.stringify(afterMilestone)}`);
+    await finishSeededAction(pool, orgId, milestoneActionId);
 
     const overdueActionId = await seedAction(pool, orgId, "지연 알림 테스트");
     await setDue(owner, orgId, overdueActionId, overdueDate);
-    const overdueFirst = await runComplianceNotificationSweep({ now });
+    const overdueFirst = await runComplianceNotificationSweep({ now: oneDayLater });
     if (overdueFirst.generated !== 1 || overdueFirst.delivered !== 1) throw new Error(`overdue notification invalid: ${JSON.stringify(overdueFirst)}`);
-    const overdueAgain = await runComplianceNotificationSweep({ now });
-    if (overdueAgain.generated !== 0) throw new Error(`overdue repeated unexpectedly: ${JSON.stringify(overdueAgain)}`);
+    const overdueAgain = await runComplianceNotificationSweep({ now: oneDayLater });
+    if (overdueAgain.generated !== 0 || overdueAgain.delivered !== 0) throw new Error(`overdue repeated unexpectedly: ${JSON.stringify(overdueAgain)}`);
 
     const outsider = await login("notification-outsider@example.com");
     const isolated = await request(`/api/saas/organizations/${orgId}/notifications`, { cookie: outsider.cookie });
@@ -168,7 +180,7 @@ try {
     );
     const cancelledRows = rows.rows.filter((row) => row.status === "CANCELLED");
     const deliveredRows = rows.rows.filter((row) => row.status === "DELIVERED");
-    if (cancelledRows.length < 2 || deliveredRows.length < 3) throw new Error(`outbox lifecycle invalid: ${JSON.stringify(rows.rows)}`);
+    if (cancelledRows.length < 2 || deliveredRows.length !== 3) throw new Error(`outbox lifecycle invalid: ${JSON.stringify(rows.rows)}`);
   } finally { await pool.end(); }
 
   console.log("Business Notification E2E passed: recipient policy + milestone + dedup + read + stale cancellation + one-time overdue + tenant isolation.");
