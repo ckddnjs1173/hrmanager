@@ -7,6 +7,7 @@ import express from "express";
 
 process.env.DB_PATH = ":memory:";
 
+const { createAdminRouter } = await import("../lib/admin-routes.js");
 const { createPublicOperationRouter } = await import("../lib/public-operation-routes.js");
 const { feedback, leads } = await import("../lib/repo.js");
 
@@ -14,10 +15,27 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const clean = (value) => typeof value === "string" ? value.slice(0, 2000).trim() : "";
 const noLimit = () => (_req, _res, next) => next();
 
-async function withServer(run) {
+function publicRouter() {
+  return createPublicOperationRouter({ rateLimit: noLimit, clean });
+}
+
+function adminRouter() {
+  return createAdminRouter({
+    rateLimit: noLimit,
+    clean,
+    adminToken: "privacy-admin-token",
+    sessionTtl: 60_000,
+    parseCookies: () => ({}),
+    verifySession: () => null,
+    setSessionCookie: () => {},
+    clearSessionCookie: () => {},
+  });
+}
+
+async function withServer(routers, run) {
   const app = express();
   app.use(express.json());
-  app.use("/api", createPublicOperationRouter({ rateLimit: noLimit, clean }));
+  for (const router of routers) app.use("/api", router);
   const server = app.listen(0, "127.0.0.1");
   await new Promise((resolve) => server.once("listening", resolve));
   const { port } = server.address();
@@ -28,18 +46,21 @@ async function withServer(run) {
   }
 }
 
+async function queueRequest(base, contact) {
+  const response = await fetch(`${base}/api/privacy/delete`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ contact }),
+  });
+  return { response, body: await response.json() };
+}
+
 test("knowing a contact string cannot immediately delete that person's records", async () => {
-  const contact = `privacy-${Date.now()}@example.com`;
+  const contact = `privacy-queue-${Date.now()}@example.com`;
   const lead = leads.insert({ kind: "test", name: "privacy test", contact, message: "keep until verified" });
 
-  await withServer(async (base) => {
-    const response = await fetch(`${base}/api/privacy/delete`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ contact }),
-    });
-    const body = await response.json();
-
+  await withServer([publicRouter()], async (base) => {
+    const { response, body } = await queueRequest(base, contact);
     assert.equal(response.status, 202);
     assert.deepEqual(body, { ok: true, status: "verification_required" });
   });
@@ -50,10 +71,50 @@ test("knowing a contact string cannot immediately delete that person's records",
   assert.match(request.message, /본인 확인/);
 });
 
+test("only authenticated admin with explicit identity verification can fulfill contact deletion", async () => {
+  const contact = `privacy-fulfill-${Date.now()}@example.com`;
+  const lead = leads.insert({ kind: "test", name: "verified user", contact, message: "delete after verification" });
+
+  await withServer([publicRouter(), adminRouter()], async (base) => {
+    const queued = await queueRequest(base, contact);
+    assert.equal(queued.response.status, 202);
+
+    const unauthorized = await fetch(`${base}/api/admin/privacy/delete-contact`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ contact, verified: true }),
+    });
+    assert.equal(unauthorized.status, 401);
+
+    const unverified = await fetch(`${base}/api/admin/privacy/delete-contact`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-admin-token": "privacy-admin-token" },
+      body: JSON.stringify({ contact }),
+    });
+    assert.equal(unverified.status, 400);
+    assert.deepEqual(await unverified.json(), { error: "identity_verification_required" });
+
+    const fulfilled = await fetch(`${base}/api/admin/privacy/delete-contact`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-admin-token": "privacy-admin-token" },
+      body: JSON.stringify({ contact, verified: true }),
+    });
+    assert.equal(fulfilled.status, 200);
+    const result = await fulfilled.json();
+    assert.equal(result.ok, true);
+    assert.ok(result.deleted >= 1);
+    assert.ok(result.requestsResolved >= 1);
+  });
+
+  assert.equal(leads.all().some((item) => item.id === lead.id), false);
+  const request = feedback.recent(50).find((item) => item.kind === "privacy_delete_request" && item.ref === contact);
+  assert.equal(request?.status, "done");
+});
+
 test("contact deletion route no longer calls destructive deleteByContact", () => {
   const source = fs.readFileSync(path.join(ROOT, "lib/public-operation-routes.js"), "utf8");
   assert.doesNotMatch(source, /privacy\.deleteByContact\(contact\)/);
-  assert.match(source, /verification_required/);
+  assert.match(source, /queuePrivacyDeletion\(contact\)/);
 });
 
 test("runtime privacy UI explains verification instead of claiming immediate deletion", () => {
