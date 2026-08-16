@@ -1,63 +1,88 @@
 # 08. PostgreSQL Cutover Runbook
 
-> 상태: Bundle 6 — shadow migration / validation 준비 완료용 운영 런북
-> 원칙: 유료 DB 생성이나 production cutover는 별도 운영 결정이다. 코드만 병합되었다고 PostgreSQL이 primary가 되지 않는다.
+> 상태: Bundle 7 — async runtime 지원 완료
+> 원칙: 코드가 PostgreSQL runtime을 지원하더라도 실제 DB 생성·비용 발생·production 전환은 별도 운영 결정이다.
 
-## 1. 현재 상태
+## 1. Runtime 구조
 
-현재 production request path는 계속 SQLite다.
-
-```text
-HTTP Route
-→ existing sync service/repository
-→ SQLite
-```
-
-Bundle 6가 추가하는 경로는 별도 migration/shadow path다.
+애플리케이션의 live HTTP/Case 경로는 async storage facade를 사용한다.
 
 ```text
-SQLite
-→ portable export
-→ PostgreSQL migrations
-→ import
-→ semantic validation
-→ cutover preflight
+HTTP / Case Service
+        ↓
+Async Runtime Repository
+        ↓
+┌───────────────────┬──────────────────┐
+│ SQLite adapter    │ PostgreSQL       │
+│ 기존 운영 기본값 │ runtime adapter  │
+└───────────────────┴──────────────────┘
 ```
 
-`STORAGE_DRIVER=postgres`는 아직 허용하지 않는다. 기존 repository/service가 동기 API이므로 PostgreSQL을 primary로 바꾸려면 다음 Bundle에서 async repository cutover가 먼저 완료되어야 한다.
+`STORAGE_DRIVER`:
 
-## 2. 사전 조건
+- `sqlite`: SQLite primary
+- `postgres-shadow`: migration/validation은 PostgreSQL을 사용하지만 live runtime primary는 SQLite
+- `postgres`: live runtime primary를 PostgreSQL로 사용. `DATABASE_URL` 필수
 
-- 현재 main Release gate green
-- Core 5 production smoke green
-- SQLite source DB의 portable export 성공
-- PostgreSQL database 준비
-- `DATABASE_URL`은 secret 환경변수로만 설정
-- source DB backup 별도 보관
+환경변수를 변경하지 않는 한 현재 production은 계속 SQLite다.
 
-## 3. Portable export
+## 2. CI 검증
+
+Repository CI는 실제 PostgreSQL service container를 기동하여 다음 흐름을 검증한다.
+
+```text
+PostgreSQL schema migration
+→ PostgreSQL runtime readiness
+→ Wage Case 생성
+→ Case token 조회
+→ Lead 저장
+→ Booking 저장
+→ Admin 조회
+→ Case 삭제
+→ 실제 DB row 확인
+```
+
+따라서 adapter 존재 여부만 검사하지 않고 실제 Node/Express/PostgreSQL 연동을 매 PR에서 검증한다.
+
+## 3. Production cutover 전 사전 조건
+
+- main Release gate green
+- PostgreSQL runtime CI green
+- Chromium E2E green
+- 현재 SQLite production smoke green
+- production SQLite source backup 확보
+- portable export 성공
+- 장기 운영용 PostgreSQL 준비
+- `DATABASE_URL` secret 설정 준비
+- DB backup/restore 정책 확인
+- maintenance/write-freeze 시간 확보
+
+## 4. Portable export
 
 ```bash
 npm run db:export-portable -- --output ./data/cutover.json
 ```
 
-export에는 각 테이블별 다음 검증값이 포함된다.
+12개 기존 production table마다 다음을 기록한다.
 
 - row count
-- 원본 SHA-256
-- DB 표현 차이를 제거한 semantic SHA-256
+- raw SHA-256
+- semantic SHA-256
 
-semantic checksum은 SQLite의 JSON TEXT / 0·1 boolean과 PostgreSQL의 JSONB / BOOLEAN 차이를 정규화한다.
+semantic checksum은 SQLite와 PostgreSQL의 표현 차이를 정규화한다.
 
-## 4. PostgreSQL schema 적용
+- JSON TEXT ↔ JSONB
+- INTEGER 0/1 ↔ BOOLEAN
+- timestamp text ↔ TIMESTAMPTZ/Date
+- numeric ID representation
+
+## 5. PostgreSQL schema 적용
 
 ```bash
 DATABASE_URL=... npm run db:pg:migrate
 ```
 
-`db/postgres/*.sql`을 파일명 순서대로 적용한다.
-
-현재 순서:
+현재 migration 순서:
 
 1. legacy Worker/booking/expert tables
 2. SaaS identity/tenant
@@ -65,48 +90,31 @@ DATABASE_URL=... npm run db:pg:migrate
 4. Business Risk
 5. Business onboarding/action support
 
-DDL은 idempotent `CREATE TABLE IF NOT EXISTS` 기반이다.
+## 6. Shadow rehearsal
 
-## 5. 최초 import
+처음에는 production runtime을 변경하지 않는다.
 
-빈 target DB:
-
-```bash
-DATABASE_URL=... npm run db:pg:import -- --input ./data/cutover.json
+```text
+Production SQLite
+      ↓ export
+Shadow PostgreSQL
+      ↓ import
+semantic validation
 ```
 
-schema까지 같이 적용:
+빈 target:
 
 ```bash
 DATABASE_URL=... npm run db:pg:import -- --input ./data/cutover.json --migrate
 ```
 
-이미 데이터가 있으면 기본적으로 import를 거부한다.
-
-검증된 shadow DB를 source export로 완전히 다시 채우는 경우에만:
-
-```bash
-DATABASE_URL=... npm run db:pg:import -- --input ./data/cutover.json --replace
-```
-
-`--replace`는 destructive operation이므로 production primary DB에서는 사용하지 않는다.
-
-## 6. 데이터 동등성 검증
+검증:
 
 ```bash
 DATABASE_URL=... npm run db:pg:validate -- --input ./data/cutover.json
 ```
 
-12개 기존 production table 전체에 대해:
-
-- source count == target count
-- source semantic checksum == target semantic checksum
-
-을 모두 요구한다.
-
-단순 row count만 맞는 것은 migration 성공으로 간주하지 않는다.
-
-## 7. Cutover preflight
+preflight:
 
 ```bash
 STORAGE_DRIVER=postgres-shadow \
@@ -114,56 +122,103 @@ DATABASE_URL=... \
 npm run db:pg:cutover-check -- --input ./data/cutover.json
 ```
 
-성공 조건:
-
-- PostgreSQL 연결 성공
-- 12개 legacy table 존재
-- 모든 count 동일
-- 모든 semantic checksum 동일
-- current runtime이 `sqlite` 또는 `postgres-shadow`
-
-성공 메시지:
+성공 시:
 
 ```text
-READY_FOR_ASYNC_REPOSITORY_CUTOVER
+READY_FOR_POSTGRES_RUNTIME_CUTOVER
 ```
 
-이는 **PostgreSQL을 production primary로 켜도 된다는 뜻이 아니다.** 다음 async repository Bundle을 시작할 수 있다는 의미다.
+이 명령은 환경변수를 바꾸거나 production write path를 변경하지 않는다.
 
-## 8. 다음 Bundle의 실제 cutover 순서
+## 7. Staging primary rehearsal
 
-다음 Bundle에서 repository/service를 async로 전환한 후에만 다음 절차를 연다.
+production 전에 별도 staging 환경에서:
 
 ```text
-1. Staging PostgreSQL primary
-2. full E2E
-3. write/read parity
-4. migration rehearsal
-5. production write freeze
-6. final SQLite export
-7. final PostgreSQL import
-8. semantic validation
+STORAGE_DRIVER=postgres
+DATABASE_URL=<staging postgres>
+```
+
+을 적용한다.
+
+필수 검증:
+
+- `/api/readiness` database.engine=`postgres`
+- Core 5 create/read/update/report/document/delete
+- booking / lead
+- Admin
+- Partner
+- secure summary
+- retention
+- 개인정보 삭제
+- restart survival
+- redeploy survival
+
+## 8. Production cutover
+
+실제 전환은 아래 순서를 유지한다.
+
+```text
+1. production source SQLite backup
+2. write freeze 시작
+3. final portable export
+4. PostgreSQL final migration
+5. final import
+6. semantic validation
+7. cutover-check
+8. DATABASE_URL production secret 확인
 9. STORAGE_DRIVER=postgres
-10. restart/redeploy survival
-11. production smoke
-12. off-host backup + restore rehearsal
+10. REQUIRE_PERSISTENT_DB=1
+11. deploy/restart
+12. /api/readiness 확인
+13. Core 5 production smoke
+14. booking/Admin smoke
+15. write freeze 해제
+16. restart/redeploy survival test
+17. off-host backup
+18. PostgreSQL restore rehearsal
+19. 검증 완료 후 PERSISTENT_STORAGE=1
 ```
 
-## 9. Rollback 원칙
+`PERSISTENT_STORAGE=1`은 DB가 있다는 이유로 미리 설정하지 않는다. 실제 survival/restore 검증 후에만 올린다.
 
-PostgreSQL primary 전환 직후 문제가 발생하면:
+## 9. Cutover 직후 관찰
 
-- 새 write를 즉시 중단
-- 원본 SQLite final export와 backup 보존
-- cutover 이후 PostgreSQL write가 존재하면 별도 export 후 유실 여부를 먼저 판단
-- 무조건 환경변수만 SQLite로 되돌리는 방식은 금지
+최소 확인 항목:
 
-데이터가 양쪽에 갈라진 상태에서 blind rollback하지 않는다.
+- API 5xx
+- DB connection errors
+- pool exhaustion
+- readiness latency
+- Case create/read errors
+- access token verify errors
+- Booking/Lead insert errors
+- Admin query errors
+- retention errors
 
-## 10. 금지사항
+SQLite final backup/export는 안정화 확인 전까지 삭제하지 않는다.
 
-- semantic validation 실패 상태에서 cutover 금지
-- `DATABASE_URL` 커밋 금지
-- 무료 30일 DB를 장기 production으로 간주 금지
-- `STORAGE_DRIVER=postgres`를 async repository 구현 전에 설정 금지
-- source backup 없이 destructive `--replace` 실행 금지
+## 10. Rollback
+
+blind rollback 금지.
+
+PostgreSQL 전환 이후 신규 write가 존재할 수 있으므로 단순히 `STORAGE_DRIVER=sqlite`로 되돌리면 데이터가 갈라질 수 있다.
+
+문제 발생 시:
+
+1. 신규 write 중단
+2. PostgreSQL 변경분 export/확인
+3. SQLite final snapshot과 차이 분석
+4. 데이터 유실 없는 rollback/import 경로 결정
+5. runtime switch
+6. smoke 재검증
+
+## 11. 금지사항
+
+- source backup 없이 cutover 금지
+- semantic validation 실패 상태 cutover 금지
+- `DATABASE_URL` 저장소 커밋 금지
+- 무료 만료형 DB를 장기 production으로 간주 금지
+- write freeze 없이 final migration 금지
+- production primary DB에 `--replace` 실행 금지
+- restore rehearsal 없이 durable storage 완료 선언 금지
