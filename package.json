@@ -18,7 +18,8 @@
     "migrate": "node scripts/migrate-json-to-db.mjs",
     "ingest": "node scripts/ingest-nomusa.mjs",
     "db:backup": "node scripts/db-backup.mjs",
-    "db:restore-check": "node scripts/db-restore-check.mjs"
+    "db:restore-check": "node scripts/db-restore-check.mjs",
+    "db:export-portable": "node scripts/export-sqlite-portable.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",
