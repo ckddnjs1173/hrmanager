@@ -1,430 +1,394 @@
-# 인사야 Repository Refactor Plan
+# 인사야 Repository Refactor Plan — Current State
 
-> 기준일: 2026-08-14
-> 목표: 현재 기능을 깨뜨리지 않으면서 제품 개발에 적합한 저장소 구조로 점진적으로 정리한다.
-
-## 1. 기본 원칙
-
-1. `main`은 항상 배포 가능한 기준 브랜치다.
-2. 현재 기능을 보존하고 구조만 단계적으로 개선한다.
-3. 프레임워크 전면 교체를 첫 작업으로 하지 않는다.
-4. 거대한 파일은 한 번에 쪼개지 않고 테스트를 만든 뒤 도메인별로 이동한다.
-5. 생성물과 원본 데이터를 구분한다.
-6. 제품 방향 문서와 과거 아이디어 문서를 구분한다.
-7. 법률 데이터·계산식·문서양식은 UI 파일에 종속시키지 않는다.
+> **기준일:** 2026-08-16
+> **목적:** 완료된 구조 개선과 남은 migration을 구분한다.
+> **원칙:** 디렉터리 모양을 예쁘게 만드는 것이 아니라 변경 위험·법률 중복·운영 위험을 줄인다.
 
 ---
 
-## 2. 현재 구조의 주요 문제
+## 1. 현재 판단
 
-### 루트 문서 과밀
-
-루트에 제품기획·디자인·콘텐츠·벤치마크·운영·런칭 문서가 다수 존재하며 서로 작성 시점이 다르다.
-
-### 대형 단일 프론트
-
-`index.html`이 SPA 화면, 콘텐츠, 계산기, 다수 UI 로직의 중심이다.
-
-### 콘텐츠 원본과 앱 결합
-
-현재 정적 SEO 빌드는 앱 내부 콘텐츠를 추출해 페이지를 생성한다. SEO 생성 방식은 유용하지만 원본 콘텐츠가 UI와 결합돼 있다.
-
-### 서버 집중
-
-`server.js`가 여러 API 책임을 담당하고 `lib/docs.js`도 큰 파일이다. 기능 증설 시 영향 범위가 넓어진다.
-
-### 테스트 기준 부족
-
-기능별 검증 기록은 존재하지만 저장소 수준의 자동 품질 게이트가 부족하다.
-
----
-
-## 3. 목표 구조
-
-최종 목표는 아래와 같은 책임 분리다. 이름은 구현 과정에서 일부 조정할 수 있다.
+초기 refactor plan에서 가장 위험했던 부분은 이미 해결됐다.
 
 ```text
-hrmanager/
-├─ README.md
-├─ package.json
-├─ package-lock.json
-├─ render.yaml
-├─ .env.example
-├─ .gitignore
-│
-├─ src/
-│  ├─ app/
-│  │  ├─ cases/
-│  │  ├─ calculators/
-│  │  ├─ documents/
-│  │  ├─ guides/
-│  │  └─ experts/
-│  │
-│  ├─ server/
-│  │  ├─ routes/
-│  │  ├─ middleware/
-│  │  └─ services/
-│  │
-│  ├─ ai/
-│  │  ├─ prompts/
-│  │  ├─ classifiers/
-│  │  └─ schemas/
-│  │
-│  ├─ legal/
-│  │  ├─ constants/
-│  │  ├─ rules/
-│  │  ├─ calculators/
-│  │  └─ sources/
-│  │
-│  └─ shared/
-│
-├─ content/
-│  ├─ guides/
-│  ├─ seo/
-│  └─ legal/
-│
-├─ public/
-│  └─ assets/
-│
-├─ data/
-├─ scripts/
-├─ tests/
-│  ├─ unit/
-│  ├─ integration/
-│  ├─ regression/
-│  └─ smoke/
-│
-└─ docs/
-   ├─ PRODUCT_PLAN_1.0.md
-   ├─ STATUS.md
-   ├─ REPO_REFACTOR_PLAN.md
-   ├─ ARCHITECTURE.md
-   └─ archive/
+✅ 테스트/CI 안전망
+✅ Core Case 전용 UI
+✅ Case frontend 공통 transport/CSS
+✅ Case Registry
+✅ Legal Registry
+✅ Server domain routers
+✅ Session / Rate Limit / HTTP Security infra
+✅ server.js bootstrap 축소
+🟡 Content Source 점진 migration 시작
+🔴 Production durable storage는 코드 refactor가 아닌 GA 운영 결정
 ```
 
-이 구조를 한 번에 만들지 않는다.
+따라서 더 이상 `src/` 디렉터리로 전체 파일을 이동하는 것 자체를 목표로 삼지 않는다.
+
+현재 `lib/` 기반 모듈 구조가 책임을 명확히 분리한다면 경로 변경만을 위한 대규모 migration은 하지 않는다.
 
 ---
 
-## 4. 문서 정리
+## 2. Refactor 원칙
 
-### 유지할 최상위 기준
+1. `main`은 항상 배포 가능한 상태를 유지한다.
+2. endpoint와 사용자 contract를 먼저 고정한다.
+3. 기능 보존 테스트 없이 대형 파일을 이동하지 않는다.
+4. 반복이 실제로 확인된 뒤에 abstraction을 추출한다.
+5. Case별 법률 차이를 공통 UI가 숨기지 않게 한다.
+6. 법정 숫자·source는 canonical layer로 수렴한다.
+7. Content Source는 block 단위로 옮긴다.
+8. 전체 framework rewrite는 별도 제품 결정이다.
+9. 경로 이동보다 single-source와 운영 안전성을 우선한다.
+10. 비용이 발생하는 infrastructure 변경은 refactor PR과 분리한다.
 
-- `README.md` — 실행·배포·프로젝트 소개
-- `docs/PRODUCT_PLAN_1.0.md` — 제품 방향
-- `docs/STATUS.md` — 실제 구현 현황
-- `docs/REPO_REFACTOR_PLAN.md` — 구조 개선 순서
-- 향후 `docs/ARCHITECTURE.md` — 실제 아키텍처
+---
 
-### 기존 문서
+## 3. Phase A — Test / Release Safety — ✅ 완료
 
-다음 문서는 바로 삭제하지 않는다.
+현재 자동 검증:
 
 ```text
-BENCHMARK.md
-CLAUDE.md
-CONTENT.md
-DESIGN.md
-HARVEST.md
-LAUNCH.md
-MASTERPLAN.md
-OPERATIONS.md
-PAGES.md
-POLISH.md
-PRODUCT.md
-UPGRADE.md
-기획-어시스턴트전환.md
+PR
+├─ Node regression
+├─ build
+├─ release gate
+└─ actual Chromium desktop/mobile
+
+main
+├─ PR checks 재실행
+├─ Render exact SHA 확인
+├─ runtime readiness
+├─ synthetic Core Cases
+├─ legal/money/document/report 검증
+└─ synthetic data cleanup
 ```
 
-처리 순서:
-
-1. 유효한 내용 확인
-2. 최신 제품 문서와 충돌 여부 판정
-3. 필요한 세부 스펙으로 승격
-4. 역할이 끝난 원문은 `docs/archive/legacy-planning/`으로 이동
-5. 루트에서는 제거
+구조 변경은 이 safety net 아래에서만 진행한다.
 
 ---
 
-## 5. Git 운영 규칙
+## 4. Phase B — Core Case Frontend — ✅ 완료
+
+Core 5 Case는 Legacy `index.html`과 분리된 전용 Workspace를 가진다.
+
+```text
+wage-intake.html
+ dismissal-intake.html
+retirement-intake.html
+worktime-intake.html
+annual-leave-intake.html
+```
+
+공통 frontend:
+
+```text
+case-client-core.js
+case-workspace-core.css
+```
+
+공통화된 책임:
+
+- protected Case transport
+- session token
+- HTTP error contract
+- document/report/delete helper
+- shared workspace resource/document UI
+
+각 사건의 intake와 법률-specific UI는 전용 client에 남긴다.
+
+### 남은 frontend migration
+
+GA 비차단:
+
+- Legacy home inline UI logic 축소
+- generic loading/error/expired state 추가 표준화
+- 접근성 audit
+
+---
+
+## 5. Phase C — Case / Legal Common Layer — ✅ 완료
+
+### Case Registry
+
+```text
+lib/case-domain-registry.js
+```
+
+Core 5 Case의 UI/API/service descriptor를 등록한다.
+
+### Legal Registry
+
+```text
+lib/legal-registry.js
+```
+
+Core 5 Case의 공식 legal source contract를 canonical adapter로 제공한다.
+
+### 남은 legal migration
+
+Core Case 자체가 아니라 **Legacy surface의 중복**이 남았다.
+
+우선순위:
+
+```text
+Legacy calculator 법정 숫자
+→ Legacy guide 법률 copy
+→ AI knowledge/prompt와 canonical result 경계 재점검
+→ SEO content source
+```
+
+경로를 `src/legal/`로 전부 이동하는 것보다 실제 duplicate source 제거가 목적이다.
+
+---
+
+## 6. Phase D — Content Source — 🟡 진행
+
+### 첫 완료 slice
+
+```text
+content/home-navigation.js
+```
+
+근로자/사업주 사이트 metadata와 category IA를 외부 canonical runtime source로 분리했다.
+
+`lib/product-home.js`가 runtime home을 제공할 때 Legacy inline block을 external binding으로 교체한다.
+
+### 현재 남은 큰 content block
+
+`index.html` 내부에 대체로 다음 데이터가 남아 있다.
+
+```text
+TOPICS
+ARTICLES
+ART_EXTRA
+legal/privacy/terms copy
+calculator metadata / display copy
+기타 guide catalog
+```
+
+### 이동 순서
+
+#### D1 — Guide Catalog
+
+- `TOPICS`
+- article key/category metadata
+- navigation/search가 동일 source를 사용
+
+#### D2 — Article Content
+
+- `ARTICLES`
+- `ART_EXTRA`
+- guide FAQ/관련 콘텐츠
+
+목표:
+
+```text
+content/guides/*
+↓
+Legacy UI renderer
++
+SEO builder
+```
+
+#### D3 — Legal Copy
+
+- UI 법률 설명에서 Core Legal Registry와 중복되는 숫자 식별
+- canonical legal metadata reference로 교체
+- privacy/terms처럼 법률 규칙 엔진과 성격이 다른 정책문서는 별도 content source 유지
+
+#### D4 — Calculator Metadata
+
+계산 로직이 아니라 UI metadata/설명부터 분리한다.
+
+실제 법정 산식은 검증된 calculator/rule module을 우선한다.
+
+#### D5 — SEO Source Unification
+
+정적 SEO 생성기가 `index.html`을 scraping하는 구조에서 벗어나 같은 canonical content source를 직접 사용하도록 전환한다.
+
+### 하지 않을 것
+
+- `index.html` 전체를 한 PR에서 다시 작성
+- Content migration 때문에 1.0 GA를 지연
+- 이동하면서 카피·법률 내용을 임의로 동시에 개정
+
+---
+
+## 7. Phase E — Server Domain Split — ✅ 완료
+
+초기 목표였던 `server.js` 집중 문제는 해결됐다.
+
+### 현재 구조
+
+```text
+server.js                 bootstrap
+lib/application.js        Express composition
+
+lib/case-routes.js
+lib/ai-routes.js
+lib/document-routes.js
+lib/expert-routes.js
+lib/public-operation-routes.js
+lib/admin-routes.js
+lib/partner-routes.js
+lib/secure-summary-routes.js
+
+lib/session-security.js
+lib/rate-limit.js
+lib/http-security.js
+lib/retention-scheduler.js
+lib/branded-page.js
+```
+
+`server.js`는 더 이상 domain endpoint 구현을 소유하지 않는다.
+
+### 앞으로의 규칙
+
+새 endpoint가 필요하면:
+
+```text
+해당 domain router
+→ application composition에 mount
+→ route-level test
+→ regression / browser / production gate
+```
+
+`server.js`에 직접 route를 다시 추가하지 않는다.
+
+---
+
+## 8. Phase F — Persistence / Operations — 🔴 GA Decision
+
+이 단계는 저장소 refactor보다 실제 production infrastructure 선택이다.
+
+현재:
+
+```text
+SQLite repository ✅
+Runtime readiness ✅
+Online backup ✅
+Restore-check ✅
+Ephemeral Render filesystem ❌ durable guarantee
+```
+
+GA 전:
+
+1. durable storage 선택
+2. `DB_PATH` 고정
+3. `REQUIRE_PERSISTENT_DB=1`
+4. restart persistence test
+5. redeploy persistence test
+6. verified backup
+7. off-host backup
+8. restore rehearsal
+9. readiness + production smoke
+
+DB engine 교체는 필요조건이 아니다. 현재 규모에서는 persistent disk + SQLite를 유지하는 경로도 가능하다.
+
+---
+
+## 9. 현재 저장소에서 유지할 Source of Truth
+
+```text
+README.md                    프로젝트 소개/실행
+
+docs/PRODUCT_PLAN_1.0.md     제품 방향/Scope Freeze
+docs/STATUS.md               실제 구현 상태
+docs/ARCHITECTURE.md         현재 구조
+docs/RELEASE_CHECKLIST.md    RC→GA 체크리스트
+docs/OPERATIONS.md           backup/restore runbook
+docs/REPO_REFACTOR_PLAN.md   남은 구조 migration
+```
+
+과거 기획문서는 구현 작업의 직접 TODO source로 사용하지 않는다.
+
+필요한 내용은 최신 Source of Truth에 승격한 뒤 archive 대상으로 분류한다.
+
+---
+
+## 10. Git / PR 운영 규칙
 
 ### main
 
 - Production source of truth
-- 항상 실행 가능
-- 직접적인 실험용 변경 금지
+- 직접 실험 금지
+- merge 후 exact-SHA production 검증
 
-### 개발 브랜치
+### PR
 
-예:
+한 PR은 하나의 명확한 책임 변화만 가진다.
+
+완료 정의:
 
 ```text
-feat/case-foundation
-feat/wage-case
-refactor/frontend-shell
-refactor/legal-rules
-test/product-regression
-fix/booking-persistence
+코드/문서 변경
++ 관련 regression
++ Release gate
++ 필요 시 Chromium
++ merge 후 production impact 확인
 ```
 
-작업 단위는 가능하면 하나의 명확한 목적만 가진다.
+### 대형 migration
 
-### 작업 완료 조건
+Content/Legacy 작업은 다음 형태를 권장한다.
 
-- 코드 변경
-- 관련 테스트
-- 필요한 문서 변경
-- 배포 영향 확인
+```text
+1. canonical source 생성
+2. adapter를 통해 runtime이 새 source 사용
+3. regression green
+4. old fallback 제거 가능성 확인
+5. 별도 PR에서 old copy 제거
+```
 
-이 네 가지를 한 세트로 본다.
+이 패턴은 `content/home-navigation.js`에서 이미 사용했다.
 
 ---
 
-## 6. Refactor Phase A — 안전망 먼저
+## 11. 1.0에서 더 하지 않을 구조 작업
 
-구조를 옮기기 전 자동 검증부터 만든다.
+아래는 1.0 GA 필수 refactor가 아니다.
 
-목표 명령:
+- 전체 파일을 `src/`로 강제 이동
+- React/Next.js 전체 전환
+- 모든 테스트 폴더 재분류
+- `lib/docs.js` 분할만을 위한 대규모 변경
+- 모든 Legacy UI를 Case UI로 즉시 교체
+- DB engine을 이유 없이 PostgreSQL로 교체
 
-```bash
-npm run check
-npm test
-```
-
-최소 검사:
-
-- 서버 시작 가능
-- `/api/health`
-- 핵심 API smoke
-- 정적 사이트 build
-- 대표 계산기 산식
-- 대표 문서 생성
-- SQLite 기본 CRUD
-- 대표 Case flow(구현 후)
-
-GitHub Actions에서 push/PR마다 실행되도록 한다.
+실제 변경 비용 대비 유지보수/제품 가치가 명확할 때만 진행한다.
 
 ---
 
-## 7. Refactor Phase B — 프론트 분리
+## 12. Refactor Completion Matrix
 
-### 1단계
-
-거대한 `index.html`에서 변경 위험이 낮은 부분부터 분리한다.
-
-```text
-public/assets/css/
-public/assets/js/
-```
-
-대상:
-
-- 공통 디자인 토큰
-- 공통 UI 스타일
-- 독립 유틸리티
-
-### 2단계
-
-제품 도메인별 JS 분리:
-
-```text
-src/app/calculators/
-src/app/documents/
-src/app/guides/
-src/app/experts/
-```
-
-### 3단계
-
-Case 제품 UI를 새 구조에 먼저 구현하고 기존 기능을 하나씩 연결한다.
-
-### 하지 않을 것
-
-초기 단계에서 React/Next.js로 전체 재작성하지 않는다.
-
-프레임워크 전환은 현재 구조를 분리한 뒤 필요성이 명확할 때 별도 결정한다.
+| 영역 | 상태 | 다음 작업 |
+|---|---|---|
+| CI / Release | ✅ | 유지 |
+| Core Case UI | ✅ | 접근성/UX polishing |
+| Case transport | ✅ | 유지 |
+| Case Registry | ✅ | 1.0 scope freeze |
+| Legal Registry | ✅ Core | Legacy duplicate migration |
+| Server routes | ✅ | server.js 재집중 방지 |
+| Security infra | ✅ | 필요 시 scale 대응 |
+| Runtime readiness | ✅ | durable config 후 enforce |
+| Backup tooling | ✅ | off-host 운영 연결 |
+| Content Source | 🟡 | TOPICS → ARTICLES → legal/calculator |
+| Durable persistence | 🔴 | GA 전 실제 선택/검증 |
 
 ---
 
-## 8. Refactor Phase C — Legal / Calculator 분리
-
-가장 중요한 기술적 목표 중 하나다.
-
-### 현재 문제
-
-법률 수치·규칙·설명이 여러 UI/프롬프트/콘텐츠에 흩어질 가능성이 있다.
-
-### 목표
+## 13. 최종 우선순위
 
 ```text
-src/legal/constants/
-src/legal/rules/
-src/legal/calculators/
-src/legal/sources/
+1. RC 문서 동결
+2. durable storage 운영 결정
+3. persistence / backup / restore rehearsal
+4. 1.0 GA
+5. Content Source migration 지속
+6. Legacy legal/calculator single-source
+7. accessibility / monitoring
+8. 1.1+ 제품 확장
 ```
 
-예:
-
-```text
-minimumWage(year)
-severance(input)
-weeklyHolidayPay(input)
-overtimePay(input)
-annualLeave(input)
-```
-
-각 결과는 단순 숫자뿐 아니라 다음 메타데이터를 반환할 수 있어야 한다.
-
-```text
-result
-formula
-assumptions
-legalBasis
-source
-validFrom
-warnings
-```
-
-AI와 UI는 이 결과를 소비한다.
-
----
-
-## 9. Refactor Phase D — Content Source 분리
-
-정적 SEO 페이지 생성 시스템은 유지한다.
-
-바꿀 것은 원본이다.
-
-### 목표
-
-```text
-content/guides/*.json 또는 *.js
-content/calculators/*.json
-content/legal/*.json
-        ↓
-앱 UI
-        +
-정적 SEO build
-```
-
-같은 내용의 두 복사본을 관리하지 않는다.
-
-콘텐츠 변경 후 build가 생성물을 갱신한다.
-
----
-
-## 10. Refactor Phase E — Server 도메인 분리
-
-한 번에 `server.js`를 재작성하지 않는다.
-
-점진적으로 다음 책임을 이동한다.
-
-```text
-src/server/routes/chat.js
-src/server/routes/cases.js
-src/server/routes/documents.js
-src/server/routes/experts.js
-src/server/routes/admin.js
-
-src/server/services/case-service.js
-src/server/services/document-service.js
-src/server/services/expert-service.js
-```
-
-기존 endpoint contract를 유지하면서 내부만 이동한다.
-
----
-
-## 11. 신규 핵심 도메인 — Case
-
-제품 기획에 맞춰 새 도메인을 추가한다.
-
-개념 모델:
-
-```text
-Case
-├ id
-├ type
-├ audience
-├ status
-├ createdAt
-├ updatedAt
-├ facts
-├ missingFacts
-├ issues
-├ assessments
-├ calculations
-├ evidence
-├ deadlines
-├ actions
-├ documents
-├ sources
-└ expertHandoff
-```
-
-Case는 단순 AI 대화 로그가 아니다.
-
-대화 로그가 없어도 현재 사건 상태를 이해할 수 있는 구조여야 한다.
-
----
-
-## 12. DB 방향
-
-현재 SQLite 기반을 당장 교체하지 않는다.
-
-먼저:
-
-- Case 데이터 모델 추가
-- migration 체계 정리
-- 운영 데이터 영속성 확보
-- 백업/복구 절차 확정
-
-이후 실제 트래픽·운영 요구가 SQLite 범위를 넘을 때 PostgreSQL 등으로 이동한다.
-
-저장소 레이어를 유지해 DB 교체 비용을 낮춘다.
-
----
-
-## 13. 우선순위
-
-### 지금 바로
-
-1. 제품 기준 문서 확정
-2. 현재 구현 감사
-3. 문서 archive 계획
-4. 테스트/CI 설계
-5. Case Schema 설계
-
-### 그 다음
-
-6. Case Workspace 와이어프레임
-7. 임금체불 Case 구현
-8. Legal/Calculator 모듈 분리 시작
-9. 프론트 공통 CSS/JS 분리
-10. 핵심 5개 Case 확대
-
-### 나중
-
-11. 콘텐츠 원본 완전 분리
-12. Admin 리디자인
-13. 사업주 제품 고도화
-14. 노무사 Portal
-15. 필요 시 프론트 프레임워크 재평가
-
----
-
-## 14. 완료 상태의 저장소 기준
-
-제품화가 진행된 저장소는 다음 특징을 가져야 한다.
-
-- 루트에서 무엇을 실행해야 하는지 즉시 이해된다.
-- 최신 제품 문서가 무엇인지 명확하다.
-- 콘텐츠를 수정할 위치가 명확하다.
-- 계산식을 수정할 위치가 명확하다.
-- 법정수치를 수정할 위치가 하나다.
-- API route의 책임이 명확하다.
-- 핵심 기능은 자동 테스트된다.
-- 생성물과 원본이 구분된다.
-- `main`은 언제든 배포할 수 있다.
-
-이 상태를 인사야 1.0 개발 저장소의 기준으로 삼는다.
+**현재 저장소에서 가장 큰 구조 문제는 더 이상 `server.js`가 아니다. 남은 핵심 기술 부채는 Legacy content single-source이며, 가장 큰 출시 리스크는 durable persistence다.**
