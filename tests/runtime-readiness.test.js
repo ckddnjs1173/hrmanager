@@ -5,13 +5,15 @@ import { once } from "node:events";
 
 process.env.DB_PATH = ":memory:";
 process.env.REQUIRE_PERSISTENT_DB = "0";
+process.env.PERSISTENT_STORAGE = "0";
 
-const { getRuntimeReadiness } = await import("../lib/runtime-readiness.js");
+const { evaluatePersistenceStatus, getRuntimeReadiness } = await import("../lib/runtime-readiness.js");
 const { createCaseRouter } = await import("../lib/case-routes.js");
 
 test("runtime readiness verifies database, five Case domains and Legal registry", () => {
   const result = getRuntimeReadiness();
   assert.equal(result.ready, true);
+  assert.equal(result.readyForSensitiveCaseStorage, false);
   assert.equal(result.database.ok, true);
   assert.equal(result.database.engine, "sqlite");
   assert.equal(result.database.foreignKeysEnabled, true);
@@ -21,34 +23,61 @@ test("runtime readiness verifies database, five Case domains and Legal registry"
   assert.equal(result.legal.ok, true);
   assert.deepEqual(result.legal.errors, []);
   assert.equal(result.persistence.required, false);
+  assert.equal(result.persistence.durableStorageDeclared, false);
+  assert.equal(result.persistence.dbPathConfigured, false, "an in-memory database must never count as a durable DB path");
   assert.equal(result.persistence.requirementSatisfied, true);
+  assert.equal(result.persistence.readyForSensitiveCaseStorage, false);
   assert.ok(result.warnings.includes("persistent_storage_not_enforced"));
+  assert.ok(result.warnings.includes("persistent_storage_not_verified"));
 });
 
-test("readiness never exposes the configured database path", () => {
-  process.env.DB_PATH = "/very/secret/production/location/app.db";
-  const result = getRuntimeReadiness();
+test("readiness never exposes configured database path values", () => {
+  const result = getRuntimeReadiness({
+    env: {
+      ...process.env,
+      DB_PATH: "/very/secret/production/location/app.db",
+      RENDER_GIT_COMMIT: "test-commit",
+    },
+  });
   const serialized = JSON.stringify(result);
-  assert.equal(result.persistence.dbPathConfigured, true);
+  assert.equal(result.build.commit, "test-commit");
   assert.doesNotMatch(serialized, /very\/secret/);
   assert.doesNotMatch(serialized, /production\/location/);
-  process.env.DB_PATH = ":memory:";
 });
 
-test("persistent requirement fails closed when DB_PATH is not configured", () => {
-  const previous = process.env.DB_PATH;
-  delete process.env.DB_PATH;
-  process.env.REQUIRE_PERSISTENT_DB = "1";
-  const result = getRuntimeReadiness();
-  assert.equal(result.persistence.required, true);
-  assert.equal(result.persistence.dbPathConfigured, false);
-  assert.equal(result.persistence.requirementSatisfied, false);
-  assert.equal(result.ready, false);
-  process.env.REQUIRE_PERSISTENT_DB = "0";
-  process.env.DB_PATH = previous;
+test("persistent requirement needs both a durable DB path and explicit storage verification", () => {
+  const withoutVerification = evaluatePersistenceStatus({
+    env: { REQUIRE_PERSISTENT_DB: "1", PERSISTENT_STORAGE: "0" },
+    storageInfo: { explicitPathConfigured: true, inMemory: false },
+  });
+  assert.equal(withoutVerification.required, true);
+  assert.equal(withoutVerification.dbPathConfigured, true);
+  assert.equal(withoutVerification.durableStorageDeclared, false);
+  assert.equal(withoutVerification.requirementSatisfied, false);
+  assert.equal(withoutVerification.readyForSensitiveCaseStorage, false);
+
+  const verified = evaluatePersistenceStatus({
+    env: { REQUIRE_PERSISTENT_DB: "1", PERSISTENT_STORAGE: "1" },
+    storageInfo: { explicitPathConfigured: true, inMemory: false },
+  });
+  assert.equal(verified.requirementSatisfied, true);
+  assert.equal(verified.readyForSensitiveCaseStorage, true);
+  assert.equal(verified.warning, null);
+  assert.equal(verified.verificationWarning, null);
 });
 
-test("public Case readiness endpoint returns the non-secret snapshot without a Case token", async (t) => {
+test("in-memory SQLite can never satisfy the persistent storage requirement", () => {
+  const result = evaluatePersistenceStatus({
+    env: { REQUIRE_PERSISTENT_DB: "1", PERSISTENT_STORAGE: "1" },
+    storageInfo: { explicitPathConfigured: true, inMemory: true },
+  });
+  assert.equal(result.dbPathConfigured, false);
+  assert.equal(result.requirementSatisfied, false);
+  assert.equal(result.readyForSensitiveCaseStorage, false);
+  assert.equal(result.warning, "persistent_storage_requirement_not_satisfied");
+});
+
+test("public Case readiness alias returns the non-secret snapshot without a Case token", async (t) => {
   const app = express();
   app.use(express.json());
   app.use("/api/cases", createCaseRouter());
@@ -61,6 +90,7 @@ test("public Case readiness endpoint returns the non-secret snapshot without a C
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.equal(body.ready, true);
+  assert.equal(body.readyForSensitiveCaseStorage, false);
   assert.equal(body.cases.count, 5);
   assert.equal(body.legal.ok, true);
   assert.equal(body.database.ok, true);
