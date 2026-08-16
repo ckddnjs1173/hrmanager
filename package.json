@@ -19,10 +19,15 @@
     "ingest": "node scripts/ingest-nomusa.mjs",
     "db:backup": "node scripts/db-backup.mjs",
     "db:restore-check": "node scripts/db-restore-check.mjs",
-    "db:export-portable": "node scripts/export-sqlite-portable.mjs"
+    "db:export-portable": "node scripts/export-sqlite-portable.mjs",
+    "db:pg:migrate": "node scripts/postgres-migrate.mjs",
+    "db:pg:import": "node scripts/import-portable-postgres.mjs",
+    "db:pg:validate": "node scripts/validate-portable-postgres.mjs",
+    "db:pg:cutover-check": "node scripts/postgres-cutover-check.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "pg": "^8.13.1"
   }
 }
