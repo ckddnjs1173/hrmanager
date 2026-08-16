@@ -24,12 +24,13 @@ test("AI router requires the server rate-limit factory", () => {
   assert.throws(() => createAiRouter({}), /ai_router_rate_limit_required/);
 });
 
-test("server delegates chat and summary endpoints to the extracted AI router", () => {
+test("application composition delegates chat and summary endpoints to the extracted AI router", () => {
+  const application = readFileSync(path.join(ROOT, "lib/application.js"), "utf8");
   const server = readFileSync(path.join(ROOT, "server.js"), "utf8");
-  assert.match(server, /import \{ createAiRouter \} from "\.\/lib\/ai-routes\.js"/);
-  assert.match(server, /app\.use\("\/api", createAiRouter\(\{ rateLimit \}\)\)/);
-  assert.doesNotMatch(server, /app\.post\("\/api\/chat"/);
-  assert.doesNotMatch(server, /app\.post\("\/api\/summary"/);
-  assert.doesNotMatch(server, /function sanitizeMessages/);
-  assert.doesNotMatch(server, /function resolveKnowledge/);
+  assert.match(application, /import \{ createAiRouter \} from "\.\/ai-routes\.js"/);
+  assert.match(application, /app\.use\("\/api", createAiRouter\(\{ rateLimit \}\)\)/);
+  assert.doesNotMatch(application, /app\.post\("\/api\/chat"/);
+  assert.doesNotMatch(application, /app\.post\("\/api\/summary"/);
+  assert.doesNotMatch(application, /function sanitizeMessages|function resolveKnowledge/);
+  assert.match(server, /createApplication/);
 });
