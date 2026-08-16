@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex,nofollow" />
+<title>법령 변경 관리 · 인사야 운영</title>
+<link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg" />
+<link rel="stylesheet" href="assets/brand/app.css" />
+<link rel="stylesheet" href="admin-legal.css" />
+</head>
+<body>
+<div id="login" class="legal-login">
+  <div class="card">
+    <div class="h1">법령 변경 관리</div>
+    <p class="muted small">인사야 내부 운영자 전용 화면입니다. 기존 운영자 토큰과 세션을 사용합니다.</p>
+    <label class="label" for="adminToken">관리자 토큰</label>
+    <input id="adminToken" class="input" type="password" autocomplete="current-password" placeholder="ADMIN_TOKEN" />
+    <div id="loginError" class="error"></div>
+    <button id="loginButton" class="btn primary" style="width:100%;margin-top:12px">로그인</button>
+    <a class="muted-link small" href="/admin.html" style="display:inline-block;margin-top:14px">← 기존 운영자 대시보드</a>
+  </div>
+</div>
+
+<div id="app" class="legal-shell" hidden>
+  <header class="legal-top">
+    <div class="brand">● 인사야 · 법령 변경 관리</div>
+    <div class="grow"></div>
+    <a class="muted-link small" href="/admin.html">기존 운영 대시보드</a>
+    <button id="logoutButton" class="btn">로그아웃</button>
+  </header>
+  <main class="legal-main">
+    <section class="legal-queue" aria-label="법령 변경 후보 목록">
+      <div class="notice">검토된 변경도 자동으로 운영 규칙에 반영되지 않습니다. 최종 상태는 <b>READY_FOR_IMPLEMENTATION</b>이며 코드 리뷰·테스트·배포가 별도로 필요합니다.</div>
+      <div class="legal-toolbar">
+        <div class="field" style="flex:1;min-width:160px">
+          <label for="operator">운영자명 · 감사로그</label>
+          <input id="operator" placeholder="예: 박창원" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="statusFilter">상태</label>
+          <select id="statusFilter"><option value="">전체</option></select>
+        </div>
+        <button id="refreshButton" class="btn">새로고침</button>
+      </div>
+      <details class="legal-card" id="createCandidateBox">
+        <summary><b>+ 법령 변경 후보 등록</b></summary>
+        <form id="candidateForm" style="margin-top:14px">
+          <div class="form-grid">
+            <div class="field"><label for="sourceType">출처 유형</label><select id="sourceType" required></select></div>
+            <div class="field"><label for="canonicalSourceId">기존 Canonical Source</label><select id="canonicalSourceId"><option value="">새 공식 출처 / 연결 없음</option></select></div>
+            <div class="field"><label for="authority">기관</label><input id="authority" required /></div>
+            <div class="field"><label for="article">조문·항목</label><input id="article" /></div>
+            <div class="field full"><label for="candidateTitle">변경 제목</label><input id="candidateTitle" required /></div>
+            <div class="field full"><label for="officialUrl">공식 URL</label><input id="officialUrl" type="url" required placeholder="https://law.go.kr/..." /></div>
+            <div class="field"><label for="sourcePublishedAt">공표일</label><input id="sourcePublishedAt" type="date" /></div>
+            <div class="field"><label for="effectiveFrom">시행일</label><input id="effectiveFrom" type="date" /></div>
+            <div class="field"><label for="effectiveTo">종료일</label><input id="effectiveTo" type="date" /></div>
+            <div class="field full"><label for="changeNote">변경 메모</label><textarea id="changeNote"></textarea></div>
+            <div class="field full"><label for="sourceSnapshot">공식 출처 스냅샷 JSON</label><textarea id="sourceSnapshot" required placeholder='{"capturedAt":"2026-08-17T00:00:00+09:00","text":"..."}'></textarea></div>
+          </div>
+          <div id="candidateFormError" class="error"></div>
+          <button class="btn primary" type="submit" style="margin-top:10px">DRAFT로 등록</button>
+        </form>
+      </details>
+      <div id="candidateList"></div>
+    </section>
+
+    <section class="legal-detail" aria-live="polite">
+      <div id="detailEmpty" class="empty">왼쪽에서 법령 변경 후보를 선택하세요.</div>
+      <div id="detailView" hidden></div>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast"></div>
+<script src="admin-legal.js" defer></script>
+</body>
+</html>
