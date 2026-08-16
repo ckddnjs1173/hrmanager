@@ -1,0 +1,80 @@
+name: Compliance Close CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: close-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres-close:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: insaya
+          POSTGRES_PASSWORD: insaya_test
+          POSTGRES_DB: insaya_close_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U insaya -d insaya_close_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Close contract tests
+        run: |
+          node --test tests/compliance-close-contract.test.js
+          node --test tests/business-compliance-close-ui.test.js
+      - name: Monthly Compliance Close PostgreSQL E2E
+        env:
+          DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_close_test
+        run: node scripts/business-compliance-close-e2e.mjs
+
+  browser-close:
+    needs: postgres-close
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: insaya
+          POSTGRES_PASSWORD: insaya_test
+          POSTGRES_DB: insaya_close_browser
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U insaya -d insaya_close_browser"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false playwright@1.62.0
+      - run: npx playwright install --with-deps chromium
+      - name: Monthly Compliance Close Chromium E2E
+        env:
+          DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_close_browser
+        run: node scripts/business-compliance-close-browser-e2e.mjs
