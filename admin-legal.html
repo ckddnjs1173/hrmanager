@@ -79,6 +79,10 @@
 
   <main id="monitorMain" class="legal-main" hidden>
     <section class="legal-queue" aria-label="공식 출처 모니터 목록">
+      <div id="schedulerStatusCard" class="legal-card" aria-live="polite">
+        <h3>자동 점검 Scheduler</h3>
+        <div class="muted small">상태를 불러오는 중입니다.</div>
+      </div>
       <div class="notice"><b>감지만 자동화합니다.</b> 첫 성공 점검은 baseline만 저장하고 후보를 만들지 않습니다. 이후 본문 hash가 바뀌어도 후보는 <b>DRAFT</b>로만 생성되며 자동 검증·Rule 제안·운영 반영은 금지됩니다.</div>
       <div class="legal-toolbar">
         <div class="field">
@@ -125,5 +129,6 @@
 <div id="toast" class="toast"></div>
 <script src="admin-legal.js" defer></script>
 <script src="admin-legal-monitor.js" defer></script>
+<script src="admin-legal-scheduler-status.js" defer></script>
 </body>
 </html>
