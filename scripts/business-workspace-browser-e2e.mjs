@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { chromium } from "playwright";
 import { createPostgresPool } from "../lib/postgres-client.js";
 import { applyPostgresMigrations } from "../lib/postgres-migrations.js";
+import { runComplianceNotificationSweep } from "../lib/saas-notification-repo.js";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL required");
 const PORT = Number(process.env.BUSINESS_E2E_PORT || 32241);
@@ -10,7 +11,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const DAY_MS = 86_400_000;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const kstDatePlusDays = (days) => new Date(Date.now() + KST_OFFSET_MS + days * DAY_MS).toISOString().slice(0, 10);
-const internalDueDate = kstDatePlusDays(4);
+const internalDueDate = kstDatePlusDays(3);
 
 const migrationPool = createPostgresPool({ applicationName: "insaya-business-workspace-browser-migrate" });
 await applyPostgresMigrations(migrationPool, { logger: { log() {} } });
@@ -135,6 +136,21 @@ try {
     assert.match(calendarText, /내부 관리 기한/);
     assert.equal((await page.locator("#calendar-next7").innerText()).trim(), "1");
 
+    const notificationSweep = await runComplianceNotificationSweep({ now: new Date() });
+    assert.equal(notificationSweep.generated, 1);
+    assert.equal(notificationSweep.delivered, 1);
+    await page.locator('.nav-item[data-view="notifications"]').click();
+    await page.locator("#notification-refresh").click();
+    await page.getByText("알림을 새로고침했습니다.").waitFor();
+    assert.equal((await page.locator("#notification-nav-count").innerText()).trim(), "1");
+    const notificationList = await page.locator("#notification-list").innerText();
+    assert.match(notificationList, /조치 기한 알림/);
+    assert.match(notificationList, /내부 관리 기한/);
+    assert.ok(notificationList.includes(internalDueDate));
+    await page.locator('#notification-list button[data-notification-read]').click();
+    await page.getByText("알림을 읽음 처리했습니다.").waitFor();
+    assert.equal((await page.locator("#notification-unread-label").innerText()).trim(), "읽지 않음 0");
+
     await page.locator('.nav-item[data-view="actions"]').click();
     wageAction = actionList.locator(".action-card", { hasText: "최저임금 기준으로 시급 검토" });
     await wageAction.locator('button[data-action-status="IN_PROGRESS"]').click();
@@ -155,7 +171,7 @@ try {
   } finally {
     await browser.close();
   }
-  console.log("Business Workspace browser E2E passed: login -> setup -> employee -> Risk -> internal due date -> Calendar -> Action -> activation.");
+  console.log("Business Workspace browser E2E passed: login -> Risk -> Calendar -> in-app alert -> read -> Action -> activation.");
 } finally {
   server.kill("SIGTERM");
   await new Promise((resolve) => {
