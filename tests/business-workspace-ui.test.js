@@ -53,6 +53,17 @@ test("Business workspace preserves the Risk -> Action -> re-evaluation product c
   assert.match(html, /정보가 부족한 경우 위반으로 단정하지 않습니다/);
 });
 
+test("Business async forms retain stable form references across await boundaries", () => {
+  assert.doesNotMatch(js, /e\.currentTarget\.(?:reset|hidden)/);
+  assert.match(js, /const form=e\.currentTarget/);
+});
+
+test("Business organization picker uses the public API response shape", () => {
+  assert.match(js, /organization\.displayName/);
+  assert.match(js, /organization\.legalName/);
+  assert.doesNotMatch(js, /organization\.display_name/);
+});
+
 test("Business styles are standalone and responsive", () => {
   assert.match(css, /\.workspace/);
   assert.match(css, /\.metric-grid/);
