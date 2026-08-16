@@ -35,6 +35,8 @@ ALTER TABLE legal_governance_events
 ALTER TABLE legal_governance_events
   DROP CONSTRAINT IF EXISTS legal_governance_events_check;
 ALTER TABLE legal_governance_events
+  DROP CONSTRAINT IF EXISTS legal_governance_events_subject_check;
+ALTER TABLE legal_governance_events
   ADD CONSTRAINT legal_governance_events_subject_check
   CHECK (candidate_id IS NOT NULL OR proposal_id IS NOT NULL OR watch_id IS NOT NULL);
 
