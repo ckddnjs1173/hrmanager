@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS compliance_notification_outbox (
   recipient_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   channel TEXT NOT NULL DEFAULT 'IN_APP' CHECK (channel IN ('IN_APP')),
   source_type TEXT NOT NULL CHECK (source_type IN ('COMPLIANCE_ACTION')),
-  source_id TEXT NOT NULL,
+  source_id TEXT NOT NULL REFERENCES compliance_actions(id) ON DELETE CASCADE,
   notification_key TEXT NOT NULL,
   dedup_key TEXT NOT NULL UNIQUE,
   status TEXT NOT NULL DEFAULT 'PENDING'
@@ -35,8 +35,8 @@ CREATE TABLE IF NOT EXISTS in_app_notifications (
   title TEXT NOT NULL,
   body TEXT NOT NULL,
   severity TEXT NOT NULL DEFAULT 'INFO' CHECK (severity IN ('INFO','WARNING','CRITICAL')),
-  source_type TEXT NOT NULL,
-  source_id TEXT NOT NULL,
+  source_type TEXT NOT NULL CHECK (source_type IN ('COMPLIANCE_ACTION')),
+  source_id TEXT NOT NULL REFERENCES compliance_actions(id) ON DELETE CASCADE,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL,
   read_at TIMESTAMPTZ
