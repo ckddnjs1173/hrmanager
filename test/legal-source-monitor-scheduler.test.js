@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   LEGAL_SOURCE_MONITOR_DEFAULT_INTERVAL_MS,
   LEGAL_SOURCE_MONITOR_MIN_INTERVAL_MS,
+  clampLegalSourceMonitorIntervalMs,
   resolveLegalSourceMonitorSchedulerConfig,
   startLegalSourceMonitorScheduler,
 } from "../lib/legal-source-monitor-scheduler.js";
@@ -59,14 +60,20 @@ test("default interval is six hours and scheduler does not run immediately", () 
   assert.equal(listCalls, 0, "server startup must not immediately fetch official sources");
 });
 
-test("interval below one hour is clamped to the one-hour minimum", () => {
+test("interval clamp preserves requested value and enforces one-hour effective minimum", () => {
+  assert.equal(LEGAL_SOURCE_MONITOR_MIN_INTERVAL_MS, 3_600_000);
+  assert.equal(clampLegalSourceMonitorIntervalMs(1000), 3_600_000);
+  assert.equal(clampLegalSourceMonitorIntervalMs(3_600_000), 3_600_000);
+  assert.equal(clampLegalSourceMonitorIntervalMs(7_200_000), 7_200_000);
+  assert.equal(clampLegalSourceMonitorIntervalMs("invalid"), LEGAL_SOURCE_MONITOR_DEFAULT_INTERVAL_MS);
+
   const config = resolveLegalSourceMonitorSchedulerConfig({
     LEGAL_SOURCE_MONITOR_ENABLED: "1",
     LEGAL_SOURCE_MONITOR_INTERVAL_MS: "1000",
     DATABASE_URL: "postgresql://test",
   });
   assert.equal(config.requestedIntervalMs, 1000);
-  assert.equal(config.intervalMs, LEGAL_SOURCE_MONITOR_MIN_INTERVAL_MS);
+  assert.equal(config.intervalMs, 3_600_000);
 });
 
 test("tick processes enabled watches sequentially and isolates failures", async () => {
