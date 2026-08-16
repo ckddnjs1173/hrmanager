@@ -7,6 +7,10 @@ import { applyPostgresMigrations } from "../lib/postgres-migrations.js";
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL required");
 const PORT = Number(process.env.BUSINESS_E2E_PORT || 32241);
 const BASE = `http://127.0.0.1:${PORT}`;
+const DAY_MS = 86_400_000;
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const kstDatePlusDays = (days) => new Date(Date.now() + KST_OFFSET_MS + days * DAY_MS).toISOString().slice(0, 10);
+const internalDueDate = kstDatePlusDays(4);
 
 const migrationPool = createPostgresPool({ applicationName: "insaya-business-workspace-browser-migrate" });
 await applyPostgresMigrations(migrationPool, { logger: { log() {} } });
@@ -68,8 +72,6 @@ try {
     await page.locator("#verify-magic").click();
 
     await page.locator("#workspace-view").waitFor({ state: "visible" });
-    // The initial anonymous /auth/me probe intentionally returns 401 before login.
-    // From this authenticated point forward, any console/page error remains a failure.
     consoleErrors.length = 0;
     await page.locator("#org-dialog[open]").waitFor();
     await page.locator('#org-form input[name="legalName"]').fill("브라우저 테스트 주식회사");
@@ -120,8 +122,21 @@ try {
 
     await page.locator('.nav-item[data-view="actions"]').click();
     const actionList = page.locator("#action-list");
-    const wageAction = actionList.locator(".action-card", { hasText: "최저임금 기준으로 시급 검토" });
+    let wageAction = actionList.locator(".action-card", { hasText: "최저임금 기준으로 시급 검토" });
     await wageAction.waitFor();
+    await wageAction.locator('.due-date-form input[name="dueDate"]').fill(internalDueDate);
+    await wageAction.locator('.due-date-form button[type="submit"]').click();
+    await page.getByText("내부 관리 기한을 저장했습니다.").waitFor();
+
+    await page.locator('.nav-item[data-view="calendar"]').click();
+    const calendarText = await page.locator("#calendar-list").innerText();
+    assert.match(calendarText, /최저임금 기준으로 시급 검토/);
+    assert.ok(calendarText.includes(internalDueDate));
+    assert.match(calendarText, /내부 관리 기한/);
+    assert.equal((await page.locator("#calendar-next7").innerText()).trim(), "1");
+
+    await page.locator('.nav-item[data-view="actions"]').click();
+    wageAction = actionList.locator(".action-card", { hasText: "최저임금 기준으로 시급 검토" });
     await wageAction.locator('button[data-action-status="IN_PROGRESS"]').click();
     await page.getByText("조치 상태를 변경했습니다.").waitFor();
 
@@ -131,6 +146,8 @@ try {
     await page.getByText(/다음 Risk Scan에서 실제 해소 여부/).waitFor();
 
     assert.equal((await page.locator("#onboarding-badge").innerText()).trim(), "활성화 완료");
+    await page.locator('.nav-item[data-view="calendar"]').click();
+    assert.doesNotMatch(await page.locator("#calendar-list").innerText(), /최저임금 기준으로 시급 검토/);
     await page.locator('.nav-item[data-view="dashboard"]').click();
     assert.match(await page.locator("#onboarding-progress").innerText(), /100% 완료/);
 
@@ -138,7 +155,7 @@ try {
   } finally {
     await browser.close();
   }
-  console.log("Business Workspace browser E2E passed: login -> org -> setup -> employee -> Risk Scan -> Action -> activation.");
+  console.log("Business Workspace browser E2E passed: login -> setup -> employee -> Risk -> internal due date -> Calendar -> Action -> activation.");
 } finally {
   server.kill("SIGTERM");
   await new Promise((resolve) => {

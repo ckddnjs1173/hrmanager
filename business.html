@@ -27,9 +27,7 @@
         <div class="eyebrow">LABOR COMPLIANCE OS</div>
         <h1>노무 문제를<br>사고 전에 관리하세요.</h1>
         <p>회사 정보와 근로조건을 기준으로 위험을 점검하고, 해야 할 조치까지 한곳에서 관리합니다.</p>
-        <div class="login-points">
-          <span>Risk Scan</span><span>Action</span><span>Document</span><span>Audit</span>
-        </div>
+        <div class="login-points"><span>Risk Scan</span><span>Action</span><span>Calendar</span><span>Audit</span></div>
       </div>
       <form id="login-form" class="auth-card">
         <div class="eyebrow">BUSINESS SIGN IN</div>
@@ -37,46 +35,30 @@
         <label>이메일<input id="login-email" type="email" autocomplete="email" placeholder="name@company.com" required></label>
         <button class="primary-button" type="submit">로그인 링크 받기</button>
         <p id="login-help" class="helper">현재 개발 환경에서는 발급된 테스트 링크를 바로 확인할 수 있습니다.</p>
-        <div id="magic-token-box" class="magic-box" hidden>
-          <p>로그인 링크가 생성되었습니다.</p>
-          <button id="verify-magic" type="button" class="secondary-button">이 계정으로 계속</button>
-        </div>
+        <div id="magic-token-box" class="magic-box" hidden><p>로그인 링크가 생성되었습니다.</p><button id="verify-magic" type="button" class="secondary-button">이 계정으로 계속</button></div>
       </form>
     </section>
 
     <section id="workspace-view" class="workspace" hidden>
       <aside class="sidebar">
         <a href="/" class="sidebar-brand">인사야 <span>Business</span></a>
-        <div class="org-picker-wrap">
-          <label for="org-picker">회사</label>
-          <select id="org-picker"></select>
-          <button id="new-org-button" class="text-button" type="button">+ 회사 추가</button>
-        </div>
+        <div class="org-picker-wrap"><label for="org-picker">회사</label><select id="org-picker"></select><button id="new-org-button" class="text-button" type="button">+ 회사 추가</button></div>
         <nav id="business-nav" class="nav-list" aria-label="Business 메뉴">
           <button data-view="dashboard" class="nav-item active">대시보드</button>
           <button data-view="risks" class="nav-item">리스크</button>
           <button data-view="actions" class="nav-item">조치</button>
+          <button data-view="calendar" class="nav-item">캘린더</button>
           <button data-view="people" class="nav-item">직원</button>
           <button data-view="setup" class="nav-item">회사 설정</button>
         </nav>
-        <div class="sidebar-footer">
-          <div id="current-user" class="current-user"></div>
-          <button id="logout-button" class="text-button" type="button">로그아웃</button>
-        </div>
+        <div class="sidebar-footer"><div id="current-user" class="current-user"></div><button id="logout-button" class="text-button" type="button">로그아웃</button></div>
       </aside>
 
       <main class="main-panel">
         <header class="topbar">
-          <div>
-            <div class="eyebrow">INSAYA BUSINESS</div>
-            <h1 id="page-title">노무 대시보드</h1>
-          </div>
-          <div class="topbar-actions">
-            <span id="onboarding-badge" class="status-badge">설정 확인 중</span>
-            <button id="risk-scan-button" class="primary-button compact" type="button">Risk Scan</button>
-          </div>
+          <div><div class="eyebrow">INSAYA BUSINESS</div><h1 id="page-title">노무 대시보드</h1></div>
+          <div class="topbar-actions"><span id="onboarding-badge" class="status-badge">설정 확인 중</span><button id="risk-scan-button" class="primary-button compact" type="button">Risk Scan</button></div>
         </header>
-
         <div id="flash" class="flash" hidden></div>
 
         <section id="view-dashboard" class="view-section">
@@ -84,22 +66,14 @@
             <article class="metric-card critical"><span>긴급</span><strong id="metric-critical">0</strong></article>
             <article class="metric-card high"><span>주의</span><strong id="metric-high">0</strong></article>
             <article class="metric-card uncertain"><span>확인 필요</span><strong id="metric-uncertain">0</strong></article>
+            <article class="metric-card overdue"><span>기한 지연</span><strong id="metric-overdue">0</strong></article>
             <article class="metric-card action"><span>진행할 조치</span><strong id="metric-actions">0</strong></article>
           </div>
           <div class="two-column">
-            <article class="panel-card">
-              <div class="panel-head"><div><span class="eyebrow">PRIORITY</span><h2>가장 먼저 할 일</h2></div></div>
-              <div id="priority-action" class="empty-state">Risk Scan 후 우선 조치를 보여드립니다.</div>
-            </article>
-            <article class="panel-card">
-              <div class="panel-head"><div><span class="eyebrow">SETUP</span><h2>회사 설정 진행도</h2></div></div>
-              <div id="onboarding-progress"></div>
-            </article>
+            <article class="panel-card"><div class="panel-head"><div><span class="eyebrow">PRIORITY</span><h2>가장 먼저 할 일</h2></div></div><div id="priority-action" class="empty-state">Risk Scan 후 우선 조치를 보여드립니다.</div></article>
+            <article class="panel-card"><div class="panel-head"><div><span class="eyebrow">SETUP</span><h2>회사 설정 진행도</h2></div></div><div id="onboarding-progress"></div></article>
           </div>
-          <article class="panel-card">
-            <div class="panel-head"><div><span class="eyebrow">LATEST RISKS</span><h2>최근 리스크</h2></div><button class="text-button" data-jump="risks">전체 보기</button></div>
-            <div id="dashboard-findings"></div>
-          </article>
+          <article class="panel-card"><div class="panel-head"><div><span class="eyebrow">LATEST RISKS</span><h2>최근 리스크</h2></div><button class="text-button" data-jump="risks">전체 보기</button></div><div id="dashboard-findings"></div></article>
         </section>
 
         <section id="view-risks" class="view-section" hidden>
@@ -108,63 +82,43 @@
         </section>
 
         <section id="view-actions" class="view-section" hidden>
-          <div class="section-intro"><p>Risk에서 생성된 조치를 담당하고 완료합니다. 조치 완료 후에도 Risk는 다음 재평가에서만 해소됩니다.</p></div>
+          <div class="section-intro"><p>Risk에서 생성된 조치를 담당하고 완료합니다. 조치 완료 후에도 Risk는 다음 재평가에서만 해소됩니다. 직접 지정하는 날짜는 법정기한이 아니라 내부 관리 기한입니다.</p></div>
           <div id="action-list" class="card-list"></div>
+        </section>
+
+        <section id="view-calendar" class="view-section" hidden>
+          <div class="section-intro"><p>Compliance Action의 내부 관리 기한을 한곳에서 봅니다. 법정기한은 검증된 Rule이 산출한 경우에만 별도 근거와 함께 표시합니다.</p></div>
+          <div class="calendar-metrics">
+            <article class="metric-card overdue"><span>지연</span><strong id="calendar-overdue">0</strong></article>
+            <article class="metric-card high"><span>오늘</span><strong id="calendar-today">0</strong></article>
+            <article class="metric-card uncertain"><span>7일 이내</span><strong id="calendar-next7">0</strong></article>
+            <article class="metric-card action"><span>향후 예정</span><strong id="calendar-scheduled">0</strong></article>
+          </div>
+          <article class="panel-card">
+            <div class="panel-head"><div><span class="eyebrow">COMPLIANCE CALENDAR</span><h2>해야 할 일과 기한</h2></div><span id="calendar-range" class="helper"></span></div>
+            <div id="calendar-list" class="calendar-list"></div>
+          </article>
         </section>
 
         <section id="view-people" class="view-section" hidden>
           <div class="panel-head"><div><span class="eyebrow">PEOPLE LITE</span><h2>직원</h2></div><button id="show-employee-form" class="secondary-button" type="button">직원 추가</button></div>
           <form id="employee-form" class="inline-form" hidden>
-            <label>이름<input name="displayName" required></label>
-            <label>사번<input name="employeeNumber"></label>
-            <label>입사일<input name="hireDate" type="date" required></label>
-            <label>사업장<select name="workplaceId" id="employee-workplace"></select></label>
-            <label>주 소정근로시간<input name="weeklyContractHours" type="number" min="0" max="168" step="0.5"></label>
-            <label>임금형태<select name="wageType"><option value="">선택</option><option value="HOURLY">시급</option><option value="MONTHLY">월급</option><option value="ANNUAL">연봉</option></select></label>
-            <label>기준임금<input name="baseWage" type="number" min="0"></label>
-            <button class="primary-button" type="submit">저장</button>
+            <label>이름<input name="displayName" required></label><label>사번<input name="employeeNumber"></label><label>입사일<input name="hireDate" type="date" required></label><label>사업장<select name="workplaceId" id="employee-workplace"></select></label><label>주 소정근로시간<input name="weeklyContractHours" type="number" min="0" max="168" step="0.5"></label><label>임금형태<select name="wageType"><option value="">선택</option><option value="HOURLY">시급</option><option value="MONTHLY">월급</option><option value="ANNUAL">연봉</option></select></label><label>기준임금<input name="baseWage" type="number" min="0"></label><button class="primary-button" type="submit">저장</button>
           </form>
           <div id="employee-list" class="table-wrap"></div>
         </section>
 
         <section id="view-setup" class="view-section" hidden>
           <div class="setup-grid">
-            <form id="profile-form" class="panel-card form-card">
-              <div class="eyebrow">COMPANY PROFILE</div><h2>회사 노무 기본정보</h2>
-              <label>업종 코드<input name="industryCode" placeholder="예: G47"></label>
-              <label>급여 지급일<input name="payday" type="number" min="1" max="31"></label>
-              <label>기본 주 근로시간<input name="defaultWeeklyHours" type="number" min="0" max="168" step="0.5"></label>
-              <label>임금 체계<select name="wageSystem"><option value="">선택</option><option value="HOURLY">시급</option><option value="MONTHLY">월급</option><option value="ANNUAL">연봉</option><option value="MIXED">혼합</option></select></label>
-              <button class="primary-button" type="submit">회사정보 저장</button>
-            </form>
-            <form id="workplace-form" class="panel-card form-card">
-              <div class="eyebrow">WORKPLACE</div><h2>사업장 추가</h2>
-              <label>사업장명<input name="name" placeholder="서울 본점" required></label>
-              <label>개설일<input name="openedAt" type="date"></label>
-              <button class="primary-button" type="submit">사업장 추가</button>
-              <div id="workplace-summary" class="mini-list"></div>
-            </form>
-            <form id="scope-form" class="panel-card form-card">
-              <div class="eyebrow">COMPLIANCE SCOPE</div><h2>법률 적용범위</h2>
-              <label>범위명<input name="name" placeholder="본사 사업장" required></label>
-              <label>현재 판단<select name="status"><option value="UNCERTAIN">확인 필요</option><option value="ACTIVE">확인됨</option></select></label>
-              <label>판단 근거<textarea name="basis" rows="3" placeholder="확인한 조직/인사 운영 형태를 기록합니다."></textarea></label>
-              <button class="primary-button" type="submit">적용범위 저장</button>
-              <div id="scope-summary" class="mini-list"></div>
-            </form>
+            <form id="profile-form" class="panel-card form-card"><div class="eyebrow">COMPANY PROFILE</div><h2>회사 노무 기본정보</h2><label>업종 코드<input name="industryCode" placeholder="예: G47"></label><label>급여 지급일<input name="payday" type="number" min="1" max="31"></label><label>기본 주 근로시간<input name="defaultWeeklyHours" type="number" min="0" max="168" step="0.5"></label><label>임금 체계<select name="wageSystem"><option value="">선택</option><option value="HOURLY">시급</option><option value="MONTHLY">월급</option><option value="ANNUAL">연봉</option><option value="MIXED">혼합</option></select></label><button class="primary-button" type="submit">회사정보 저장</button></form>
+            <form id="workplace-form" class="panel-card form-card"><div class="eyebrow">WORKPLACE</div><h2>사업장 추가</h2><label>사업장명<input name="name" placeholder="서울 본점" required></label><label>개설일<input name="openedAt" type="date"></label><button class="primary-button" type="submit">사업장 추가</button><div id="workplace-summary" class="mini-list"></div></form>
+            <form id="scope-form" class="panel-card form-card"><div class="eyebrow">COMPLIANCE SCOPE</div><h2>법률 적용범위</h2><label>범위명<input name="name" placeholder="본사 사업장" required></label><label>현재 판단<select name="status"><option value="UNCERTAIN">확인 필요</option><option value="ACTIVE">확인됨</option></select></label><label>판단 근거<textarea name="basis" rows="3" placeholder="확인한 조직/인사 운영 형태를 기록합니다."></textarea></label><button class="primary-button" type="submit">적용범위 저장</button><div id="scope-summary" class="mini-list"></div></form>
           </div>
         </section>
       </main>
     </section>
 
-    <dialog id="org-dialog" class="modal-card">
-      <form id="org-form" method="dialog">
-        <div class="eyebrow">NEW ORGANIZATION</div><h2>회사 만들기</h2>
-        <label>법인/사업자명<input name="legalName" required></label>
-        <label>표시 이름<input name="displayName" required></label>
-        <div class="dialog-actions"><button type="button" class="secondary-button" id="close-org-dialog">취소</button><button class="primary-button" type="submit">만들기</button></div>
-      </form>
-    </dialog>
+    <dialog id="org-dialog" class="modal-card"><form id="org-form" method="dialog"><div class="eyebrow">NEW ORGANIZATION</div><h2>회사 만들기</h2><label>법인/사업자명<input name="legalName" required></label><label>표시 이름<input name="displayName" required></label><div class="dialog-actions"><button type="button" class="secondary-button" id="close-org-dialog">취소</button><button class="primary-button" type="submit">만들기</button></div></form></dialog>
   </div>
   <script type="module" src="/business.js"></script>
 </body>
