@@ -52,6 +52,7 @@ jobs:
         run: |
           node scripts/browser-e2e.mjs
           node scripts/annual-leave-browser-e2e.mjs
+          node scripts/case-a11y-browser-e2e.mjs
 
   production-smoke:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
