@@ -1,131 +1,19 @@
-// 노무 AI 상담 — 백엔드 (Express + Anthropic SDK)
-// 실행: npm install && npm start  (ANTHROPIC_API_KEY 필요. 없으면 데모 모드로 동작)
+// 노무 AI 상담 — 백엔드 bootstrap
+// 실행: npm install && npm start  (AI 키가 없으면 데모 모드)
 
-import "./lib/env.js"; // ⚠️ 반드시 첫 import — 이후 모듈들이 process.env를 읽기 전에 .env 로드
-import express from "express";
+import "./lib/env.js"; // 반드시 첫 import — 이후 모듈들이 process.env를 읽기 전에 .env 로드
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { AI_ENABLED, AI_INFO } from "./lib/ai.js";
-import { renderBrandedPage, renderStateMarkup } from "./lib/branded-page.js";
-import { retentionSweep } from "./lib/repo.js";
-import { createAdminRouter } from "./lib/admin-routes.js";
-import { createAiRouter } from "./lib/ai-routes.js";
-import { createCaseRouter } from "./lib/case-routes.js";
-import { createDocumentRouter } from "./lib/document-routes.js";
-import { createExpertRouter } from "./lib/expert-routes.js";
-import { createPartnerRouter } from "./lib/partner-routes.js";
-import { createPublicOperationRouter } from "./lib/public-operation-routes.js";
-import { createRateLimiter } from "./lib/rate-limit.js";
-import { createSecureSummaryRouter } from "./lib/secure-summary-routes.js";
-import { createSessionSecurity } from "./lib/session-security.js";
-import { createProductHomeHandler } from "./lib/product-home.js";
+import { createApplication } from "./lib/application.js";
+import { startRetentionScheduler } from "./lib/retention-scheduler.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const app = express();
-app.set("trust proxy", 1); // Render/Railway 프록시 뒤 — req.protocol·ip 정확히
-app.use(express.json({ limit: "1mb" }));
-
-// ===== 보안 헤더 (helmet 대체 · 무의존) =====
-app.use((req, res, next) => {
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "SAMEORIGIN");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
-  res.setHeader("Content-Security-Policy",
-    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; " +
-    "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; " +
-    "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'");
-  if (req.secure) res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
-  next();
-});
-
-// ===== 공통 세션/보안 + 레이트리밋 =====
-const sessionSecurity = createSessionSecurity();
-if (sessionSecurity.generatedAdminToken) {
-  console.warn("⚠️  운영 모드 + ADMIN_TOKEN 미설정 → 관리자 로그인 비활성(무작위 토큰). 환경변수를 설정하세요.");
-}
-const { rateLimit } = createRateLimiter();
-const {
-  adminToken: ADMIN_TOKEN,
-  sessionSecret: SESSION_SECRET,
-  sessionTtl: SESSION_TTL,
-  parseCookies,
-  verifySession,
-  setSessionCookie,
-  clearSessionCookie,
-} = sessionSecurity;
-
-// ===== 제품 API =====
-app.use("/api/cases", rateLimit({ windowMs: 60000, max: 30 }), createCaseRouter());
-if (!AI_ENABLED) console.warn("⚠️  AI 키 미설정(ANTHROPIC_API_KEY/GEMINI_API_KEY) → 데모 모드로 동작합니다(프론트가 목업 응답 사용).");
-app.use("/api", createAiRouter({ rateLimit }));
-app.use("/api", createExpertRouter({ rootDir: __dirname }));
-app.use("/api", createDocumentRouter());
-
-const clean = (value) => (typeof value === "string" ? value.slice(0, 2000).trim() : "");
-app.use("/api", createPublicOperationRouter({ rateLimit, clean }));
-app.use("/api", createAdminRouter({
-  rateLimit,
-  clean,
-  adminToken: ADMIN_TOKEN,
-  sessionTtl: SESSION_TTL,
-  parseCookies,
-  verifySession,
-  setSessionCookie,
-  clearSessionCookie,
-}));
-app.use("/api", createPartnerRouter({
-  rateLimit,
-  clean,
-  sessionTtl: SESSION_TTL,
-  parseCookies,
-  verifySession,
-  setSessionCookie,
-  clearSessionCookie,
-}));
-
-// ===== 노무사 전달용 보안 요약 링크 =====
-app.use(createSecureSummaryRouter({ sessionSecret: SESSION_SECRET }));
-
-// 서버 상태(프론트가 데모/실모드 판단용)
-app.get("/api/health", (_req, res) => res.json({ ai: AI_ENABLED, provider: AI_INFO?.provider || null, model: AI_INFO?.model || null }));
-
-// 제품 홈 + 정적 파일
-app.get("/", createProductHomeHandler(__dirname));
-app.use(express.static(__dirname, {
-  extensions: ["html"],
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith(".html")) res.setHeader("Cache-Control", "no-cache, must-revalidate");
-  },
-}));
-
-// 알 수 없는 경로 — API는 JSON 404, 그 외는 브랜드 404 페이지
-app.use((req, res) => {
-  if (req.path.startsWith("/api/")) return res.status(404).json({ error: "not_found" });
-  return res.status(404).set("Content-Type", "text/html; charset=utf-8").send(
-    renderBrandedPage(
-      "페이지를 찾을 수 없습니다",
-      renderStateMarkup("🧭", "페이지를 찾을 수 없어요", `요청하신 주소가 없습니다. <a href="/">인사야 홈으로</a> 돌아가 상담·계산·문서를 이용해 보세요.`),
-    ),
-  );
-});
-
-// 개인정보 보존 자동 파기: 기동 시 1회 + 24시간 주기
-function runSweep() {
-  try {
-    const result = retentionSweep();
-    if (result.deletedBookings || result.deletedLeads || result.abandonedSoftDeleted) {
-      console.log(`🧹 보존정책 정리: 예약삭제 ${result.deletedBookings}, 리드삭제 ${result.deletedLeads}, 미수락파기 ${result.abandonedSoftDeleted}`);
-    }
-  } catch (error) {
-    console.warn("sweep error:", error?.message || error);
-  }
-}
-runSweep();
-setInterval(runSweep, 24 * 3600 * 1000).unref?.();
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
+const { app, runtime } = createApplication({ rootDir });
+startRetentionScheduler();
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
+  const { aiEnabled, aiInfo } = runtime;
   console.log(`\n✅ 노무 AI 서버 실행: http://localhost:${PORT}`);
-  console.log(`   모델: ${AI_ENABLED ? `${AI_INFO.provider} · ${AI_INFO.model}${AI_INFO.fallbacks?.length ? `  (폴백: ${AI_INFO.fallbacks.join(", ")})` : ""}` : "데모 모드(키 없음)"}\n`);
+  console.log(`   모델: ${aiEnabled ? `${aiInfo.provider} · ${aiInfo.model}${aiInfo.fallbacks?.length ? `  (폴백: ${aiInfo.fallbacks.join(", ")})` : ""}` : "데모 모드(키 없음)"}\n`);
 });
