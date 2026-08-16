@@ -85,6 +85,61 @@ export function createCaseAccessClient({ storageKey }) {
   return { api, clearSession, getSession, setSession };
 }
 
+export function openAccessibleDocumentPreview({
+  previewId,
+  title = "문서 초안",
+  text = "",
+  closeOnBackdrop = false,
+  copyLabel = "텍스트 복사",
+  copiedLabel = "복사됨",
+}) {
+  if (!previewId) throw new Error("case_preview_id_required");
+
+  document.getElementById(previewId)?.remove();
+  const previousFocus = document.activeElement && typeof document.activeElement.focus === "function"
+    ? document.activeElement
+    : null;
+  const titleId = `${previewId}-title`;
+  const overlay = document.createElement("div");
+  overlay.id = previewId;
+  overlay.className = "doc-preview-overlay";
+  overlay.innerHTML = `<div class="doc-preview" role="dialog" aria-modal="true" aria-labelledby="${escapeHtml(titleId)}"><div class="doc-preview-head"><div><span>사건 정보 자동 반영</span><h3 id="${escapeHtml(titleId)}">${escapeHtml(title)}</h3></div><button class="btn" type="button" data-close aria-label="문서 미리보기 닫기">닫기</button></div><pre tabindex="0"></pre><div class="doc-preview-actions"><button class="btn primary" type="button" data-copy>${escapeHtml(copyLabel)}</button></div></div>`;
+  overlay.querySelector("pre").textContent = text || "";
+
+  let closed = false;
+  const onKeydown = (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    close();
+  };
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    document.removeEventListener("keydown", onKeydown);
+    overlay.remove();
+    if (previousFocus && typeof previousFocus.focus === "function" && previousFocus.isConnected !== false) {
+      previousFocus.focus();
+    }
+  };
+
+  const closeButton = overlay.querySelector("[data-close]");
+  closeButton.addEventListener("click", close);
+  overlay.querySelector("[data-copy]").addEventListener("click", async (event) => {
+    await navigator.clipboard.writeText(text || "").catch(() => {});
+    event.currentTarget.textContent = copiedLabel;
+  });
+  if (closeOnBackdrop) {
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) close();
+    });
+  }
+
+  document.addEventListener("keydown", onKeydown);
+  document.body.appendChild(overlay);
+  closeButton.focus();
+  return close;
+}
+
 export function createCaseClientCore({
   root,
   storageKey,
@@ -113,12 +168,14 @@ export function createCaseClientCore({
   const access = createCaseAccessClient({ storageKey });
   const { api, clearSession, getSession, setSession } = access;
   const errorSelector = `.${String(errorClass).trim().split(/\s+/).join(".")}`;
+  let closeActivePreview = null;
 
   function showError(text) {
     root.querySelector(errorSelector)?.remove();
     const box = document.createElement("div");
     box.className = errorClass;
     box.setAttribute("role", "alert");
+    box.setAttribute("aria-live", "assertive");
     box.textContent = text;
     root.prepend(box);
   }
@@ -155,6 +212,12 @@ export function createCaseClientCore({
   }
 
   function closePreview() {
+    if (closeActivePreview) {
+      const close = closeActivePreview;
+      closeActivePreview = null;
+      close();
+      return;
+    }
     document.getElementById(previewId)?.remove();
   }
 
@@ -167,22 +230,12 @@ export function createCaseClientCore({
         body: JSON.stringify({ values: {} }),
       });
       closePreview();
-      const overlay = document.createElement("div");
-      overlay.id = previewId;
-      overlay.className = "doc-preview-overlay";
-      overlay.innerHTML = `<div class="doc-preview"><div class="doc-preview-head"><div><span>사건 정보 자동 반영</span><h3>${escapeHtml(result.document?.title || "문서 초안")}</h3></div><button class="btn" type="button" data-close>닫기</button></div><pre></pre><div class="doc-preview-actions"><button class="btn primary" type="button" data-copy>텍스트 복사</button></div></div>`;
-      overlay.querySelector("pre").textContent = result.document?.text || "";
-      overlay.querySelector("[data-close]").onclick = closePreview;
-      overlay.querySelector("[data-copy]").onclick = async (event) => {
-        await navigator.clipboard.writeText(result.document?.text || "").catch(() => {});
-        event.currentTarget.textContent = "복사됨";
-      };
-      if (closePreviewOnBackdrop) {
-        overlay.addEventListener("click", (event) => {
-          if (event.target === overlay) closePreview();
-        });
-      }
-      document.body.appendChild(overlay);
+      closeActivePreview = openAccessibleDocumentPreview({
+        previewId,
+        title: result.document?.title || "문서 초안",
+        text: result.document?.text || "",
+        closeOnBackdrop: closePreviewOnBackdrop,
+      });
     } catch {
       showError(previewErrorText);
     }
