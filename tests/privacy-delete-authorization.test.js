@@ -9,7 +9,7 @@ process.env.DB_PATH = ":memory:";
 
 const { createAdminRouter } = await import("../lib/admin-routes.js");
 const { createPublicOperationRouter } = await import("../lib/public-operation-routes.js");
-const { feedback, leads } = await import("../lib/repo.js");
+const { bookings, feedback, leads } = await import("../lib/repo.js");
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const clean = (value) => typeof value === "string" ? value.slice(0, 2000).trim() : "";
@@ -46,11 +46,11 @@ async function withServer(routers, run) {
   }
 }
 
-async function queueRequest(base, contact) {
+async function postDelete(base, payload) {
   const response = await fetch(`${base}/api/privacy/delete`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ contact }),
+    body: JSON.stringify(payload),
   });
   return { response, body: await response.json() };
 }
@@ -60,7 +60,7 @@ test("knowing a contact string cannot immediately delete that person's records",
   const lead = leads.insert({ kind: "test", name: "privacy test", contact, message: "keep until verified" });
 
   await withServer([publicRouter()], async (base) => {
-    const { response, body } = await queueRequest(base, contact);
+    const { response, body } = await postDelete(base, { contact });
     assert.equal(response.status, 202);
     assert.deepEqual(body, { ok: true, status: "verification_required" });
   });
@@ -76,7 +76,7 @@ test("only authenticated admin with explicit identity verification can fulfill c
   const lead = leads.insert({ kind: "test", name: "verified user", contact, message: "delete after verification" });
 
   await withServer([publicRouter(), adminRouter()], async (base) => {
-    const queued = await queueRequest(base, contact);
+    const queued = await postDelete(base, { contact });
     assert.equal(queued.response.status, 202);
 
     const unauthorized = await fetch(`${base}/api/admin/privacy/delete-contact`, {
@@ -111,10 +111,41 @@ test("only authenticated admin with explicit identity verification can fulfill c
   assert.equal(request?.status, "done");
 });
 
+test("expired privacy token cannot delete a booking while an active token can", async () => {
+  const expiredToken = `expired-${Date.now()}`;
+  const activeToken = `active-${Date.now()}`;
+  const expired = bookings.insert({
+    contact: "expired@example.com",
+    consent: true,
+    token: expiredToken,
+    expires: new Date(Date.now() - 60_000).toISOString(),
+  });
+  const active = bookings.insert({
+    contact: "active@example.com",
+    consent: true,
+    token: activeToken,
+    expires: new Date(Date.now() + 60_000).toISOString(),
+  });
+
+  await withServer([publicRouter()], async (base) => {
+    const expiredResult = await postDelete(base, { token: expiredToken });
+    assert.equal(expiredResult.response.status, 200);
+    assert.equal(expiredResult.body.deleted, 0);
+
+    const activeResult = await postDelete(base, { token: activeToken });
+    assert.equal(activeResult.response.status, 200);
+    assert.equal(activeResult.body.deleted, 1);
+  });
+
+  assert.equal(bookings.get(expired.id)?.deleted_at, null);
+  assert.ok(bookings.get(active.id)?.deleted_at);
+});
+
 test("contact deletion route no longer calls destructive deleteByContact", () => {
   const source = fs.readFileSync(path.join(ROOT, "lib/public-operation-routes.js"), "utf8");
   assert.doesNotMatch(source, /privacy\.deleteByContact\(contact\)/);
   assert.match(source, /queuePrivacyDeletion\(contact\)/);
+  assert.match(source, /deleteByActivePrivacyToken\(token\)/);
 });
 
 test("runtime privacy UI explains verification instead of claiming immediate deletion", () => {
