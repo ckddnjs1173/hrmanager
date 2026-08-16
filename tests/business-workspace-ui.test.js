@@ -9,8 +9,9 @@ const css = fs.readFileSync(new URL("../business.css", import.meta.url), "utf8")
 test("Business workspace has the required product surfaces", () => {
   for (const id of [
     "disabled-view", "login-view", "workspace-view", "org-picker", "risk-scan-button",
-    "view-dashboard", "view-risks", "view-actions", "view-calendar", "view-people", "view-setup",
+    "view-dashboard", "view-risks", "view-actions", "view-calendar", "view-notifications", "view-people", "view-setup",
     "metric-overdue", "calendar-overdue", "calendar-today", "calendar-next7", "calendar-scheduled", "calendar-list",
+    "notification-nav-count", "notification-unread-label", "notification-refresh", "notification-list",
     "profile-form", "workplace-form", "scope-form", "employee-form",
   ]) assert.match(html, new RegExp(`id=[\"']${id}[\"']`), `missing Business UI element: ${id}`);
   assert.match(html, /noindex,nofollow/);
@@ -22,7 +23,7 @@ test("Business workspace only talks to feature-gated SaaS APIs", () => {
   for (const endpoint of [
     "/auth/me", "/auth/magic-link", "/organizations", "/onboarding", "/business-profile",
     "/workplaces", "/compliance-scopes", "/employees", "/risk-scan", "/risks", "/actions",
-    "/due-date", "/compliance-calendar",
+    "/due-date", "/compliance-calendar", "/notifications", "/read",
   ]) assert.ok(js.includes(endpoint), `missing SaaS API usage: ${endpoint}`);
   assert.match(js, /credentials:\s*[\"']same-origin[\"']/);
   assert.match(js, /x-csrf-token/);
@@ -41,6 +42,15 @@ test("Business Calendar clearly distinguishes internal management dates from leg
   assert.match(js, /MANUAL_INTERNAL/);
   assert.match(js, /내부 관리 기한 · 법정기한으로 표시되지 않습니다/);
   assert.match(js, /timingStatus/);
+});
+
+test("Business notification inbox exposes unread and read flows without external delivery claims", () => {
+  assert.match(html, /7일·3일·1일 전/);
+  assert.match(html, /중복 생성하지 않습니다/);
+  assert.match(js, /unreadCount/);
+  assert.match(js, /data-notification-read/);
+  assert.match(js, /알림을 읽음 처리했습니다/);
+  assert.doesNotMatch(html + js, /SMS 전송 완료|이메일 전송 완료/);
 });
 
 test("Business async forms retain stable form references across await boundaries", () => {

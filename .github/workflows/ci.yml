@@ -27,8 +27,14 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
-      - name: Release gate
-        run: npm run release:check
+      - name: Tests
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Content integrity
+        run: npm run content:check
+      - name: Release safety
+        run: node scripts/release-check.mjs
 
   postgres-runtime:
     needs: check
@@ -78,6 +84,10 @@ jobs:
         env:
           DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_test
         run: node scripts/business-calendar-e2e.mjs
+      - name: Business Notification E2E
+        env:
+          DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_test
+        run: node scripts/business-notification-e2e.mjs
 
   business-browser-e2e:
     needs: [check, postgres-runtime]

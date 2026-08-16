@@ -82,14 +82,20 @@ test("server close failure exits non-zero", () => {
   assert.deepEqual(exits, [1]);
 });
 
-test("server bootstrap wires SIGTERM/SIGINT and storage cleanup to graceful shutdown", () => {
+test("server bootstrap wires SIGTERM/SIGINT and scheduler/storage cleanup to graceful shutdown", () => {
   const source = fs.readFileSync(path.join(ROOT, "server.js"), "utf8");
   assert.match(source, /createGracefulShutdown/);
+  assert.match(source, /import \{ startRetentionScheduler \} from "\.\/lib\/retention-scheduler\.js"/);
+  assert.match(source, /import \{ startComplianceNotificationScheduler \} from "\.\/lib\/notification-scheduler\.js"/);
   assert.match(source, /const stopRetentionScheduler = startRetentionScheduler\(\)/);
+  assert.match(source, /const stopComplianceNotificationScheduler = startComplianceNotificationScheduler\(\)/);
   assert.match(source, /import \{ closeRuntimeStorage \} from "\.\/lib\/runtime-repo\.js"/);
   assert.match(source, /import \{ closeRuntimePostgres \} from "\.\/lib\/runtime-postgres\.js"/);
   assert.match(source, /const server = app\.listen/);
   assert.match(source, /process\.once\("SIGTERM"/);
   assert.match(source, /process\.once\("SIGINT"/);
-  assert.match(source, /stopJobs: \[stopRetentionScheduler, closeRuntimeStorage, closeRuntimePostgres\]/);
+  assert.match(
+    source,
+    /stopJobs:\s*\[\s*stopRetentionScheduler,\s*stopComplianceNotificationScheduler,\s*closeRuntimeStorage,\s*closeRuntimePostgres,?\s*\]/
+  );
 });

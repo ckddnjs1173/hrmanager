@@ -6,6 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>인사야 Business</title>
   <link rel="stylesheet" href="/business.css">
+  <link rel="stylesheet" href="/business-notifications.css">
 </head>
 <body>
   <div id="business-app" class="business-app" data-state="loading">
@@ -48,6 +49,7 @@
           <button data-view="risks" class="nav-item">리스크</button>
           <button data-view="actions" class="nav-item">조치</button>
           <button data-view="calendar" class="nav-item">캘린더</button>
+          <button data-view="notifications" class="nav-item">알림 <span id="notification-nav-count" class="nav-count" hidden>0</span></button>
           <button data-view="people" class="nav-item">직원</button>
           <button data-view="setup" class="nav-item">회사 설정</button>
         </nav>
@@ -97,6 +99,14 @@
           <article class="panel-card">
             <div class="panel-head"><div><span class="eyebrow">COMPLIANCE CALENDAR</span><h2>해야 할 일과 기한</h2></div><span id="calendar-range" class="helper"></span></div>
             <div id="calendar-list" class="calendar-list"></div>
+          </article>
+        </section>
+
+        <section id="view-notifications" class="view-section" hidden>
+          <div class="section-intro"><p>조치의 내부 관리 기한이 7일·3일·1일 전, 당일 또는 지연 상태가 되면 인앱 알림을 생성합니다. 같은 기한과 단계의 알림은 중복 생성하지 않습니다.</p></div>
+          <article class="panel-card">
+            <div class="panel-head"><div><span class="eyebrow">IN-APP NOTIFICATIONS</span><h2>컴플라이언스 알림</h2></div><div class="notification-head"><span id="notification-unread-label" class="status-badge">읽지 않음 0</span><button id="notification-refresh" class="text-button" type="button">새로고침</button></div></div>
+            <div id="notification-list" class="notification-list"></div>
           </article>
         </section>
 
