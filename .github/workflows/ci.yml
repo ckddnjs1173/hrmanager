@@ -66,6 +66,14 @@ jobs:
         env:
           DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_test
         run: node scripts/saas-auth-tenant-e2e.mjs
+      - name: Business onboarding E2E
+        env:
+          DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_test
+        run: node scripts/business-onboarding-e2e.mjs
+      - name: Business Risk and Action E2E
+        env:
+          DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_test
+        run: node scripts/business-risk-e2e.mjs
 
   browser-e2e:
     needs: [check, postgres-runtime]
