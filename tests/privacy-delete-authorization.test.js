@@ -111,41 +111,33 @@ test("only authenticated admin with explicit identity verification can fulfill c
   assert.equal(request?.status, "done");
 });
 
-test("expired privacy token cannot delete a booking while an active token can", async () => {
-  const expiredToken = `expired-${Date.now()}`;
-  const activeToken = `active-${Date.now()}`;
-  const expired = bookings.insert({
-    contact: "expired@example.com",
+test("expert-facing summary token cannot be reused as a destructive privacy capability", async () => {
+  const summaryToken = `summary-${Date.now()}`;
+  const booking = bookings.insert({
+    contact: "summary-viewer@example.com",
     consent: true,
-    token: expiredToken,
-    expires: new Date(Date.now() - 60_000).toISOString(),
-  });
-  const active = bookings.insert({
-    contact: "active@example.com",
-    consent: true,
-    token: activeToken,
+    token: summaryToken,
     expires: new Date(Date.now() + 60_000).toISOString(),
   });
 
   await withServer([publicRouter()], async (base) => {
-    const expiredResult = await postDelete(base, { token: expiredToken });
-    assert.equal(expiredResult.response.status, 200);
-    assert.equal(expiredResult.body.deleted, 0);
-
-    const activeResult = await postDelete(base, { token: activeToken });
-    assert.equal(activeResult.response.status, 200);
-    assert.equal(activeResult.body.deleted, 1);
+    const result = await postDelete(base, { token: summaryToken });
+    assert.equal(result.response.status, 400);
+    assert.deepEqual(result.body, { error: "contact_required" });
   });
 
-  assert.equal(bookings.get(expired.id)?.deleted_at, null);
-  assert.ok(bookings.get(active.id)?.deleted_at);
+  assert.equal(bookings.get(booking.id)?.deleted_at, null);
+  assert.equal(bookings.byToken(summaryToken)?.id, booking.id);
 });
 
-test("contact deletion route no longer calls destructive deleteByContact", () => {
-  const source = fs.readFileSync(path.join(ROOT, "lib/public-operation-routes.js"), "utf8");
-  assert.doesNotMatch(source, /privacy\.deleteByContact\(contact\)/);
-  assert.match(source, /queuePrivacyDeletion\(contact\)/);
-  assert.match(source, /deleteByActivePrivacyToken\(token\)/);
+test("public deletion route separates summary-view and deletion capabilities", () => {
+  const route = fs.readFileSync(path.join(ROOT, "lib/public-operation-routes.js"), "utf8");
+  const operations = fs.readFileSync(path.join(ROOT, "lib/privacy-operations.js"), "utf8");
+  assert.doesNotMatch(route, /privacy\.deleteByContact\(contact\)/);
+  assert.match(route, /queuePrivacyDeletion\(contact\)/);
+  assert.doesNotMatch(route, /deleteByActivePrivacyToken/);
+  assert.doesNotMatch(operations, /deleteByActivePrivacyToken/);
+  assert.match(route, /Booking tokens authorize the expert-facing summary link only/);
 });
 
 test("runtime privacy UI explains verification instead of claiming immediate deletion", () => {
