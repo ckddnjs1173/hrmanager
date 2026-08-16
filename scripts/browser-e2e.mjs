@@ -1,12 +1,18 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
 
-const PORT = 4173;
+const PORT = Number(process.env.E2E_PORT || 32179);
 const BASE = `http://127.0.0.1:${PORT}`;
+
 const server = spawn(process.execPath, ["server.js"], {
-  env: { ...process.env, PORT: String(PORT), DB_PATH: ":memory:" },
+  env: {
+    ...process.env,
+    PORT: String(PORT),
+    DB_PATH: ":memory:",
+    NODE_ENV: "test",
+    SITE_URL: BASE,
+  },
   stdio: ["ignore", "pipe", "pipe"],
 });
 
@@ -15,14 +21,23 @@ server.stdout.on("data", (chunk) => { serverOutput += chunk.toString(); });
 server.stderr.on("data", (chunk) => { serverOutput += chunk.toString(); });
 
 async function waitForServer() {
-  for (let i = 0; i < 100; i += 1) {
+  const deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
+    if (server.exitCode !== null) throw new Error(`server exited before E2E\n${serverOutput}`);
     try {
-      const response = await fetch(`${BASE}/api/health`);
+      const response = await fetch(`${BASE}/wage-intake`);
       if (response.ok) return;
     } catch {}
-    await delay(100);
+    await new Promise((resolve) => setTimeout(resolve, 200));
   }
-  throw new Error(`server did not start\n${serverOutput}`);
+  throw new Error(`server did not become ready\n${serverOutput}`);
+}
+
+async function choose(page, name, value) {
+  const input = page.locator(`input[name="${name}"][value="${value}"]`);
+  assert.equal(await input.count(), 1, `choice missing: ${name}=${value}`);
+  await input.locator("..").click();
+  assert.equal(await input.isChecked(), true, `choice not selected: ${name}=${value}`);
 }
 
 function collectConsoleErrors(page) {
@@ -32,24 +47,14 @@ function collectConsoleErrors(page) {
   return errors;
 }
 
-async function choose(page, name, value) {
-  const field = page.locator(`[name="${name}"]`);
-  if (!await field.count()) return;
-  const first = field.first();
-  const tag = await first.evaluate((element) => element.tagName);
-  const type = await first.getAttribute("type");
-  if (tag === "SELECT") await first.selectOption(value);
-  else if (type === "radio") await page.locator(`[name="${name}"][value="${value}"]`).check();
-  else await first.fill(value);
-}
-
 async function fillVisibleWageIntake(page) {
   const values = {
-    employmentStartDate: "2025-01-02",
     employmentEndDate: "2026-08-01",
     payDay: "매월 10일",
     unpaidPeriodStart: "2026-07-01",
     unpaidPeriodEnd: "2026-07-31",
+    employmentStartDate: "2025-01-02",
+    alreadyPaidAmount: "0",
   };
   for (const [name, value] of Object.entries(values)) {
     const input = page.locator(`[name="${name}"]`);
@@ -86,8 +91,7 @@ async function completeWageJourney(browser) {
   await page.getByRole("button", { name: "추가 수당 정보 저장" }).click();
 
   await page.locator("#money").waitFor();
-  const moneyText = await page.locator("#money").innerText();
-  assert.match(moneyText, /3,000,000원/);
+  assert.match(await page.locator("#money").innerText(), /3,000,000원/);
   const currentTotal = (await page.locator("#money .money-stat").nth(3).locator("b").innerText()).trim();
   assert.match(currentTotal, /^\d[\d,]*원$/);
   assert.match(await page.locator("#sources").innerText(), /최저임금위원회/);
@@ -116,40 +120,50 @@ async function completeDismissalJourney(browser) {
   await page.getByRole("heading", { name: /회사와의 종료 경위를/ }).waitFor();
 
   await choose(page, "separationType", "dismissal");
-  await page.getByRole("button", { name: "사건 만들고 계속하기" }).click();
-  for (let step = 0; step < 5; step += 1) {
-    if (await page.locator(".workspace").count()) break;
-    await page.locator("form[data-intake-form]").waitFor();
-    const fields = {
-      employmentStartDate: "2026-01-01",
-      employmentEndDate: "2026-08-01",
-      dismissalNoticeDate: "2026-07-20",
-      workplaceEmployeeCount: "12",
-      monthlyWage: "3200000",
-    };
-    for (const [name, value] of Object.entries(fields)) {
-      const input = page.locator(`[name="${name}"]`);
-      if (await input.count() && await input.first().isVisible()) await input.first().fill(value);
-    }
-    for (const [name, value] of [["writtenNotice", "no"], ["dismissalReason", "경영상 이유라고만 들었습니다"], ["consentedToResignation", "no"], ["pressureOrCoercion", "yes"]]) {
-      const field = page.locator(`[name="${name}"]`);
-      if (await field.count() && await field.first().isVisible()) await choose(page, name, value);
-    }
-    await page.getByRole("button", { name: "저장하고 다음" }).click();
-    await page.waitForTimeout(80);
-  }
-  await page.locator(".workspace").waitFor();
-  assert.match(await page.locator("#assessment").innerText(), /부당해고|해고예고|서면/);
-  assert.match(await page.locator("#sources").innerText(), /근로기준법/);
+  await page.locator('[name="employmentStartDate"]').fill("2025-01-01");
+  await page.locator('[name="effectiveDate"]').fill("2026-08-01");
+  await page.locator('[name="workplaceEmployeeCount"]').fill("8");
+  await page.getByRole("button", { name: "사건 만들고 적용범위 확인" }).click();
+  await page.locator(".dismissal-workspace").waitFor();
+
+  await page.locator('[name="noticeDate"]').fill("2026-07-20");
+  await page.locator('[name="writtenNoticeReceived"]').selectOption("false");
+  await page.locator('[name="noticePayPaid"]').selectOption("false");
+  await page.locator('[name="employerReason"]').fill("업무성과를 이유로 종료 통보");
+  await page.getByRole("button", { name: "사실 저장·다시 판단" }).click();
+
+  await page.locator('[name="ordinaryDailyWage"]').waitFor();
+  await page.locator('[name="ordinaryDailyWage"]').fill("120000");
+  await page.getByRole("button", { name: "사실 저장·다시 판단" }).click();
+  await page.waitForTimeout(100);
+
+  const workspaceText = await page.locator(".dismissal-workspace").innerText();
+  const assessment = await page.locator(".assessment-list").innerText();
+  assert.match(workspaceText, /상시 5명 이상/);
+  assert.match(assessment, /신청 가능성 검토/);
+  assert.match(assessment, /3,600,000원/);
+  const sourceText = await page.locator("#dismissal-sources").innerText();
+  assert.match(sourceText, /근로기준법 제27조/);
+  assert.match(sourceText, /근로기준법 제28조/);
+  assert.match(sourceText, /중앙노동위원회/);
+
+  await page.locator('select[name="dismissalNotice"]').selectOption("have");
+  await page.locator('select[name="messagesWithEmployer"]').selectOption("have");
   await page.locator('select[name="employmentContract"]').selectOption("have");
-  await page.locator('select[name="dismissalNotice"]').selectOption("planned");
   await page.getByRole("button", { name: "증거 상태 저장" }).click();
-  await page.getByRole("button", { name: /노동위원회/ }).first().click();
-  await page.locator("#case-doc-preview").waitFor();
-  assert.match(await page.locator("#case-doc-preview pre").innerText(), /해고/);
-  await page.locator("#case-doc-preview [data-close]").click();
+
+  await page.locator("#dismissal-documents").waitFor();
+  await page.getByRole("button", { name: /부당해고 등 구제신청서/ }).click();
+  await page.locator("#dismissal-doc-preview").waitFor();
+  assert.match(await page.locator("#dismissal-doc-preview pre").innerText(), /2026-08-01/);
+  await page.locator("#dismissal-doc-preview [data-close]").click();
+
   await page.getByRole("button", { name: "사건 요약 복사" }).click();
   await page.getByRole("button", { name: "사건 요약 복사됨" }).waitFor();
+  const report = await page.evaluate(() => navigator.clipboard.readText());
+  assert.match(report, /인사야 해고·권고사직 사건 요약/);
+  assert.match(report, /3,600,000원/);
+  assert.match(await page.locator("#dismissal-procedures").innerText(), /중앙노동위원회/);
   assert.deepEqual(consoleErrors, [], `dismissal browser console errors:\n${consoleErrors.join("\n")}`);
   await context.close();
 }
@@ -159,30 +173,51 @@ async function completeRetirementJourney(browser) {
   const page = await context.newPage();
   const consoleErrors = collectConsoleErrors(page);
   await page.goto(`${BASE}/retirement-intake`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: /퇴직급여/ }).waitFor();
-  await choose(page, "retirementType", "severance");
-  await page.getByRole("button", { name: "사건 만들고 계속하기" }).click();
-  for (let step = 0; step < 6; step += 1) {
-    if (await page.locator(".workspace").count()) break;
-    await page.locator("form[data-intake-form]").waitFor();
-    for (const [name, value] of Object.entries({
-      employmentStartDate: "2023-01-01", employmentEndDate: "2026-08-01", weeklyScheduledHours: "40",
-      averageWageTotal: "9000000", averageWageDays: "92", ordinaryDailyWage: "100000",
-    })) {
-      const input = page.locator(`[name="${name}"]`);
-      if (await input.count() && await input.first().isVisible()) await input.first().fill(value);
-    }
-    await page.getByRole("button", { name: "저장하고 다음" }).click();
-    await page.waitForTimeout(80);
-  }
-  await page.locator(".workspace").waitFor();
-  assert.match(await page.locator("#money").innerText(), /퇴직급여|원/);
-  assert.match(await page.locator("#sources").innerText(), /근로자퇴직급여 보장법/);
-  await page.getByRole("button", { name: /내용증명|진정/ }).first().click();
-  await page.locator("#case-doc-preview").waitFor();
-  await page.locator("#case-doc-preview [data-close]").click();
+  await page.getByRole("button", { name: "퇴직급여 사건 만들기" }).waitFor();
+
+  await choose(page, "benefitType", "severance_pay");
+  await page.locator('[name="employmentStartDate"]').fill("2024-01-01");
+  await page.locator('[name="retirementDate"]').fill("2026-08-01");
+  await page.locator('[name="averageWeeklyScheduledHours"]').fill("40");
+  await page.locator('[name="hadUnder15HourPeriods"]').selectOption("false");
+  await page.getByRole("button", { name: "퇴직급여 사건 만들기" }).click();
+  await page.locator(".retirement-workspace").waitFor();
+
+  await page.locator('[name="hasAverageWageExcludedPeriod"]').selectOption("false");
+  await page.getByRole("button", { name: "계산 정보 저장·재계산" }).click();
+  await page.locator('[name="threeMonthWageTotal"]').waitFor();
+  await page.locator('[name="threeMonthWageTotal"]').fill("9200000");
+  await page.locator('[name="annualBonusTotal12m"]').fill("1200000");
+  await page.locator('[name="annualLeaveAllowanceForAverageWage"]').fill("400000");
+  await page.locator('[name="ordinaryDailyWage"]').fill("100000");
+  await page.locator('[name="amountAlreadyPaid"]').fill("0");
+  await page.getByRole("button", { name: "계산 정보 저장·재계산" }).click();
+  await page.waitForTimeout(100);
+
+  const moneyText = await page.locator("#retirement-money").innerText();
+  assert.match(moneyText, /8,087,671원/);
+  assert.match(moneyText, /2026-05-01 ~ 2026-07-31/);
+  const sourceText = await page.locator("#retirement-sources").innerText();
+  assert.match(sourceText, /근로자퇴직급여 보장법 제8조/);
+  assert.match(sourceText, /고용노동부/);
+
+  await page.locator('select[name="employmentContract"]').selectOption("have");
+  await page.locator('select[name="payslips3m"]').selectOption("have");
+  await page.locator('select[name="bankHistory"]').selectOption("planned");
+  await page.getByRole("button", { name: "증거 상태 저장" }).click();
+
+  await page.locator("#retirement-documents").waitFor();
+  await page.getByRole("button", { name: /퇴직급여 지급 요청 내용증명/ }).click();
+  await page.locator("#retirement-doc-preview").waitFor();
+  assert.match(await page.locator("#retirement-doc-preview pre").innerText(), /8,087,671원/);
+  await page.locator("#retirement-doc-preview [data-close]").click();
+
   await page.getByRole("button", { name: "사건 요약 복사" }).click();
   await page.getByRole("button", { name: "사건 요약 복사됨" }).waitFor();
+  const report = await page.evaluate(() => navigator.clipboard.readText());
+  assert.match(report, /퇴직금·퇴직연금 사건 요약/);
+  assert.match(report, /8,087,671원/);
+  assert.match(await page.locator("#retirement-procedures").innerText(), /노동포털/);
   assert.deepEqual(consoleErrors, [], `retirement browser console errors:\n${consoleErrors.join("\n")}`);
   await context.close();
 }
@@ -192,55 +227,88 @@ async function completeWorktimeJourney(browser) {
   const page = await context.newPage();
   const consoleErrors = collectConsoleErrors(page);
   await page.goto(`${BASE}/worktime-intake`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: /연장·야간·휴일/ }).waitFor();
-  await choose(page, "workSystem", "standard");
-  await page.getByRole("button", { name: "사건 만들고 계속하기" }).click();
-  for (let step = 0; step < 6; step += 1) {
-    if (await page.locator(".workspace").count()) break;
-    await page.locator("form[data-intake-form]").waitFor();
-    for (const [name, value] of Object.entries({ workplaceEmployeeCount: "12", ordinaryHourlyWage: "20000", weeklyOvertimeHours: "13", weekdayOvertimeHours: "10", nightOvertimeHours: "2", dailyWorkHours: "9", breakMinutes: "30" })) {
-      const input = page.locator(`[name="${name}"]`);
-      if (await input.count() && await input.first().isVisible()) await input.first().fill(value);
-    }
-    for (const [name, value] of [["baseWageForExtraHoursPaid", "yes"]]) {
-      const field = page.locator(`[name="${name}"]`);
-      if (await field.count() && await field.first().isVisible()) await choose(page, name, value);
-    }
-    await page.getByRole("button", { name: "저장하고 다음" }).click();
-    await page.waitForTimeout(80);
-  }
-  await page.locator(".workspace").waitFor();
-  assert.match(await page.locator("#money").innerText(), /140,000원/);
-  assert.match(await page.locator("#assessment").innerText(), /12시간/);
-  await page.getByRole("button", { name: /문서|진정|내용증명/ }).first().click();
-  await page.locator("#case-doc-preview").waitFor();
-  await page.locator("#case-doc-preview [data-close]").click();
+  await page.getByRole("button", { name: "근로시간 사건 만들기" }).waitFor();
+
+  await page.locator('[name="referenceDate"]').fill("2026-08-16");
+  await page.locator('[name="workplaceEmployeeCount"]').fill("8");
+  await page.locator('[name="standardWorkSystem"]').selectOption("true");
+  await page.getByRole("button", { name: "근로시간 사건 만들기" }).click();
+  await page.locator(".worktime-workspace").waitFor();
+
+  await page.locator('[name="ordinaryHourlyWage"]').fill("20000");
+  await page.locator('[name="baseWageForExtraHoursPaid"]').selectOption("true");
+  await page.locator('[name="amountAlreadyPaid"]').fill("0");
+  await page.locator('[name="maxWeeklyOvertimeHours"]').fill("13");
+  await page.locator('[name="representativeDailyWorkHours"]').fill("9");
+  await page.locator('[name="representativeBreakMinutes"]').fill("30");
+  const hours = {
+    weekdayOvertimeDayHours: "10",
+    weekdayOvertimeNightHours: "2",
+    holidayDayUpTo8Hours: "0",
+    holidayNightUpTo8Hours: "0",
+    holidayDayOver8Hours: "0",
+    holidayNightOver8Hours: "0",
+  };
+  for (const [name, value] of Object.entries(hours)) await page.locator(`[name="${name}"]`).fill(value);
+  await page.getByRole("button", { name: "계산 정보 저장·재계산" }).click();
+  await page.waitForTimeout(100);
+
+  const moneyText = await page.locator("#worktime-money").innerText();
+  assert.match(moneyText, /140,000원/);
+  assert.match(moneyText, /13시간/);
+  assert.match(moneyText, /30분 \/ 필요 60분/);
+  const sourceText = await page.locator("#worktime-sources").innerText();
+  assert.match(sourceText, /근로기준법 제56조/);
+  assert.match(sourceText, /근로기준법 제54조/);
+
+  await page.locator('select[name="attendanceRecord"]').selectOption("have");
+  await page.locator('select[name="workSchedule"]').selectOption("have");
+  await page.locator('select[name="payslip"]').selectOption("planned");
+  await page.getByRole("button", { name: "증거 상태 저장" }).click();
+
+  await page.locator("#worktime-documents").waitFor();
+  await page.getByRole("button", { name: /연장·야간·휴일수당 지급 요청 내용증명/ }).click();
+  await page.locator("#worktime-doc-preview").waitFor();
+  assert.match(await page.locator("#worktime-doc-preview pre").innerText(), /140,000원/);
+  await page.locator("#worktime-doc-preview [data-close]").click();
+
   await page.getByRole("button", { name: "사건 요약 복사" }).click();
   await page.getByRole("button", { name: "사건 요약 복사됨" }).waitFor();
-  assert.deepEqual(consoleErrors, [], `worktime browser console errors:\n${consoleErrors.join("\n")}`);
+  const report = await page.evaluate(() => navigator.clipboard.readText());
+  assert.match(report, /근로시간·연장\/야간\/휴일수당 사건 요약/);
+  assert.match(report, /140,000원/);
+  assert.match(await page.locator("#worktime-procedures").innerText(), /노동포털/);
+  assert.deepEqual(consoleErrors, [], `working-time browser console errors:\n${consoleErrors.join("\n")}`);
   await context.close();
 }
 
-async function mobileSmoke(browser) {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+async function verifyMobileLayout(browser, path, buttonName) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
   const page = await context.newPage();
-  for (const route of ["/wage-intake", "/dismissal-intake", "/retirement-intake", "/worktime-intake"]) {
-    await page.goto(`${BASE}${route}`, { waitUntil: "domcontentloaded" });
-    assert.equal(await page.locator("body").evaluate((body) => body.scrollWidth <= window.innerWidth + 2), true, `${route} must not horizontally overflow mobile viewport`);
-  }
+  await page.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: buttonName }).waitFor();
+  const metrics = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth }));
+  assert.ok(metrics.scrollWidth <= metrics.viewport + 1, `${path} mobile horizontal overflow: ${JSON.stringify(metrics)}`);
+  assert.equal(await page.getByRole("button", { name: buttonName }).isVisible(), true);
   await context.close();
 }
 
-await waitForServer();
-const browser = await chromium.launch({ headless: true });
+let browser;
 try {
+  await waitForServer();
+  browser = await chromium.launch({ headless: true });
   await completeWageJourney(browser);
   await completeDismissalJourney(browser);
   await completeRetirementJourney(browser);
   await completeWorktimeJourney(browser);
-  await mobileSmoke(browser);
-  console.log("✅ Chromium E2E passed: wage + dismissal + retirement + working-time + mobile");
+  await verifyMobileLayout(browser, "/wage-intake", "사건 만들고 계속하기");
+  await verifyMobileLayout(browser, "/dismissal-intake", "사건 만들고 적용범위 확인");
+  await verifyMobileLayout(browser, "/retirement-intake", "퇴직급여 사건 만들기");
+  await verifyMobileLayout(browser, "/worktime-intake", "근로시간 사건 만들기");
+  console.log("✅ Chromium E2E passed: wage + dismissal + retirement + working-time desktop journeys and mobile viewports");
 } finally {
-  await browser.close();
+  if (browser) await browser.close().catch(() => {});
   server.kill("SIGTERM");
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  if (server.exitCode === null) server.kill("SIGKILL");
 }
