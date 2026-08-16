@@ -92,6 +92,7 @@ export function createCaseClientCore({
   errorClass = "case-error",
   previewId = `${slug}-doc-preview`,
   deleteConfirm = "이 사건을 삭제할까요?",
+  deleteErrorText = "사건을 삭제하지 못했습니다. 접근 정보는 유지했습니다. 다시 시도해 주세요.",
   patchErrorText = "사건 정보를 저장하지 못했습니다.",
   previewErrorText = "문서 초안을 만들지 못했습니다.",
   closePreviewOnBackdrop = false,
@@ -117,6 +118,7 @@ export function createCaseClientCore({
     root.querySelector(errorSelector)?.remove();
     const box = document.createElement("div");
     box.className = errorClass;
+    box.setAttribute("role", "alert");
     box.textContent = text;
     root.prepend(box);
   }
@@ -216,10 +218,18 @@ export function createCaseClientCore({
     if (!window.confirm(deleteConfirm)) return;
     try {
       await api(`/api/cases/${encodeURIComponent(session.id)}`, { method: "DELETE" });
-    } finally {
       clearSession();
       closePreview();
       renderStart();
+    } catch (error) {
+      if (isTerminalCaseRestoreError(error)) {
+        clearSession();
+        closePreview();
+        renderStart();
+        showError(caseRestoreErrorText(error));
+        return;
+      }
+      showError(deleteErrorText);
     }
   }
 
