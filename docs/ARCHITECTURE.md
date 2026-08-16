@@ -1,85 +1,250 @@
-# 인사야 1.0 Architecture
+# 인사야 1.0 Architecture — FINAL RC
 
 > **기준일:** 2026-08-16
 > **목적:** 목표 구조가 아니라 현재 Production에서 실제로 동작하는 구조와 안전 경계를 설명한다.
+> **코드 baseline:** `2de40069dea23c8d33d28f632aec7676e98ff132`
 
 ---
 
-## 1. 시스템 개요
+## 1. 전체 시스템
 
 ```text
 Browser
 │
-├─ Main SPA (`index.html`)
-│   ├─ AI 상담
-│   ├─ Legacy 계산기/문서/가이드/전문가 UI
-│   └─ Case launcher (`wage-intake-launcher.js`)
+├─ Legacy Product Home
+│   ├─ index.html
+│   ├─ lib/product-home.js runtime adapter
+│   ├─ content/home-navigation.js
+│   └─ wage-intake-launcher.js
 │
-├─ Dedicated Case Workspaces
+├─ Dedicated Core Case Workspaces
 │   ├─ /wage-intake
 │   ├─ /dismissal-intake
 │   ├─ /retirement-intake
 │   ├─ /worktime-intake
 │   └─ /annual-leave-intake
 │
-└─ Express (`server.js`)
-    ├─ /api/cases → `lib/case-routes.js`
-    ├─ /api/chat, /api/summary
-    ├─ /api/docs, /api/docpack
-    ├─ /api/nomu
-    ├─ booking / lead / admin APIs
-    └─ static files + generated SEO
+├─ Shared Case Frontend
+│   ├─ case-client-core.js
+│   └─ case-workspace-core.css
+│
+└─ HTTP
+    ↓
+server.js (bootstrap only)
+    ↓
+lib/application.js
+    ├─ Case API
+    ├─ AI API
+    ├─ Document API
+    ├─ Expert API
+    ├─ Public Operation API
+    ├─ Admin API
+    ├─ Partner API
+    ├─ Secure Summary route
+    ├─ static/public pages
+    └─ branded 404
 
 SQLite
-├─ legacy operational data
-└─ structured Case repository
+├─ structured Cases
+├─ bookings / leads
+├─ experts / partner data
+├─ events / feedback / notifications
+└─ access / operational records
 ```
 
 ---
 
-## 2. Case Architecture
+## 2. Bootstrap / Application Boundary
 
-### 공통 흐름
+### `server.js`
 
-모든 핵심 Case는 동일한 개념 흐름을 따른다.
+`server.js`는 더 이상 도메인 endpoint를 직접 구현하지 않는다.
+
+책임:
 
 ```text
-Client Intake
+1. lib/env.js load
+2. createApplication({ rootDir })
+3. retention scheduler start
+4. app.listen()
+```
+
+이 경계는 테스트로 고정한다.
+
+### `lib/application.js`
+
+Express application 조립의 단일 진입점이다.
+
+책임:
+
+- JSON parser
+- trust proxy
+- HTTP security middleware
+- session security 생성
+- rate limiter 생성
+- router mounting
+- health
+- product home
+- static files
+- branded 404
+
+`server.js`에 새로운 API 구현을 다시 추가하지 않는다.
+
+---
+
+## 3. Server Domain Routers
+
+현재 서버 domain은 다음 파일로 분리돼 있다.
+
+| Domain | Module | 주요 contract |
+|---|---|---|
+| Core Cases | `lib/case-routes.js` | `/api/cases/*` |
+| AI 상담 | `lib/ai-routes.js` | `/api/chat`, `/api/summary` |
+| 문서센터 | `lib/document-routes.js` | `/api/docs`, `/api/doc`, `/api/docpacks`, `/api/docpack` |
+| 노무사 공개검색 | `lib/expert-routes.js` | `/api/nomu` + seed |
+| 공개 운영입력 | `lib/public-operation-routes.js` | lead/booking/event/feedback/privacy delete |
+| 운영자 | `lib/admin-routes.js` | `/api/admin/*` |
+| 파트너 노무사 | `lib/partner-routes.js` | `/api/partner/*` |
+| 보안 상담요약 | `lib/secure-summary-routes.js` | `/r/:token` |
+
+Refactor의 원칙은 URL·request·response contract를 유지하고 내부 책임만 옮기는 것이었다.
+
+---
+
+## 4. Shared Server Infrastructure
+
+### Session Security — `lib/session-security.js`
+
+관리자·파트너의 signed session 기반을 제공한다.
+
+현재 contract:
+
+- HMAC SHA-256 signature
+- 12시간 기본 TTL
+- timing-safe verification
+- expiry check
+- `HttpOnly`
+- `SameSite=Strict`
+- HTTPS에서 `Secure`
+- Production `ADMIN_TOKEN` 미설정 시 random token으로 fail-closed
+
+Admin/Partner router가 이 helper를 dependency injection으로 공유한다.
+
+### Rate Limit — `lib/rate-limit.js`
+
+현재 in-memory limiter.
+
+```text
+key = IP + request path
+```
+
+기존 endpoint별 quota/window를 유지하며 초과 시:
+
+```json
+{ "error": "too_many_requests" }
+```
+
+과 `Retry-After`를 반환한다.
+
+현재 단일 Render instance 구조에서는 충분한 baseline이지만 다중 instance 확장 시 shared limiter 저장소가 필요할 수 있다.
+
+### HTTP Security — `lib/http-security.js`
+
+기본 응답 보호:
+
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: SAMEORIGIN`
+- Referrer Policy
+- Permissions Policy
+- CSP
+- HTTPS HSTS
+
+### Retention — `lib/retention-scheduler.js`
+
+기동 시 + 주기적으로 기존 retention policy를 실행한다.
+
+도메인 보존정책 자체는 repository layer에 있고 scheduler는 실행 lifecycle만 담당한다.
+
+### Branded HTML — `lib/branded-page.js`
+
+보안 요약 링크의 상태 화면과 일반 404가 같은 brand shell을 사용한다.
+
+---
+
+## 5. Case Domain Registry
+
+`lib/case-domain-registry.js`가 Core Case 등록의 canonical layer다.
+
+등록 domain:
+
+```text
+wage
+dismissal
+retirement
+worktime
+annual_leave
+```
+
+각 descriptor는 다음을 연결한다.
+
+- stable domain ID
+- label
+- UI path
+- API route fragment
+- service operations
+
+`lib/case-routes.js`는 registry를 순회해 공통 endpoint를 등록한다.
+
+새 Core Case를 추가하려면 registry contract와 service operations를 충족해야 한다. 단, 1.0 scope에서는 5개로 동결한다.
+
+---
+
+## 6. Case Architecture
+
+### 공통 pipeline
+
+```text
+Intake UI
 ↓
 Protected Case API
 ↓
 Intake Normalizer
 ↓
-Legal / Money Rules
+Case Facts / Missing Facts
 ↓
-Next Action Planner
+Deterministic Legal / Money Rules
 ↓
-Case Repository
+Action Planner
 ↓
-Workspace Result
+Resource / Document Planner
+↓
+Repository
+↓
+Workspace
 ├─ facts
-├─ legal
-├─ calculations
+├─ assessment / money
 ├─ evidence
+├─ next action
+├─ official sources
 ├─ documents
 ├─ procedures
-└─ nextAction
+└─ report
 ```
 
-### Case 모듈 구성
+### Case module pattern
 
-각 사건은 현재 `lib/` 아래 다음 책임을 분리한다.
+일반적인 사건:
 
 ```text
-<case>-intake.js      사실 정규화 / missing facts / issue detection
-<case>-rules.js       결정론 법률 규칙 / 계산 / official sources
-<case>-actions.js     다음 행동 하나 결정
-<case>-resources.js   문서/공식 절차 연결
-<case>-report.js      결정론 Case Report
-<case>-service.js     repository와 위 모듈 orchestration
+<case>-intake.js
+<case>-rules.js
+<case>-actions.js
+<case>-resources.js
+<case>-report.js
+<case>-service.js
 ```
 
-임금체불은 초기 구현 역사 때문에 이름이 일부 다르다.
+임금체불은 초기 구현 역사로 이름이 다르다.
 
 ```text
 wage-intake-service.js
@@ -89,33 +254,19 @@ wage-resources.js
 wage-report.js
 ```
 
-이 차이는 다음 공통화 단계에서 adapter/registry로 흡수한다.
+이 차이는 registry/service adapter가 외부 contract에서 흡수한다. 경로 이름을 통일하기 위한 대규모 파일 이동은 1.0 과제가 아니다.
 
 ---
 
-## 3. 핵심 Case 목록
+## 7. Case API Contract
 
-| Case type | UI | Service |
-|---|---|---|
-| `wage` 계열 | `wage-intake.html` | `wage-intake-service.js` |
-| dismissal | `dismissal-intake.html` | `dismissal-service.js` |
-| retirement benefit | `retirement-intake.html` | `retirement-service.js` |
-| working time pay | `worktime-intake.html` | `worktime-service.js` |
-| annual leave | `annual-leave-intake.html` | `annual-leave-service.js` |
-
-UI는 각 Case별 HTML/CSS/JS로 분리돼 있고, `index.html`을 직접 수정하지 않고도 Case를 발전시킬 수 있다.
-
----
-
-## 4. Case API Contract
-
-Case router base:
+Base:
 
 ```text
 /api/cases
 ```
 
-각 vertical slice의 기본 패턴:
+대표 pattern:
 
 ```text
 POST   /<case>-intake
@@ -126,9 +277,15 @@ POST   /:id/<case>-document/:templateKey
 DELETE /:id
 ```
 
-### Access Token
+추가 공통 endpoint:
 
-Case 생성 응답:
+```text
+GET /api/cases/readiness
+```
+
+### Access token
+
+생성 응답은 opaque token을 반환한다.
 
 ```json
 {
@@ -140,199 +297,385 @@ Case 생성 응답:
 후속 요청:
 
 ```text
-x-case-token: <opaque-token>
+x-case-token: <token>
 ```
 
 또는:
 
 ```text
-Authorization: Bearer <opaque-token>
+Authorization: Bearer <token>
 ```
 
-서버는 token을 검증한 뒤에만 Case를 읽거나 수정한다.
+Case ID만 아는 것으로 조회할 수 없다.
 
 ---
 
-## 5. 브라우저 보안 경계
+## 8. Browser Case Security / Shared Client
 
-### 토큰 저장
+### `case-client-core.js`
 
-전용 Case client는 access token을 `sessionStorage`에만 저장한다.
+공통 `CaseAccessClient`가 다음 transport 책임을 가진다.
+
+- session token lookup/store
+- protected API request
+- `x-case-token`
+- status-aware error
+- Case PATCH
+- delete flow
+- document/report 공통 helper
+
+임금체불의 다단계 UI처럼 화면 구조가 다른 경우에도 access transport만 공통 adapter를 사용한다.
+
+### Token storage
+
+브라우저에서는 `sessionStorage`만 사용한다.
 
 하지 않는 것:
 
-- `localStorage` 영구 저장
-- URL query에 token 노출
-- Case ID만으로 조회 허용
+- `localStorage`
+- URL query/hash에 Case token 노출
+- permanent browser token
 
-### 문서 preview
+### Document preview
 
-문서 endpoint 결과는 브라우저에서 `textContent`로 렌더링한다.
+Case 문서 결과는 plain text로 렌더링한다.
 
 ```text
-Server template output
-→ JSON
+server template
+→ JSON text
 → <pre>.textContent
 ```
 
-사용자 입력값이 HTML/script로 실행되는 경로를 만들지 않는다.
+사용자 입력값을 executable HTML로 주입하지 않는다.
 
-### 삭제
+### Shared Workspace CSS
 
-사용자 삭제:
+`case-workspace-core.css`
 
-```text
-DELETE Case
-→ repository archive/delete policy
-→ access token revoke
-```
+공통:
+
+- source/resource section
+- document cards
+- procedure box
+- preview overlay
+- shared workspace layout elements
+
+법률적 의미가 다른 사건별 UI는 각 전용 CSS/client에 남긴다.
 
 ---
 
-## 6. Legal / Calculator Architecture
+## 9. Legal Registry / Deterministic Rules
 
-핵심 5개 Case의 중요한 수치·판단은 AI가 계산하지 않는다.
+### `lib/legal-registry.js`
+
+Core 5 Case의 legal source adapter다.
+
+제공:
+
+- domain lookup
+- canonical source list
+- stable normalization
+- registry validation
+- authority/article collision detection
+
+같은 법령의 공식 URL 표현이 다를 수 있으므로 URL 문자열 자체의 완전 일치보다 법률 authority/article contract를 우선한다.
+
+### Rule principle
 
 ```text
-Facts
+Known facts
 ↓
 Deterministic Rules
 ↓
 {
-  status,
-  amount / assessment,
+  assessment,
+  amount,
   assumptions,
   sources,
   warnings,
   verifiedAt
 }
 ↓
-AI/UI는 결과를 설명·표시
+UI / AI explanation
 ```
 
-### 현재 장점
+명확한 법정 숫자·기한·산식은 AI가 생성한 문장보다 rule result가 우선한다.
 
-- 사건일 기준 법률 버전 선택 가능
-- unsupported date를 현재 법으로 조용히 fallback하지 않음
-- 모르는 사실을 임의 추정하지 않음
-- 공식 출처와 검증일을 결과에 포함
+### Date boundaries
 
-### 현재 한계
+Case rule은 필요 시 시행일/사건일 경계를 다룬다.
 
-Case별 source object와 rule metadata가 각 파일에 존재한다.
+예: 연차 domain은 법률 변경 경계와 365/366일 employment boundary를 명시적으로 관리한다.
 
-다음 목표:
+미지원 날짜를 현재 규칙으로 조용히 치환하지 않는 것이 원칙이다.
+
+---
+
+## 10. AI Architecture
+
+AI endpoint는 `lib/ai-routes.js`에 분리돼 있다.
+
+내부 AI 계층:
 
 ```text
-src/legal/
-├─ registry.js
-├─ sources/
-├─ rules/
-└─ calculators/
+lib/ai.js
+lib/prompt.js
+lib/knowledge.js
 ```
 
-단, 기존 모듈을 한 번에 이동하지 않고 adapter를 먼저 두어 endpoint contract를 보존한다.
-
----
-
-## 7. Persistence
-
-### 현재
-
-- Node built-in SQLite 기반 repository
-- 기본 운영 DB: 파일 기반
-- Case와 legacy 예약/리드/운영 데이터가 SQLite를 사용
-
-### 중요한 운영 제약
-
-Render 무료 파일시스템은 장기 영속성을 보장하지 않는다.
-
-따라서 현재 구조에서 다음 둘은 구분한다.
-
-```text
-코드/배포 동작 가능 ✅
-장기 사용자 데이터 영속 보장 ❌
-```
-
-### 운영 전 필요한 것
-
-- persistent disk 또는 외부 영속 DB 선택
-- `DB_PATH` 영속 경로 고정
-- backup/restore runbook
-- 실제 복구 연습
-
-유료 인프라 변경은 별도 운영 결정으로 취급한다.
-
----
-
-## 8. Retention / Privacy
-
-Case는 노동분쟁 관련 민감 사실을 포함할 수 있다.
-
-현재 원칙:
-
-- 필요한 사실만 구조화
-- 이름/회사명 등 불필요한 PII를 Case 계산에 요구하지 않음
-- access token 만료
-- 오래 방치된 Case 정리 sweep
-- 삭제된 Case 후속 정리
-- 전문가 전달은 별도 동의 기반 흐름
-
-향후 인증 계정형 `내 사건`을 도입하더라도 이 최소수집 원칙을 유지한다.
-
----
-
-## 9. AI Architecture
-
-`lib/ai.js`, `lib/prompt.js`, `lib/knowledge.js`가 기존 AI 상담을 담당한다.
-
-현재 원칙:
+흐름:
 
 ```text
 키워드 분류 가능
-→ AI 분류 호출 생략
+→ AI classifier 생략
 
 키워드 미적중
-→ AI 의미 분류
+→ AI semantic classification
 
-법정 계산/기한/명시 규칙
-→ Case Legal/Calculator 결과 우선
+Core Case 법률/계산
+→ deterministic result 우선
 
 AI
-→ 사용자 설명과 구조화 보조
+→ 설명·요약·자유 질문 보조
 ```
 
-AI provider가 없어도 서버 자체와 결정론 Case 기능은 실행 가능하다.
+AI provider key가 없어도 Core Case와 서버는 동작할 수 있다.
 
 ---
 
-## 10. Document Architecture
+## 11. Document Architecture
 
-공통 템플릿 엔진:
+공통 document template engine:
 
 ```text
 lib/docs.js
 ```
 
-Case resource module이 사건 사실과 계산 결과를 `prefill`로 만든다.
+공개 문서 API는 `lib/document-routes.js`가 담당한다.
+
+Case 문서 흐름:
 
 ```text
-Case Result
+Case facts / calculation
 ↓
 <case>-resources.js
 ↓
 prefill values
 ↓
-renderDoc(templateKey, values)
+document template
 ↓
-plain-text preview
+JSON text/html
+↓
+Case UI에서는 plain-text preview
 ```
 
-이 구조는 문서 템플릿 자체와 Case 판단을 분리한다.
+Legacy 독립 문서센터는 HTML preview 기능을 유지하지만 Core Case security boundary와는 별도다.
 
 ---
 
-## 11. Release Architecture
+## 12. Expert / Booking Architecture
+
+### Public Expert
+
+`lib/expert-routes.js`
+
+- 공개 노무사 목록
+- region filter
+- 최초 seed 책임
+
+### Public Operations
+
+`lib/public-operation-routes.js`
+
+- lead
+- booking
+- analytics event
+- feedback
+- privacy deletion
+
+상담 booking은 contact + consent contract를 유지한다.
+
+### Admin
+
+`lib/admin-routes.js`
+
+- login/logout/session
+- booking/lead data
+- summary/notification/feedback
+- booking 상태/배정
+- expert visibility
+- partner token 발급
+
+Admin은 signed session + CSRF 또는 `x-admin-token` 호환 경로를 유지한다.
+
+### Partner
+
+`lib/partner-routes.js`
+
+- issued token login
+- signed partner session
+- 본인에게 배정된 booking만 조회
+- 허용 상태(`in_progress`, `done`)와 memo만 변경
+
+---
+
+## 13. Secure Expert Summary
+
+`lib/secure-summary-routes.js`
+
+```text
+GET /r/:token
+```
+
+현재 보안 contract:
+
+- booking token lookup
+- 만료 시 410
+- 없는 token 404
+- `noindex`
+- user content HTML escape
+- telephone href sanitize
+- access log
+- IP 원문 대신 SHA-256 기반 truncated hash
+- print/PDF action
+
+HTML shell은 `lib/branded-page.js`와 공유한다.
+
+---
+
+## 14. Content Architecture — Migration In Progress
+
+### 현재 Legacy
+
+`index.html`은 여전히 UI·가이드·계산기 metadata·법률 copy 등을 상당량 포함한다.
+
+### 첫 external source
+
+```text
+content/home-navigation.js
+```
+
+근로자/사업주 사이트 metadata와 category IA의 canonical runtime source다.
+
+`lib/product-home.js`가 `/`와 `/index.html`을 제공할 때:
+
+1. legacy inline navigation block을 external binding으로 교체
+2. `content/home-navigation.js`를 head에 주입
+3. Case launcher를 body 끝에 주입
+
+물리적 `index.html`에는 migration 중 fallback copy가 남아 있다.
+
+### 다음 migration
+
+```text
+TOPICS
+→ ARTICLES
+→ legacy legal copy
+→ calculator metadata
+→ SEO builder shared source
+```
+
+대형 monolith를 한 번에 수정하지 않고 작은 canonical source 단위로 이동한다.
+
+---
+
+## 15. Persistence
+
+### 현재
+
+- Node built-in `node:sqlite`
+- Case repository
+- legacy operational repository
+- 파일 기반 SQLite
+
+기본 DB와 `DB_PATH` override를 지원한다.
+
+### 현재 운영 한계
+
+Render free filesystem은 장기 영속 storage contract가 아니다.
+
+```text
+Application runtime ✅
+Exact deployment verification ✅
+Structured persistence while instance lives ✅
+Long-term restart/redeploy persistence ❌ guaranteed
+```
+
+따라서 Code/Product RC와 GA를 구분한다.
+
+---
+
+## 16. Runtime Readiness
+
+`lib/runtime-readiness.js`
+
+endpoint:
+
+```text
+GET /api/cases/readiness
+```
+
+검증 영역:
+
+- deployed build metadata
+- AI status
+- Case Registry 5개
+- Legal Registry
+- SQLite query probe
+- journal mode
+- foreign keys
+- required tables
+- persistence config
+
+민감한 실제 DB path는 응답에 노출하지 않는다.
+
+`REQUIRE_PERSISTENT_DB=1` 상태에서 `DB_PATH`가 없으면 ready=false가 된다.
+
+Liveness는 rate-limit 영향이 없는 `/api/health`를 계속 사용한다.
+
+---
+
+## 17. Backup / Restore
+
+`lib/sqlite-backup.js`
+
+도구:
+
+```text
+npm run db:backup
+npm run db:restore-check -- --source <backup.db>
+```
+
+Backup verification:
+
+- `PRAGMA integrity_check`
+- `PRAGMA foreign_key_check`
+- required app tables
+- overwrite protection
+
+Restore-check는 운영 DB 위에 덮어쓰지 않고 별도 target DB로 검증한다.
+
+현재 tooling은 준비됐지만 off-host backup 운영과 실제 restore rehearsal은 durable storage 선택 후 GA 단계에서 수행해야 한다.
+
+---
+
+## 18. Retention / Privacy
+
+현재 원칙:
+
+- Case 계산에 불필요한 PII 최소수집
+- token expiry
+- abandoned Case lifecycle
+- user delete
+- booking privacy delete
+- expert handoff consent
+- secure summary expiry/access log
+
+계정형 장기 `My Cases`가 도입되면 개인정보 보존정책을 별도로 확장해야 한다.
+
+---
+
+## 19. Release Architecture
 
 ### PR
 
@@ -340,17 +683,17 @@ plain-text preview
 PR
 ↓
 check
-├─ npm test
-├─ npm run build
-└─ release-check
+├─ Node regression
+├─ build
+└─ release gate
 ↓
-browser-e2e
-├─ Chromium
-├─ 핵심 Case 사용자 여정
+actual Chromium
+├─ desktop Case journeys
+├─ annual leave journey
 └─ mobile viewport
 ```
 
-PR에서는 Production 데이터를 건드리지 않는다.
+PR은 production synthetic Case를 만들지 않는다.
 
 ### main
 
@@ -359,60 +702,70 @@ main merge
 ↓
 check
 ↓
-browser-e2e
+Chromium
 ↓
 Render auto deploy
 ↓
 production-smoke
-├─ build-info commit == github.sha
-├─ synthetic Case 생성
-├─ result/document/report 검증
-└─ synthetic Case 삭제
+├─ build-info SHA == github.sha
+├─ readiness
+├─ synthetic Core Cases
+├─ legal / money verification
+├─ document
+├─ report
+└─ cleanup DELETE
 ```
 
-배포 성공 여부는 단순 HTTP 200이 아니라 **정확한 커밋 + 실제 핵심 Case 동작**으로 확인한다.
+단순 HTTP 200만으로 배포 성공을 판정하지 않는다.
 
 ---
 
-## 12. Build Metadata
+## 20. Build Metadata
 
-`npm run build` 과정에서 `scripts/write-build-info.mjs`가 배포 메타데이터를 만든다.
+`npm run build`에서 `scripts/write-build-info.mjs`가 deployment metadata를 생성한다.
 
-Render가 제공하는 `RENDER_GIT_COMMIT`을 사용해 실제 배포된 SHA를 확인한다.
-
-Production smoke는 이 값이 GitHub Actions의 `github.sha`와 일치하기 전에는 합성 Case 검증을 진행하지 않는다.
+Production smoke는 Render가 노출하는 build metadata의 commit이 현재 GitHub `main` SHA와 일치할 때만 핵심 flow 검증을 진행한다.
 
 ---
 
-## 13. 현재 기술 부채
+## 21. 현재 기술 부채
 
-### 메인 SPA
+### Legacy Content — P1/P2
 
-`index.html`이 여전히 많은 Legacy UI/콘텐츠를 포함한다.
+`index.html`에 남은:
 
-### Server
+- TOPICS
+- ARTICLES
+- 법률 설명
+- calculator metadata
+- 기타 Legacy UI logic
 
-`server.js`에 AI, 문서, 전문가, 리드/예약, Admin 등 여러 API가 남아 있다.
+을 external source로 점진 이동해야 한다.
 
-### Legal
+### Legacy Legal Duplication — P1
 
-핵심 Case별 결정론 모듈은 존재하지만 source/metadata registry가 공통화되지 않았다.
+Core Case는 Legal Registry를 사용하지만 Legacy 계산기/가이드의 법률 숫자/설명 일부는 중복될 수 있다.
 
-### Frontend
+### Account-based Case Recovery — 1.1+
 
-5개 Case client에 token/API/문서 preview/report/delete 코드가 반복된다.
+현재는 session-only anonymous Case다. 계정/멀티디바이스는 durable persistence 및 개인정보 lifecycle 설계 후 진행한다.
 
-### Content
+### Distributed Runtime — 미래
 
-가이드·계산기·SEO 원본이 앱 UI와 강하게 결합된 부분이 남아 있다.
+현재 in-memory rate limit은 단일 instance baseline이다. 수평 확장 시 shared rate-limit backend를 검토해야 한다.
 
 ---
 
-## 14. 다음 구조 변경 원칙
+## 22. 구조 변경 원칙
 
 1. endpoint URL과 response contract를 먼저 고정한다.
-2. 회귀 테스트 없이 대형 파일을 이동하지 않는다.
-3. 공통 abstraction은 **두 번째 구현이 아니라 5개 실제 구현에서 반복이 확인된 뒤** 추출한다.
-4. Legal source와 법정 수치는 한 곳으로 수렴시킨다.
+2. `server.js`에 domain route를 다시 넣지 않는다.
+3. registry/adapter를 이용해 기존 구현을 보존한다.
+4. Legal source와 법정 수치는 가능한 한 canonical source로 수렴한다.
 5. UI 공통화가 Case별 법적 차이를 숨기지 않게 한다.
-6. `main`은 항상 Render에 배포 가능한 상태를 유지한다.
+6. Content Source는 block 단위로 이동한다.
+7. 큰 프레임워크 rewrite는 현재 구조의 유지보수 필요성이 실제로 요구할 때 별도 결정한다.
+8. `main`은 항상 Render에 배포 가능한 상태를 유지한다.
+9. 비용이 발생하는 infrastructure 변경은 code refactor와 분리한다.
+
+**현재 architecture의 다음 필수 변화는 코드 구조가 아니라 durable production persistence다.**
