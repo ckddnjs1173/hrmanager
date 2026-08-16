@@ -48,4 +48,6 @@ jobs:
       - name: Internal Legal Admin Chromium E2E
         env:
           DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_legal_admin
-        run: node scripts/legal-admin-browser-e2e.mjs
+        run: |
+          node scripts/legal-admin-browser-e2e.mjs
+          node scripts/legal-scheduler-status-browser-e2e.mjs
