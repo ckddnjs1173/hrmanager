@@ -1,83 +1,164 @@
 # 인사야 운영 Runbook
 
 > 기준일: 2026-08-16
-> 범위: 현재 SQLite 운영 구조의 백업·복구 검증과 영속 저장 전환 준비
+> 범위: SQLite 백업·복구, runtime readiness, durable storage 전환
 
-## 1. 현재 운영 데이터 구조
+## 1. 현재 운영 데이터
 
-인사야는 기본적으로 다음 SQLite 파일을 사용한다.
+기본 DB:
 
 ```text
 data/app.db
 ```
 
-환경변수 `DB_PATH`가 설정되면 해당 경로를 사용한다.
+`DB_PATH`가 설정되면 해당 파일을 사용한다.
 
-이 DB에는 Case뿐 아니라 예약·리드·노무사·운영 이벤트 등 서비스 데이터가 함께 저장될 수 있다. 따라서 DB 백업 파일도 개인정보·민감한 노동사건 정보를 포함할 수 있으며 소스 저장소에 커밋하면 안 된다.
+DB에는 Case뿐 아니라 booking, lead, expert/partner, event 등 운영 데이터가 포함될 수 있다. DB와 backup은 민감정보를 포함할 수 있으므로 Git에 커밋하지 않는다.
 
-`.gitignore`는 `backups/`와 런타임 DB 파일을 제외한다.
-
----
-
-## 2. 가장 중요한 운영 제약
-
-현재 Render 무료 파일시스템은 장기 영속 저장을 전제로 사용할 수 없다.
-
-즉 아래 두 상태는 다르다.
+현재 Render free filesystem은 **장기 durable storage로 간주하지 않는다.**
 
 ```text
-서비스 코드와 배포 동작 ✅
-재배포/재시작 후 사용자 DB 영속 보장 ❌
+서비스 실행 가능 ✅
+재시작/재배포 후 사용자 데이터 영속 보장 ❌
 ```
-
-이 문서와 backup tooling은 **복구 가능한 백업 절차를 준비하는 것**이지 무료 Render 디스크를 영속 스토리지로 바꾸는 것이 아니다.
-
-실제 장기 운영 전에는 persistent disk 또는 외부 영속 DB를 선택해야 한다.
 
 ---
 
-## 3. 백업 생성
+## 2. 운영 Probe
 
-기본 DB를 백업한다.
+### Liveness
+
+```text
+GET /api/health
+```
+
+프로세스 생존 확인용이다.
+
+### Canonical Readiness
+
+```text
+GET /api/readiness
+```
+
+호환 alias:
+
+```text
+GET /api/cases/readiness
+```
+
+중요 필드:
+
+```text
+ready
+readyForSensitiveCaseStorage
+persistence.required
+persistence.durableStorageDeclared
+persistence.dbPathConfigured
+persistence.requirementSatisfied
+```
+
+무료 baseline에서는:
+
+```text
+ready=true
+readyForSensitiveCaseStorage=false
+```
+
+가 정상이다.
+
+---
+
+## 3. Durable Storage 플래그 의미
+
+### `DB_PATH`
+
+실제 DB 파일 경로. durable storage 사용 시 mount 아래의 명시적 파일을 지정한다.
+
+### `REQUIRE_PERSISTENT_DB=1`
+
+운영에서 durable storage가 아니면 readiness를 실패시키는 **강제 플래그**다.
+
+### `PERSISTENT_STORAGE=1`
+
+단순 설정값이 아니라 다음을 실제 확인했다는 **운영자 attestation**이다.
+
+```text
+restart survival ✅
+redeploy survival ✅
+```
+
+따라서 `PERSISTENT_STORAGE=1`은 survival test보다 먼저 설정하지 않는다.
+
+`DB_PATH=:memory:`나 `file::memory:*`는 어떤 플래그 조합에서도 durable storage로 인정하지 않는다.
+
+---
+
+## 4. Durable Storage 전환 순서
+
+```text
+1. persistent disk 또는 외부 durable DB/storage 선택
+2. mount/connection 방식 확정
+3. durable DB_PATH 설정
+4. REQUIRE_PERSISTENT_DB=1
+5. PERSISTENT_STORAGE=0 유지
+6. marker record 생성
+7. service restart
+8. marker 유지 확인
+9. redeploy
+10. marker 유지 확인
+11. PERSISTENT_STORAGE=1
+12. /api/readiness 확인
+13. ready=true 확인
+14. readyForSensitiveCaseStorage=true 확인
+15. verified backup 생성
+16. host 밖에 backup 보관
+17. restore-check
+18. 실제 restore rehearsal
+19. Core 5 production smoke
+```
+
+비용이 발생하는 storage 활성화는 코드 작업과 별도 운영 결정이다.
+
+---
+
+## 5. Backup 생성
+
+기본:
 
 ```bash
 npm run db:backup
 ```
 
-기본 출력 위치:
+기본 출력:
 
 ```text
 backups/app-<ISO timestamp>.db
 ```
 
-다른 DB 경로를 지정할 수 있다.
+명시 경로:
 
 ```bash
-node scripts/db-backup.mjs --source /path/to/app.db --out /secure/path/app-backup.db
+node scripts/db-backup.mjs \
+  --source /path/to/app.db \
+  --out /secure/path/app-backup.db
 ```
 
-기존 파일을 덮어써야 하는 특별한 경우에만 명시적으로 사용한다.
-
-```bash
-node scripts/db-backup.mjs --source /path/to/app.db --out /secure/path/app-backup.db --overwrite
-```
-
-기본값은 기존 backup 파일 덮어쓰기를 거부한다.
+기존 파일은 기본적으로 덮어쓰지 않는다. 특별히 필요한 경우에만 `--overwrite`를 명시한다.
 
 ---
 
-## 4. 백업 성공 조건
+## 6. Backup 성공 조건
 
-단순 파일 생성만으로 성공 처리하지 않는다.
+`lib/sqlite-backup.js`는 단순 파일 복사 성공만으로 backup을 인정하지 않는다.
 
-`lib/sqlite-backup.js`는 Node `node:sqlite`의 `backup()` API를 사용한 뒤 다음 검증을 수행한다.
+필수 검증:
 
-1. SQLite `PRAGMA integrity_check` 결과가 `ok`
+1. `PRAGMA integrity_check = ok`
 2. `PRAGMA foreign_key_check` 위반 0건
-3. 필수 앱 테이블 존재
-4. backup 파일 실제 생성 확인
+3. 필수 app table 존재
+4. backup 파일 생성 확인
 
-기본 필수 테이블:
+필수 table baseline:
 
 ```text
 bookings
@@ -89,30 +170,30 @@ cases
 case_events
 ```
 
-검증에 실패하면 새로 만든 backup 파일은 제거되고 명령은 실패한다.
+검증에 실패한 새 backup은 제거되고 command는 실패한다.
 
 ---
 
-## 5. 복구 가능성 확인
+## 7. Restore Check
 
-백업 파일을 실제 운영 DB 위에 덮어쓰지 않고 **별도 임시 DB로 복원하여 검사**한다.
+운영 DB 위에 직접 덮어쓰지 않고 별도 DB로 복원해 확인한다.
 
 ```bash
 npm run db:restore-check -- --source backups/app-....db
 ```
 
-기본 동작:
+기본 흐름:
 
 ```text
 backup.db
-→ OS 임시 폴더의 restored.db
+→ temporary restored.db
 → integrity_check
 → foreign_key_check
-→ 필수 테이블 확인
-→ 임시 restored.db 삭제
+→ required tables
+→ temporary target cleanup
 ```
 
-복원 결과 파일을 직접 확인하고 싶으면 별도 target을 지정한다.
+별도 target을 남기려면:
 
 ```bash
 npm run db:restore-check -- \
@@ -120,94 +201,90 @@ npm run db:restore-check -- \
   --target /secure/test/restored.db
 ```
 
-`--target`을 지정하면 결과 파일을 남긴다.
-
-기존 target 파일은 자동 덮어쓰지 않는다.
+기존 target은 자동 덮어쓰지 않는다.
 
 ---
 
-## 6. 실제 장애 복구 절차
-
-현재 tooling은 의도적으로 Production `DB_PATH`를 자동 교체하지 않는다.
-
-실제 장애 복구는 다음 순서로 수행한다.
+## 8. 실제 장애 복구
 
 ```text
 1. 쓰기 트래픽 중지 또는 서비스 중지
 2. 사용할 backup 선택
-3. db:restore-check 통과 확인
-4. 현재 손상/기존 DB 별도 보관
-5. 영속 스토리지 내 새 DB 경로에 복원본 배치
-6. DB_PATH를 복원본 경로로 지정
+3. db:restore-check 통과
+4. 현재 DB 별도 보관
+5. durable storage의 새 경로에 복원본 배치
+6. DB_PATH를 복원본으로 전환
 7. 서비스 시작
-8. /api/health 확인
-9. 관리자/Case 핵심 read 확인
-10. 합성 Case smoke 확인
+8. /api/health
+9. /api/readiness
+10. readyForSensitiveCaseStorage 확인
+11. Admin/Core read 확인
+12. synthetic Core Case smoke
 ```
 
-운영 DB를 삭제한 뒤 backup을 덮어쓰는 방식보다 **새 경로에 검증된 복원본을 만들고 `DB_PATH`를 전환**하는 방식을 우선한다.
+가능하면 손상 DB를 바로 덮어쓰지 말고 **검증된 새 파일 경로로 전환**한다.
 
 ---
 
-## 7. 권장 백업 보관 원칙
+## 9. Backup 보관 원칙
 
-백업 파일 자체가 민감정보이므로 다음 원칙을 적용한다.
+- 공개 Git 업로드 금지
+- 운영 DB와 같은 단일 디스크에만 보관 금지
+- 접근제어가 있는 저장소 사용
+- 전송/저장 암호화 사용
+- 보존기간 설정
+- 개인 다운로드 폴더 장기 방치 금지
+- 주기적으로 restore 가능성 확인
 
-- 공개 Git 저장소 업로드 금지
-- 개인 PC 다운로드 폴더 장기 방치 금지
-- 접근권한이 통제되는 저장소 사용
-- 전송 및 저장 시 암호화가 제공되는 저장소 사용
-- 보존기간을 정하고 오래된 backup 자동/수동 삭제
-- 운영 DB와 같은 단일 디스크에만 backup을 두지 않음
-
----
-
-## 8. Persistent storage 전환 시 체크리스트
-
-Render persistent disk 또는 다른 영속 저장소를 선택하면 다음을 확인한다.
+권장 baseline:
 
 ```text
-[ ] 영속 mount 경로 확정
-[ ] DB_PATH를 mount 아래 파일로 설정
-[ ] REQUIRE_PERSISTENT_DB=1 활성화
-[ ] 최초 배포 후 DB 생성 위치 확인
-[ ] 재시작 후 데이터 유지 확인
-[ ] 재배포 후 데이터 유지 확인
-[ ] db:backup 실행
-[ ] backup을 원격 안전 저장소로 복사
-[ ] db:restore-check 통과
-[ ] 실제 복구 rehearsal 1회
+매일        verified backup
+매일/주기적  off-host copy
+주 1회      restore-check
+월 1회      restore rehearsal/runbook review
+주요 법률 배포 시 Core Case smoke
 ```
-
-비용이 발생하는 인프라 활성화는 코드 배포와 별도 운영 결정으로 한다.
 
 ---
 
-## 9. 정기 운영 권장안
+## 10. Render Persistent Disk 선택 시 예시
 
-장기 운영 시 권장 baseline:
+예시 mount:
 
 ```text
-매일        verified DB backup 생성
-매일/주기적  backup을 별도 영속 저장소로 이동
-주 1회      최신 backup restore-check
-월 1회      실제 복구 rehearsal 또는 runbook 검토
-법률 배포 시 Case production smoke 확인
+/opt/render/project/src/data
 ```
 
-스케줄 자동화는 실제 영속 저장소가 결정된 뒤 연결한다. 현재 무료 ephemeral disk 안에서 backup만 반복 생성하는 것은 장애 대비 효과가 제한적이다.
+환경변수 예시:
+
+```text
+DB_PATH=/opt/render/project/src/data/app.db
+REQUIRE_PERSISTENT_DB=1
+PERSISTENT_STORAGE=0
+```
+
+restart/redeploy survival test가 끝난 뒤:
+
+```text
+PERSISTENT_STORAGE=1
+```
+
+로 변경한다.
 
 ---
 
-## 10. 관련 파일
+## 11. 관련 파일
 
 ```text
 lib/db.js
+lib/runtime-readiness.js
 lib/sqlite-backup.js
 scripts/db-backup.mjs
 scripts/db-restore-check.mjs
+scripts/readiness-production-smoke.mjs
 scripts/production-smoke.mjs
-docs/STATUS.md
-docs/ARCHITECTURE.md
 render.yaml
+.env.example
+docs/RELEASE_CHECKLIST.md
 ```
