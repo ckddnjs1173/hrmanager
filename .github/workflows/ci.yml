@@ -47,6 +47,8 @@ jobs:
               exit 1
             fi
           done
+      - name: Sequential test-suite diagnostic
+        run: node --test --test-concurrency=1
       - name: Tests
         run: npm test
       - name: Build
