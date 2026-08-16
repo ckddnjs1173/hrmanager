@@ -4,7 +4,8 @@ import { fetchOfficialLegalSource, normalizeLegalSourceContent } from "../lib/le
 import { validateOfficialLegalUrl } from "../lib/legal-change-contract.js";
 
 function html(body, init = {}) {
-  return new Response(body, { status: 200, headers: { "content-type": "text/html; charset=utf-8", ...(init.headers || {}) }, ...init });
+  const { headers = {}, ...rest } = init;
+  return new Response(body, { status: 200, ...rest, headers: { "content-type": "text/html; charset=utf-8", ...headers } });
 }
 
 test("official legal URL requires https allowlisted host and forbids credentials", () => {
