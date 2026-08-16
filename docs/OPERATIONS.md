@@ -1,7 +1,7 @@
 # 인사야 운영 Runbook
 
 > 기준일: 2026-08-16
-> 범위: SQLite 백업·복구, runtime readiness, durable storage 전환
+> 범위: SQLite 백업·복구, runtime readiness, **영속 저장(durable storage)** 전환
 
 ## 1. 현재 운영 데이터
 
@@ -15,7 +15,7 @@ data/app.db
 
 DB에는 Case뿐 아니라 booking, lead, expert/partner, event 등 운영 데이터가 포함될 수 있다. DB와 backup은 민감정보를 포함할 수 있으므로 Git에 커밋하지 않는다.
 
-현재 Render free filesystem은 **장기 durable storage로 간주하지 않는다.**
+현재 Render free filesystem은 **장기 영속 저장(durable storage)으로 간주하지 않는다.**
 
 ```text
 서비스 실행 가능 ✅
@@ -72,7 +72,7 @@ readyForSensitiveCaseStorage=false
 
 ### `DB_PATH`
 
-실제 DB 파일 경로. durable storage 사용 시 mount 아래의 명시적 파일을 지정한다.
+실제 DB 파일 경로. 영속 저장 사용 시 mount 아래의 명시적 파일을 지정한다.
 
 ### `REQUIRE_PERSISTENT_DB=1`
 
@@ -206,6 +206,8 @@ npm run db:restore-check -- \
 ---
 
 ## 8. 실제 장애 복구
+
+현재 tooling은 **Production `DB_PATH`를 자동 교체하지 않는다.** 운영자가 검증된 복원본을 선택해 명시적으로 전환해야 한다.
 
 ```text
 1. 쓰기 트래픽 중지 또는 서비스 중지
