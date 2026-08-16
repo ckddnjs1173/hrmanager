@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createPostgresPool } from "../lib/postgres-client.js";
 import { applyPostgresMigrations } from "../lib/postgres-migrations.js";
+import { closeRuntimePostgres } from "../lib/runtime-postgres.js";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL required");
 
@@ -161,4 +162,5 @@ try {
   await pool.end();
 }
 
+await closeRuntimePostgres();
 console.log("Legal governance PostgreSQL E2E passed: official candidate -> human review -> fixture-gated rule proposal -> ready for implementation, with no runtime activation.");
