@@ -125,6 +125,59 @@ try {
     assert.match(detailText, /READY_FOR_IMPLEMENTATION|구현 대기/);
     assert.match(detailText, /운영 Rule을 활성화할 수 없습니다/);
     assert.doesNotMatch(detailText, /ACTIVE로 이동|운영 반영|자동 활성화 허용/);
+
+    await page.locator("#monitorTab").click();
+    await page.locator("#monitorMain").waitFor({ state: "visible" });
+    assert.equal(await page.locator("#candidateMain").isHidden(), true);
+    const monitorText = await page.locator("#monitorMain").innerText();
+    assert.match(monitorText, /감지만 자동화합니다/);
+    assert.match(monitorText, /자동 검증·Rule 제안·운영 반영은 금지/);
+
+    await page.locator("#createWatchBox").evaluate((node) => { node.open = true; });
+    await page.locator("#watchCanonicalSourceId option[value='source.lsa.article36']").waitFor({ state: "attached" });
+    assert.equal(await page.locator("#createWatchBox input[type=url]").count(), 0, "watch UI must not accept arbitrary URL input");
+    await page.locator("#watchCanonicalSourceId").selectOption("source.lsa.article36");
+    await page.locator("#watchSourceType").selectOption("STATUTE");
+    assert.match(await page.locator("#watchOfficialUrl").innerText(), /^https:\/\/(www\.)?law\.go\.kr\//);
+    await page.locator("#watchForm button[type=submit]").click();
+
+    const watchItem = page.locator("#watchList [data-watch-id]").filter({ hasText: "근로기준법 제36조" }).first();
+    await watchItem.waitFor({ state: "visible" });
+    await watchItem.click();
+    await page.locator("#monitorDetailView").waitFor({ state: "visible" });
+    let monitorDetailText = await page.locator("#monitorDetailView").innerText();
+    assert.match(monitorDetailText, /아직 baseline이 없습니다/);
+    assert.match(monitorDetailText, /자동 검토 금지/);
+    assert.match(monitorDetailText, /Runtime 자동 반영 금지/);
+
+    await page.getByRole("button", { name: "Watch 중지" }).click();
+    await page.getByRole("button", { name: "Watch 재개" }).waitFor({ state: "visible" });
+    await page.getByRole("button", { name: "Watch 재개" }).click();
+    await page.getByRole("button", { name: "수동 점검 실행" }).waitFor({ state: "visible" });
+
+    let interceptedRun = false;
+    await page.route("**/api/admin/legal/monitor/watches/*/run", async (route) => {
+      interceptedRun = true;
+      const request = route.request();
+      assert.equal(request.method(), "POST");
+      assert.equal(request.postDataJSON().operator, "Legal QA");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          run: { runId: "lsr_ui_e2e", status: "BASELINED", candidateId: null },
+          automaticReviewAllowed: false,
+          runtimeActivationAllowed: false,
+        }),
+      });
+    });
+    await page.getByRole("button", { name: "수동 점검 실행" }).click();
+    await page.locator("#toast").filter({ hasText: "Baseline 저장" }).waitFor({ state: "visible" });
+    assert.equal(interceptedRun, true);
+
+    await page.locator("#candidateTab").click();
+    await page.locator("#candidateMain").waitFor({ state: "visible" });
+    assert.equal(await page.locator("#monitorMain").isHidden(), true);
     assert.deepEqual(consoleErrors, [], `Legal Admin browser console errors:\n${consoleErrors.join("\n")}`);
   } finally {
     await browser.close();
@@ -141,11 +194,19 @@ try {
     assert.match(proposals.rows[0].fixture_evidence_hash, /^[a-f0-9]{64}$/);
     const active = await assertPool.query("SELECT COUNT(*)::integer AS count FROM legal_rule_change_proposals WHERE status='ACTIVE'");
     assert.equal(active.rows[0].count, 0);
+
+    const watches = await assertPool.query("SELECT source_type,enabled,last_content_hash FROM legal_source_watches WHERE canonical_source_id=$1", ["source.lsa.article36"]);
+    assert.equal(watches.rowCount, 1);
+    assert.equal(watches.rows[0].source_type, "STATUTE");
+    assert.equal(watches.rows[0].enabled, true);
+    assert.equal(watches.rows[0].last_content_hash, null, "intercepted UI run must not perform an external fetch or mutate monitor baseline");
+    const adapterCandidates = await assertPool.query("SELECT COUNT(*)::integer AS count FROM legal_change_candidates WHERE detected_by='OFFICIAL_ADAPTER'");
+    assert.equal(adapterCandidates.rows[0].count, 0, "UI browser test must not create an automatic candidate");
   } finally {
     await assertPool.end();
   }
 
-  console.log("Legal Admin browser E2E passed: admin auth -> candidate -> human verification -> fixture-gated proposal -> READY_FOR_IMPLEMENTATION with no runtime activation.");
+  console.log("Legal Admin browser E2E passed: candidate governance plus canonical-only monitor watch UI, toggle and manual-run control with no external network or runtime activation.");
 } finally {
   server.kill("SIGTERM");
   await new Promise((resolve) => {
