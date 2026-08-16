@@ -47,6 +47,21 @@ jobs:
               exit 1
             fi
           done
+      - name: Isolate test files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find . -type f \( -name '*.test.js' -o -name '*.test.mjs' -o -name '*.spec.js' -o -name '*.spec.mjs' \) -not -path './node_modules/*' | sort)
+          echo "discovered_test_files=${#files[@]}"
+          printf '%s\n' "${files[@]}"
+          for file in "${files[@]}"; do
+            if ! node --test --test-concurrency=1 "$file" >/tmp/test-file.log 2>&1; then
+              clean="${file#./}"
+              echo "::error file=$clean::isolated_test_file_failed=$clean"
+              cat /tmp/test-file.log
+              exit 1
+            fi
+          done
       - name: Sequential test-suite diagnostic
         run: node --test --test-concurrency=1
       - name: Tests
