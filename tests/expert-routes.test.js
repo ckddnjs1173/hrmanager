@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -41,11 +41,13 @@ test("expert seed is fail-safe when source data is unavailable", () => {
   }
 });
 
-test("server delegates public expert route and startup seed to expert router", () => {
+test("application composition delegates public expert route and startup seed to expert router", () => {
+  const application = readFileSync(path.join(ROOT, "lib/application.js"), "utf8");
   const server = readFileSync(path.join(ROOT, "server.js"), "utf8");
-  assert.match(server, /import \{ createExpertRouter \} from "\.\/lib\/expert-routes\.js"/);
-  assert.match(server, /app\.use\("\/api", createExpertRouter\(\{ rootDir: __dirname \}\)\)/);
-  assert.doesNotMatch(server, /app\.get\("\/api\/nomu"/);
-  assert.doesNotMatch(server, /function seedNomusa|\(function seedNomusa/);
+  assert.match(application, /import \{ createExpertRouter \} from "\.\/expert-routes\.js"/);
+  assert.match(application, /app\.use\("\/api", createExpertRouter\(\{ rootDir \}\)\)/);
+  assert.doesNotMatch(application, /app\.get\("\/api\/nomu"/);
+  assert.doesNotMatch(application, /function seedNomusa|\(function seedNomusa/);
   assert.doesNotMatch(server, /data", "nomusa\.json/);
+  assert.match(server, /createApplication/);
 });
