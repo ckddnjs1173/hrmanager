@@ -48,4 +48,14 @@ assert.ok(readiness.warnings?.includes("persistent_storage_not_enforced"));
 assert.ok(readiness.warnings?.includes("persistent_storage_not_verified"));
 assert.doesNotMatch(JSON.stringify(readiness), /\/opt\/render|data\/app\.db|DB_PATH/i, "readiness must not expose database paths or env names");
 
+// Backward compatibility: existing operational clients may still call the Case-scoped alias.
+const aliasResponse = await fetch(`${BASE}/api/cases/readiness?t=${Date.now()}`, {
+  headers: { "cache-control": "no-cache" },
+});
+assert.equal(aliasResponse.status, 200);
+const alias = await aliasResponse.json();
+assert.equal(alias.build?.commit, EXPECTED_COMMIT);
+assert.equal(alias.ready, readiness.ready);
+assert.equal(alias.readyForSensitiveCaseStorage, readiness.readyForSensitiveCaseStorage);
+
 console.log(`✅ runtime readiness passed · ${EXPECTED_COMMIT.slice(0, 12)} · ${BASE}`);
