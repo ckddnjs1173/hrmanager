@@ -54,11 +54,14 @@ test("event and privacy validation contracts remain unchanged", async () => {
   });
 });
 
-test("server delegates public operation endpoints to the extracted router", () => {
+test("application composition delegates public operation endpoints to the extracted router", () => {
+  const application = readFileSync(path.join(ROOT, "lib/application.js"), "utf8");
   const server = readFileSync(path.join(ROOT, "server.js"), "utf8");
-  assert.match(server, /import \{ createPublicOperationRouter \} from "\.\/lib\/public-operation-routes\.js"/);
-  assert.match(server, /app\.use\("\/api", createPublicOperationRouter\(\{ rateLimit, clean \}\)\)/);
+  assert.match(application, /import \{ createPublicOperationRouter \} from "\.\/public-operation-routes\.js"/);
+  assert.match(application, /app\.use\("\/api", createPublicOperationRouter\(\{ rateLimit, clean \}\)\)/);
   for (const route of ["lead", "booking", "event", "feedback", "privacy/delete"]) {
+    assert.doesNotMatch(application, new RegExp(`app\\.post\\(\"/api/${route.replace("/", "\\/")}`));
     assert.doesNotMatch(server, new RegExp(`app\\.post\\(\"/api/${route.replace("/", "\\/")}`));
   }
+  assert.match(server, /createApplication/);
 });

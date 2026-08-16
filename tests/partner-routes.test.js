@@ -70,12 +70,15 @@ test("partner bookings preserve unauthorized contract without a valid session", 
   });
 });
 
-test("server delegates partner endpoints to the extracted router", () => {
+test("application composition delegates partner endpoints to the extracted router", () => {
+  const application = readFileSync(path.join(ROOT, "lib/application.js"), "utf8");
   const server = readFileSync(path.join(ROOT, "server.js"), "utf8");
-  assert.match(server, /import \{ createPartnerRouter \} from "\.\/lib\/partner-routes\.js"/);
-  assert.match(server, /app\.use\("\/api", createPartnerRouter\(\{/);
+  assert.match(application, /import \{ createPartnerRouter \} from "\.\/partner-routes\.js"/);
+  assert.match(application, /app\.use\("\/api", createPartnerRouter\(\{/);
   for (const route of ["login", "logout", "me", "bookings", "booking/:id"]) {
+    assert.doesNotMatch(application, new RegExp(`app\\.(?:get|post)\\(\"/api/partner/${route.replace("/:id", "/:id")}`));
     assert.doesNotMatch(server, new RegExp(`app\\.(?:get|post)\\(\"/api/partner/${route.replace("/:id", "/:id")}`));
   }
-  assert.doesNotMatch(server, /function partnerAuth/);
+  assert.doesNotMatch(application, /function partnerAuth/);
+  assert.match(server, /createApplication/);
 });

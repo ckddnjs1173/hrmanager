@@ -42,11 +42,13 @@ test("shared branded page renderer escapes user-controlled text helpers", () => 
   assert.match(renderBrandedPage("테스트", renderStateMarkup("!", "상태", "설명")), /상태/);
 });
 
-test("server delegates secure summary links and branded 404 rendering", () => {
+test("application composition delegates secure summary links and branded 404 rendering", () => {
+  const application = readFileSync(path.join(ROOT, "lib/application.js"), "utf8");
   const server = readFileSync(path.join(ROOT, "server.js"), "utf8");
-  assert.match(server, /import \{ createSecureSummaryRouter \} from "\.\/lib\/secure-summary-routes\.js"/);
-  assert.match(server, /import \{ renderBrandedPage, renderStateMarkup \} from "\.\/lib\/branded-page\.js"/);
-  assert.match(server, /app\.use\(createSecureSummaryRouter\(\{ sessionSecret: SESSION_SECRET \}\)\)/);
-  assert.doesNotMatch(server, /app\.get\("\/r\/:token"/);
-  assert.doesNotMatch(server, /function rPage|function rState|const telHref|const esc =/);
+  assert.match(application, /import \{ createSecureSummaryRouter \} from "\.\/secure-summary-routes\.js"/);
+  assert.match(application, /import \{ renderBrandedPage, renderStateMarkup \} from "\.\/branded-page\.js"/);
+  assert.match(application, /app\.use\(createSecureSummaryRouter\(\{ sessionSecret \}\)\)/);
+  assert.doesNotMatch(application, /app\.get\("\/r\/:token"/);
+  assert.doesNotMatch(application, /function rPage|function rState|const telHref|const esc =/);
+  assert.match(server, /createApplication/);
 });
