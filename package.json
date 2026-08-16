@@ -1,6 +1,7 @@
 {
   "name": "nomu-ai",
-  "version": "1.0.0-rc.1",
+  "version": "0.1.0",
+  "private": true,
   "description": "인사야 — Case 중심 AI 노동문제 해결 서비스",
   "type": "module",
   "engines": {
