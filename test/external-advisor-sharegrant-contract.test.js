@@ -91,5 +91,5 @@ test("access requires exact advisor identity, ACTIVE unexpired grant and explici
   assert.equal(externalAdvisorGrantAllows({ grant, actorUserId: "other", permission: "case.read", now: "2026-08-19T00:00:00Z" }).allowed, false);
   assert.equal(externalAdvisorGrantAllows({ grant, actorUserId: "advisor-a", permission: "comment.create", now: "2026-08-19T00:00:00Z" }).allowed, false);
   assert.equal(externalAdvisorGrantAllows({ grant, actorUserId: "advisor-a", permission: "case.read", now: "2026-08-20T00:00:00Z" }).reason, "grant_expired");
-  assert.equal(externalAdvisorGrantAllows({ ...grant, status: "PENDING" }, "advisor-a", "case.read").allowed, false);
+  assert.equal(externalAdvisorGrantAllows({ grant: { ...grant, status: "PENDING" }, actorUserId: "advisor-a", permission: "case.read", now: "2026-08-19T00:00:00Z" }).allowed, false);
 });
