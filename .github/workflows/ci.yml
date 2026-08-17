@@ -108,6 +108,10 @@ jobs:
         env:
           DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_test
         run: node scripts/business-case-foundation-e2e.mjs
+      - name: External Advisor Collaboration Service E2E
+        env:
+          DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_test
+        run: node scripts/external-advisor-collaboration-service-e2e.mjs
 
   business-browser-e2e:
     needs: [check, postgres-runtime]
