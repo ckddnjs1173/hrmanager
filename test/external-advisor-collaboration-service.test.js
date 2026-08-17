@@ -6,13 +6,39 @@ import {
   isExternalAdvisorManagementRole,
 } from "../lib/external-advisor-collaboration-service.js";
 
-function harness({ roleKey = "OWNER", caseStatus = "OPEN", caseOrganizationId = "org-a" } = {}) {
+function harness({ roleKey = "OWNER", caseStatus = "OPEN", caseOrganizationId = "org-a", permissionAllowed = true } = {}) {
   const calls = [];
   const cases = new Map([
-    ["case-a", { id: "case-a", organizationId: caseOrganizationId, status: caseStatus, title: "A case" }],
+    ["case-a", {
+      id: "case-a",
+      organizationId: caseOrganizationId,
+      status: caseStatus,
+      title: "A case",
+      summary: "공유 가능한 사실관계",
+      resolutionNote: caseStatus === "RESOLVED" ? "처리 완료" : "",
+      createdByUserId: "owner-a",
+      openedByUserId: "owner-a",
+      resolvedByUserId: caseStatus === "RESOLVED" ? "hr-a" : null,
+      archivedByUserId: null,
+      createdAt: "2026-08-17T00:00:00.000Z",
+      updatedAt: "2026-08-18T00:00:00.000Z",
+      openedAt: "2026-08-17T01:00:00.000Z",
+      resolvedAt: caseStatus === "RESOLVED" ? "2026-08-18T00:00:00.000Z" : null,
+      archivedAt: null,
+    }],
   ]);
   const grants = new Map([
-    ["grant-a", { id: "grant-a", organizationId: "org-a", advisorUserId: "advisor-a", status: "PENDING" }],
+    ["grant-a", {
+      id: "grant-a",
+      organizationId: "org-a",
+      resourceType: "BUSINESS_CASE",
+      resourceId: "case-a",
+      advisorUserId: "advisor-a",
+      permissions: ["case.read", "document.read"],
+      status: "PENDING",
+      effectiveStatus: "PENDING",
+      expiresAt: "2026-09-01T00:00:00.000Z",
+    }],
   ]);
   const businessCaseRepository = {
     async create(input) { calls.push(["case.create", input]); return { id: "case-new", status: "DRAFT", ...input }; },
@@ -27,6 +53,14 @@ function harness({ roleKey = "OWNER", caseStatus = "OPEN", caseOrganizationId = 
     async accept(input) { calls.push(["grant.accept", input]); return { ...grants.get(input.grantId), status: "ACTIVE" }; },
     async listForOrganization(input) { calls.push(["grant.list.org", input]); return [...grants.values()]; },
     async listForAdvisor(input) { calls.push(["grant.list.advisor", input]); return [...grants.values()].filter((g) => g.advisorUserId === input.advisorUserId); },
+    async hasPermission(input) {
+      calls.push(["grant.permission", input]);
+      const grant = grants.get(input.grantId) || null;
+      if (!permissionAllowed || !grant || input.advisorUserId !== grant.advisorUserId || input.permission !== "case.read") {
+        return { allowed: false, reason: "denied" };
+      }
+      return { allowed: true, reason: null, grant: { ...grant, status: "ACTIVE", effectiveStatus: "ACTIVE" } };
+    },
   };
   const getMembership = async (organizationId, userId) => {
     calls.push(["membership.get", { organizationId, userId }]);
@@ -170,4 +204,65 @@ test("advisor acceptance and listing require exact global User identity", async 
     /external_advisor_list_identity_mismatch/,
   );
   assert.equal(calls.filter(([name]) => name === "grant.list.advisor").length, 1);
+});
+
+test("advisor-safe Case read requires repository case.read permission and returns only shared fields", async () => {
+  const { service, calls } = harness({ caseStatus: "RESOLVED" });
+  const result = await service.getSharedBusinessCaseForAdvisor({ grantId: "grant-a", actorUserId: "advisor-a" });
+  assert.deepEqual(result.shareGrant, {
+    id: "grant-a",
+    permissions: ["case.read", "document.read"],
+    expiresAt: "2026-09-01T00:00:00.000Z",
+    effectiveStatus: "ACTIVE",
+  });
+  assert.deepEqual(result.businessCase, {
+    id: "case-a",
+    title: "A case",
+    summary: "공유 가능한 사실관계",
+    status: "RESOLVED",
+    resolutionNote: "처리 완료",
+    createdAt: "2026-08-17T00:00:00.000Z",
+    updatedAt: "2026-08-18T00:00:00.000Z",
+    openedAt: "2026-08-17T01:00:00.000Z",
+    resolvedAt: "2026-08-18T00:00:00.000Z",
+  });
+  assert.equal("organizationId" in result.businessCase, false);
+  assert.equal("createdByUserId" in result.businessCase, false);
+  assert.equal("openedByUserId" in result.businessCase, false);
+  assert.equal("resolvedByUserId" in result.businessCase, false);
+  assert.equal(calls.some(([name, value]) => name === "grant.permission" && value.permission === "case.read"), true);
+});
+
+test("advisor-safe Case read hides all denied states behind the same not-found error", async () => {
+  const deniedPermission = harness({ permissionAllowed: false });
+  await assert.rejects(
+    () => deniedPermission.service.getSharedBusinessCaseForAdvisor({ grantId: "grant-a", actorUserId: "advisor-a" }),
+    /external_advisor_shared_case_not_found/,
+  );
+
+  const wrongUser = harness();
+  await assert.rejects(
+    () => wrongUser.service.getSharedBusinessCaseForAdvisor({ grantId: "grant-a", actorUserId: "other-user" }),
+    /external_advisor_shared_case_not_found/,
+  );
+
+  for (const status of ["DRAFT", "ARCHIVED"]) {
+    const hiddenCase = harness({ caseStatus: status });
+    await assert.rejects(
+      () => hiddenCase.service.getSharedBusinessCaseForAdvisor({ grantId: "grant-a", actorUserId: "advisor-a" }),
+      /external_advisor_shared_case_not_found/,
+    );
+  }
+
+  const crossTenant = harness({ caseOrganizationId: "org-b" });
+  await assert.rejects(
+    () => crossTenant.service.getSharedBusinessCaseForAdvisor({ grantId: "grant-a", actorUserId: "advisor-a" }),
+    /external_advisor_shared_case_not_found/,
+  );
+
+  const missing = harness();
+  await assert.rejects(
+    () => missing.service.getSharedBusinessCaseForAdvisor({ grantId: "missing-grant", actorUserId: "advisor-a" }),
+    /external_advisor_shared_case_not_found/,
+  );
 });
