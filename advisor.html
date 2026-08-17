@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>인사야 · 외부 자문 협업</title>
+  <link rel="stylesheet" href="/advisor.css">
+</head>
+<body>
+  <div id="advisor-shell" class="advisor-shell">
+    <section id="advisor-loading" class="advisor-center">
+      <div class="advisor-card"><div class="brand">인사<span>야</span></div><p>외부 자문 협업 공간을 준비하고 있습니다.</p></div>
+    </section>
+
+    <section id="advisor-disabled" class="advisor-center" hidden>
+      <div class="advisor-card"><div class="eyebrow">EXTERNAL ADVISOR</div><h1>협업 포털을 사용할 수 없습니다.</h1><p>현재 환경에서 Business SaaS가 활성화되어 있지 않습니다.</p><a href="/">인사야 홈으로</a></div>
+    </section>
+
+    <section id="advisor-login" class="advisor-center" hidden>
+      <form id="advisor-login-form" class="advisor-card">
+        <div class="brand">인사<span>야</span></div>
+        <div class="eyebrow">EXTERNAL ADVISOR SIGN IN</div>
+        <h1>초대받은 이메일로 로그인</h1>
+        <p>초대 이메일과 로그인 계정이 정확히 일치해야 Case를 확인할 수 있습니다. 회사 내부 계정 권한은 생성되지 않습니다.</p>
+        <label>이메일<input id="advisor-login-email" type="email" autocomplete="email" required placeholder="advisor@example.com"></label>
+        <button class="primary full" type="submit">로그인 링크 받기</button>
+        <div id="advisor-login-error" class="error"></div>
+        <div id="advisor-magic-box" class="notice" hidden>개발 환경 로그인 링크가 준비되었습니다.<button id="advisor-verify-magic" type="button" class="secondary full">이 계정으로 계속</button></div>
+      </form>
+    </section>
+
+    <section id="advisor-invite-view" class="advisor-center" hidden>
+      <div class="advisor-card">
+        <div class="brand">인사<span>야</span></div>
+        <div class="eyebrow">INVITATION PREVIEW</div>
+        <h1>외부 자문 초대 확인</h1>
+        <div class="notice">이 초대는 회사 전체가 아니라 아래 Business Case 하나에만 적용됩니다. 직원·급여·조직설정·결제 데이터에는 접근할 수 없습니다.</div>
+        <div id="advisor-invite-preview" class="invite-preview"></div>
+        <div class="preview-actions"><button id="advisor-accept-invite" class="primary" type="button">초대 수락</button><button id="advisor-ignore-invite" class="secondary" type="button">나중에</button></div>
+        <div id="advisor-invite-error" class="error"></div>
+      </div>
+    </section>
+
+    <section id="advisor-workspace" class="advisor-app" hidden>
+      <aside class="advisor-side">
+        <div class="brand">인사<span>야</span> Advisor</div>
+        <p class="meta">회사 Membership 없이 명시적으로 공유된 Case만 조회합니다.</p>
+        <div class="advisor-user"><div id="advisor-current-user"></div><button id="advisor-logout" class="secondary full" type="button">로그아웃</button></div>
+      </aside>
+      <main class="advisor-main">
+        <header><div><div class="eyebrow">EXTERNAL ADVISOR PORTAL</div><h1>공유받은 Business Case</h1><p class="meta">읽기 권한이 있는 Case만 표시합니다.</p></div><button id="advisor-refresh" class="secondary" type="button">새로고침</button></header>
+        <div id="advisor-workspace-error" class="error"></div>
+        <div class="grant-grid">
+          <section class="panel"><h2>공유 목록</h2><div id="advisor-grant-list" class="grant-list"><div class="empty">공유받은 Case를 불러오는 중입니다.</div></div></section>
+          <section class="panel"><div id="advisor-case-detail" class="empty">왼쪽에서 Case를 선택하세요.</div></section>
+        </div>
+      </main>
+    </section>
+  </div>
+  <script src="/advisor.js" defer></script>
+</body>
+</html>
