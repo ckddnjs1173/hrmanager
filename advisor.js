@@ -66,7 +66,8 @@ async function loadAdvisorWorkspace(){
     const data=await advisorApi("/advisor/share-grants");advisorState.grants=(data.shareGrants||[]).filter(item=>grantStatus(item)==="ACTIVE");
     if(advisorState.selectedGrantId&&!advisorState.grants.some(item=>item.id===advisorState.selectedGrantId))advisorState.selectedGrantId="";
     renderGrants();advisorView("advisor-workspace");a$("advisor-current-user").textContent=advisorState.user?.email||"";
-    if(!advisorState.selectedGrantId&&advisorState.grants[0])await openSharedCase(advisorState.grants[0].id);
+    const grantToOpen=advisorState.selectedGrantId||advisorState.grants[0]?.id||"";
+    if(grantToOpen)await openSharedCase(grantToOpen);
   }catch(error){errorTo("advisor-workspace-error",`공유 목록 조회 실패: ${error.message}`);advisorView("advisor-workspace");}
 }
 
