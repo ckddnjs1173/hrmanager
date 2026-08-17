@@ -22,7 +22,9 @@ CREATE TABLE IF NOT EXISTS business_cases (
   CHECK ((status='ARCHIVED') = (archived_at IS NOT NULL)),
   CHECK ((archived_at IS NULL) = (archived_by_user_id IS NULL)),
   CHECK (opened_at IS NULL OR opened_by_user_id IS NOT NULL),
-  CHECK (resolved_at IS NULL OR resolved_by_user_id IS NOT NULL)
+  CHECK (resolved_at IS NULL OR resolved_by_user_id IS NOT NULL),
+  CHECK (status NOT IN ('OPEN','RESOLVED') OR opened_at IS NOT NULL),
+  CHECK (status <> 'RESOLVED' OR resolved_at IS NOT NULL)
 );
 
 CREATE INDEX IF NOT EXISTS idx_business_cases_org_status
