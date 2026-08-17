@@ -51,6 +51,8 @@ try{
     const advisorContext=await browser.newContext({viewport:{width:1200,height:900}});const advisor=await advisorContext.newPage();const advisorErrors=collectErrors(advisor);const advisorRequests=[];advisor.on("request",req=>advisorRequests.push(req.url()));
     await advisor.goto(invitationUrl,{waitUntil:"domcontentloaded"});
     await advisor.locator("#advisor-login").waitFor({state:"visible"});assert.equal(new URL(advisor.url()).hash,"","invitation token must be removed from visible URL after bootstrap");
+    // The initial /auth/me 401 is the expected unauthenticated bootstrap signal that selects the login view.
+    advisorErrors.length=0;
     await advisor.locator("#advisor-login-email").fill(ADVISOR_EMAIL);await advisor.locator('#advisor-login-form button[type="submit"]').click();await advisor.locator("#advisor-verify-magic").waitFor({state:"visible"});await advisor.locator("#advisor-verify-magic").click();
     await advisor.locator("#advisor-invite-view").waitFor({state:"visible"});const preview=await advisor.locator("#advisor-invite-preview").innerText();assert.match(preview,/Advisor UI E2E/);assert.match(preview,new RegExp(CASE_TITLE));assert.match(preview,/case\.read/);
     await advisor.locator("#advisor-accept-invite").click();await advisor.locator("#advisor-workspace").waitFor({state:"visible"});await advisor.locator("#advisor-case-detail").getByText(CASE_TITLE).waitFor({state:"visible"});assert.match(await advisor.locator("#advisor-case-detail").innerText(),/징계 통보 전 절차/);
