@@ -102,18 +102,9 @@ try {
     `INSERT INTO organization_memberships
      (id,organization_id,user_id,role_key,status,scope,joined_at,removed_at,created_at,updated_at)
      VALUES
-       ($1,$2,$3,'HR_ADMIN','ACTIVE','{}'::jsonb,$7,NULL,$7,$7),
-       ($4,$2,$5,'MANAGER','ACTIVE','{}'::jsonb,$7,NULL,$7,$7)`,
-    [`mem-api-hr-${suffix}`, orgA, hr.user.id, `mem-api-manager-${suffix}`, manager.user.id, manager.user.id, membershipNow],
-  ).catch(async (error) => {
-    // Keep parameter count explicit if the PostgreSQL driver surfaces a fixture mistake.
-    throw error;
-  });
-
-  // The multi-row statement above intentionally uses separate ids; fix the MANAGER row user if needed.
-  await fixturePool.query(
-    `UPDATE organization_memberships SET user_id=$1 WHERE id=$2`,
-    [manager.user.id, `mem-api-manager-${suffix}`],
+       ($1,$2,$3,'HR_ADMIN','ACTIVE','{}'::jsonb,$6,NULL,$6,$6),
+       ($4,$2,$5,'MANAGER','ACTIVE','{}'::jsonb,$6,NULL,$6,$6)`,
+    [`mem-api-hr-${suffix}`, orgA, hr.user.id, `mem-api-manager-${suffix}`, manager.user.id, membershipNow],
   );
 
   const unauthenticated = await request(`/api/saas/organizations/${orgA}/business-cases`);
