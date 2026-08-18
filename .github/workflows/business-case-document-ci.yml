@@ -49,3 +49,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_document_test
         run: node scripts/business-case-document-repository-e2e.mjs
+      - name: Business Case Document HTTP API E2E
+        env:
+          DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_document_test
+        run: node scripts/business-case-document-api-e2e.mjs
