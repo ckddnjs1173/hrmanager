@@ -1,16 +1,20 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
+# 사용법: GitHub에 올린 뒤 Render에서 "New + → Blueprint"로 이 저장소를 선택하면 자동 구성됩니다.
 services:
   - type: web
     name: insaya
     runtime: node
-    plan: free
-    buildCommand: npm install && npm run build
+    plan: free                 # 무료 플랜(일정 시간 미사용 시 절전 → 첫 접속 시 콜드스타트)
+    buildCommand: npm install && npm run build   # 의존성 설치 + 정적 SEO 페이지 생성
     startCommand: npm start
+    # /api/health는 rate limit 바깥의 가벼운 liveness probe.
+    # 상세 DB/Case/Legal readiness는 /api/readiness가 제공하며 main production smoke가 exact SHA와 함께 검증한다.
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
       - key: NODE_VERSION
-        value: "24"
+        value: "24"            # node:sqlite + online backup API 사용 가능
+      # AI provider 자동 선택: ANTHROPIC_API_KEY 있으면 Claude, 없고 GEMINI_API_KEY 있으면 Gemini, 둘 다 없으면 데모.
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: ANTHROPIC_MODEL
@@ -31,7 +35,7 @@ services:
         generateValue: true
       - key: SITE_URL
         sync: false
-      # Optional production SaaS email delivery. Leave provider blank until domain/from/API key are ready.
+      # Optional production Business magic-link delivery. Provider remains blank until explicitly configured.
       - key: SAAS_EMAIL_PROVIDER
         sync: false
       - key: RESEND_API_KEY
@@ -43,7 +47,17 @@ services:
       - key: PERSISTENT_STORAGE
         value: "0"
 
-# 중요: 현재 무료 플랜 파일시스템은 장기 영속 저장을 전제로 하지 않습니다.
-# Business Case 문서 원본은 SaaS/PostgreSQL 런타임에서 AES-256-GCM 암호화 bytea로 저장합니다.
-# SAAS_EMAIL_PROVIDER는 자동 활성화하지 않습니다. verified domain/from/API key와 SITE_URL을 검증한 뒤 운영자가 명시적으로 설정합니다.
-# SaaS 자체도 별도의 SAAS_ENABLED/STORAGE_DRIVER/DATABASE_URL/SAAS_SESSION_SECRET 준비가 끝나기 전에는 활성화하지 않습니다.
+# 중요: 현재 무료 플랜의 파일시스템은 장기 영속 저장을 전제로 하지 않습니다.
+# Case·예약·리드 등 운영 데이터는 SQLite DB 파일에 저장되므로 장기 운영 전 영속 저장소가 필요합니다.
+# Business Case 문서 원본은 SAAS/PostgreSQL 런타임에서 평문 파일시스템이 아니라 암호화된 PostgreSQL bytea로 저장합니다.
+# SAAS_EMAIL_PROVIDER는 자동 활성화하지 않습니다. verified sender/domain과 SITE_URL 검증 후 운영자가 명시적으로 설정합니다.
+# 유료 persistent disk를 선택할 경우 예시:
+#    disk:
+#      name: data
+#      mountPath: /opt/render/project/src/data
+#      sizeGB: 1
+# 그리고 환경변수:
+#   DB_PATH=/opt/render/project/src/data/app.db
+#   REQUIRE_PERSISTENT_DB=1
+#   PERSISTENT_STORAGE=1   # 실제 restart/redeploy survival test를 통과한 뒤에만 설정
+# 전환 후 npm run db:backup / db:restore-check 및 재시작·재배포 데이터 유지 검증을 수행하세요.
