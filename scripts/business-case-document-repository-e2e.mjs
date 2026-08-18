@@ -15,8 +15,12 @@ const suffix = crypto.randomUUID();
 const ownerId = `user-docrepo-owner-${suffix}`;
 const hrId = `user-docrepo-hr-${suffix}`;
 const managerId = `user-docrepo-manager-${suffix}`;
-const advisorId = `user-docrepo-advisor-${suffix}`;
-const otherAdvisorId = `user-docrepo-other-advisor-${suffix}`;
+const readAdvisorId = `user-docrepo-read-advisor-${suffix}`;
+const reviewAdvisorId = `user-docrepo-review-advisor-${suffix}`;
+const caseOnlyAdvisorId = `user-docrepo-case-advisor-${suffix}`;
+const expiredAdvisorId = `user-docrepo-expired-advisor-${suffix}`;
+const otherCaseAdvisorId = `user-docrepo-othercase-advisor-${suffix}`;
+const outsiderId = `user-docrepo-outsider-${suffix}`;
 const orgId = `org-docrepo-${suffix}`;
 const otherOrgId = `org-docrepo-other-${suffix}`;
 const caseId = `bcase-docrepo-${suffix}`;
@@ -28,11 +32,28 @@ const repo = createBusinessCaseDocumentRepository({ pool, now });
 
 const sha = (value) => crypto.createHash("sha256").update(value).digest("hex");
 
+async function createUser(userId, emailPrefix) {
+  await pool.query(
+    `INSERT INTO users(id,email_normalized,status,created_at,updated_at)
+     VALUES ($1,$2,'active',$3,$3)`,
+    [userId, `${emailPrefix}-${suffix}@example.com`, createdAt],
+  );
+}
+
+async function createMembership({ membershipId, organizationId, userId, roleKey }) {
+  await pool.query(
+    `INSERT INTO organization_memberships
+     (id,organization_id,user_id,role_key,status,joined_at,created_at,updated_at)
+     VALUES ($1,$2,$3,$4,'ACTIVE',$5,$5,$5)`,
+    [membershipId, organizationId, userId, roleKey, createdAt],
+  );
+}
+
 async function createGrant({
   id,
   organizationId = orgId,
   resourceId = caseId,
-  advisorUserId = advisorId,
+  advisorUserId,
   permissions,
   status = "ACTIVE",
   expiresAt = "2026-09-18T03:00:00Z",
@@ -49,23 +70,20 @@ async function createGrant({
 }
 
 try {
-  await pool.query(
-    `INSERT INTO users(id,email_normalized,status,created_at,updated_at)
-     VALUES
-       ($1,$2,'active',$11,$11),
-       ($3,$4,'active',$11,$11),
-       ($5,$6,'active',$11,$11),
-       ($7,$8,'active',$11,$11),
-       ($9,$10,'active',$11,$11)`,
-    [
-      ownerId, `docrepo-owner-${suffix}@example.com`,
-      hrId, `docrepo-hr-${suffix}@example.com`,
-      managerId, `docrepo-manager-${suffix}@example.com`,
-      advisorId, `docrepo-advisor-${suffix}@example.com`,
-      otherAdvisorId, `docrepo-other-advisor-${suffix}@example.com`,
-      createdAt,
-    ],
-  );
+  for (const [userId, emailPrefix] of [
+    [ownerId, "docrepo-owner"],
+    [hrId, "docrepo-hr"],
+    [managerId, "docrepo-manager"],
+    [readAdvisorId, "docrepo-read-advisor"],
+    [reviewAdvisorId, "docrepo-review-advisor"],
+    [caseOnlyAdvisorId, "docrepo-case-advisor"],
+    [expiredAdvisorId, "docrepo-expired-advisor"],
+    [otherCaseAdvisorId, "docrepo-othercase-advisor"],
+    [outsiderId, "docrepo-outsider"],
+  ]) {
+    await createUser(userId, emailPrefix);
+  }
+
   await pool.query(
     `INSERT INTO organizations(id,type,legal_name,display_name,status,created_at,updated_at)
      VALUES
@@ -73,21 +91,11 @@ try {
        ($2,'BUSINESS','Other Document Repo Co','Other Document Repo Co','ACTIVE',$3,$3)`,
     [orgId, otherOrgId, createdAt],
   );
-  await pool.query(
-    `INSERT INTO organization_memberships
-     (id,organization_id,user_id,role_key,status,joined_at,created_at,updated_at)
-     VALUES
-       ($1,$2,$3,'OWNER','ACTIVE',$9,$9,$9),
-       ($4,$2,$5,'HR_ADMIN','ACTIVE',$9,$9,$9),
-       ($6,$2,$7,'MANAGER','ACTIVE',$9,$9,$9),
-       ($8,$10,$3,'OWNER','ACTIVE',$9,$9,$9)`,
-    [
-      `membership-owner-${suffix}`, orgId, ownerId,
-      `membership-hr-${suffix}`, hrId,
-      `membership-manager-${suffix}`, managerId,
-      `membership-other-owner-${suffix}`, createdAt, otherOrgId,
-    ],
-  );
+  await createMembership({ membershipId: `membership-owner-${suffix}`, organizationId: orgId, userId: ownerId, roleKey: "OWNER" });
+  await createMembership({ membershipId: `membership-hr-${suffix}`, organizationId: orgId, userId: hrId, roleKey: "HR_ADMIN" });
+  await createMembership({ membershipId: `membership-manager-${suffix}`, organizationId: orgId, userId: managerId, roleKey: "MANAGER" });
+  await createMembership({ membershipId: `membership-other-owner-${suffix}`, organizationId: otherOrgId, userId: ownerId, roleKey: "OWNER" });
+
   await pool.query(
     `INSERT INTO business_cases
      (id,organization_id,title,summary,status,created_by_user_id,opened_by_user_id,created_at,updated_at,opened_at)
@@ -102,7 +110,7 @@ try {
     /business_case_document_management_role_required/,
   );
   await assert.rejects(
-    () => repo.createDraft({ caseId, actorUserId: otherAdvisorId, title: "Non-member denied", documentKind: "NOTICE" }),
+    () => repo.createDraft({ caseId, actorUserId: outsiderId, title: "Non-member denied", documentKind: "NOTICE" }),
     /business_case_document_management_membership_required/,
   );
 
@@ -159,11 +167,12 @@ try {
   const caseOnlyGrantId = `grant-caseonly-${suffix}`;
   const expiredGrantId = `grant-expired-${suffix}`;
   const otherCaseGrantId = `grant-othercase-${suffix}`;
-  await createGrant({ id: readGrantId, permissions: ["case.read", "document.read"] });
-  await createGrant({ id: reviewGrantId, permissions: ["case.read", "document.read", "document.review"] });
-  await createGrant({ id: caseOnlyGrantId, permissions: ["case.read"] });
+  await createGrant({ id: readGrantId, advisorUserId: readAdvisorId, permissions: ["case.read", "document.read"] });
+  await createGrant({ id: reviewGrantId, advisorUserId: reviewAdvisorId, permissions: ["case.read", "document.read", "document.review"] });
+  await createGrant({ id: caseOnlyGrantId, advisorUserId: caseOnlyAdvisorId, permissions: ["case.read"] });
   await createGrant({
     id: expiredGrantId,
+    advisorUserId: expiredAdvisorId,
     permissions: ["case.read", "document.read"],
     expiresAt: "2026-08-18T03:09:59Z",
   });
@@ -171,20 +180,21 @@ try {
     id: otherCaseGrantId,
     organizationId: otherOrgId,
     resourceId: otherCaseId,
+    advisorUserId: otherCaseAdvisorId,
     permissions: ["case.read", "document.read", "document.review"],
   });
 
-  assert.deepEqual(await repo.listForAdvisor({ grantId: readGrantId, advisorUserId: advisorId }), []);
+  assert.deepEqual(await repo.listForAdvisor({ grantId: readGrantId, advisorUserId: readAdvisorId }), []);
   await assert.rejects(
-    () => repo.listForAdvisor({ grantId: caseOnlyGrantId, advisorUserId: advisorId }),
+    () => repo.listForAdvisor({ grantId: caseOnlyGrantId, advisorUserId: caseOnlyAdvisorId }),
     /business_case_document_advisor_not_found/,
   );
   await assert.rejects(
-    () => repo.listForAdvisor({ grantId: readGrantId, advisorUserId: otherAdvisorId }),
+    () => repo.listForAdvisor({ grantId: readGrantId, advisorUserId: outsiderId }),
     /business_case_document_advisor_not_found/,
   );
   await assert.rejects(
-    () => repo.listForAdvisor({ grantId: expiredGrantId, advisorUserId: advisorId }),
+    () => repo.listForAdvisor({ grantId: expiredGrantId, advisorUserId: expiredAdvisorId }),
     /business_case_document_advisor_not_found/,
   );
 
@@ -203,10 +213,10 @@ try {
     /business_case_document_version_state_invalid/,
   );
 
-  const advisorList = await repo.listForAdvisor({ grantId: readGrantId, advisorUserId: advisorId });
+  const advisorList = await repo.listForAdvisor({ grantId: readGrantId, advisorUserId: readAdvisorId });
   assert.equal(advisorList.length, 1);
   assert.equal(advisorList[0].id, draft.id);
-  const advisorRead = await repo.getForAdvisor({ grantId: readGrantId, advisorUserId: advisorId, documentId: draft.id });
+  const advisorRead = await repo.getForAdvisor({ grantId: readGrantId, advisorUserId: readAdvisorId, documentId: draft.id });
   assert.equal(advisorRead.document.title, "근로계약서 검토본");
   assert.equal(advisorRead.versions.length, 1);
   assert.equal(Object.hasOwn(advisorRead.versions[0], "createdByUserId"), false);
@@ -214,17 +224,17 @@ try {
   assert.equal(JSON.stringify(advisorRead).includes("business-case-documents/"), false);
 
   await assert.rejects(
-    () => repo.getForAdvisor({ grantId: otherCaseGrantId, advisorUserId: advisorId, documentId: draft.id }),
+    () => repo.getForAdvisor({ grantId: otherCaseGrantId, advisorUserId: otherCaseAdvisorId, documentId: draft.id }),
     /business_case_document_advisor_not_found/,
   );
   await assert.rejects(
-    () => repo.reviewForAdvisor({ grantId: readGrantId, advisorUserId: advisorId, documentId: draft.id, decision: "APPROVED" }),
+    () => repo.reviewForAdvisor({ grantId: readGrantId, advisorUserId: readAdvisorId, documentId: draft.id, decision: "APPROVED" }),
     /business_case_document_advisor_not_found/,
   );
 
   const changeRequest = await repo.reviewForAdvisor({
     grantId: reviewGrantId,
-    advisorUserId: advisorId,
+    advisorUserId: reviewAdvisorId,
     documentId: draft.id,
     decision: "CHANGES_REQUESTED",
     note: "근무장소 문구를 확인해 주세요.",
@@ -250,7 +260,7 @@ try {
   current = new Date("2026-08-18T03:40:00Z");
   const approval = await repo.reviewForAdvisor({
     grantId: reviewGrantId,
-    advisorUserId: advisorId,
+    advisorUserId: reviewAdvisorId,
     documentId: draft.id,
     decision: "APPROVED",
     note: "검토 완료",
@@ -261,7 +271,7 @@ try {
   assert.deepEqual(approved.versions.map((version) => version.versionNo), [1, 2]);
   assert.deepEqual(approved.reviews.map((review) => review.decision), ["CHANGES_REQUESTED", "APPROVED"]);
   await assert.rejects(
-    () => repo.reviewForAdvisor({ grantId: reviewGrantId, advisorUserId: advisorId, documentId: draft.id, decision: "APPROVED" }),
+    () => repo.reviewForAdvisor({ grantId: reviewGrantId, advisorUserId: reviewAdvisorId, documentId: draft.id, decision: "APPROVED" }),
     /business_case_document_advisor_not_found/,
   );
 
@@ -280,22 +290,21 @@ try {
   const withdrawDraft = await repo.createDraft({ caseId, actorUserId: ownerId, title: "철회 문서", documentKind: "NOTICE" });
   const withdrawn = await repo.withdraw({ documentId: withdrawDraft.id, actorUserId: hrId });
   assert.equal(withdrawn.status, "WITHDRAWN");
-  const advisorAfterWithdraw = await repo.listForAdvisor({ grantId: readGrantId, advisorUserId: advisorId });
+  const advisorAfterWithdraw = await repo.listForAdvisor({ grantId: readGrantId, advisorUserId: readAdvisorId });
   assert.equal(advisorAfterWithdraw.some((item) => item.id === withdrawDraft.id), false);
 
-  const internalMembershipId = `membership-advisor-internal-${suffix}`;
-  await pool.query(
-    `INSERT INTO organization_memberships
-     (id,organization_id,user_id,role_key,status,joined_at,created_at,updated_at)
-     VALUES ($1,$2,$3,'EMPLOYEE','ACTIVE',$4,$4,$4)`,
-    [internalMembershipId, orgId, advisorId, current],
-  );
+  await createMembership({
+    membershipId: `membership-read-advisor-internal-${suffix}`,
+    organizationId: orgId,
+    userId: readAdvisorId,
+    roleKey: "EMPLOYEE",
+  });
   await assert.rejects(
-    () => repo.listForAdvisor({ grantId: readGrantId, advisorUserId: advisorId }),
+    () => repo.listForAdvisor({ grantId: readGrantId, advisorUserId: readAdvisorId }),
     /business_case_document_advisor_not_found/,
   );
 
-  console.log("Business Case document repository PostgreSQL E2E passed: tenant ownership, management RBAC, exact advisor identity, live ShareGrant permissions, review lifecycle and storage-key non-disclosure are enforced.");
+  console.log("Business Case document repository PostgreSQL E2E passed: tenant ownership, management RBAC, exact advisor identity, one-live-grant semantics, live ShareGrant permissions, review lifecycle and storage-key non-disclosure are enforced.");
 } finally {
   await pool.end();
 }
