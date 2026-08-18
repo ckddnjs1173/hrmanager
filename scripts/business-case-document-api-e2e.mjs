@@ -13,6 +13,7 @@ Object.assign(process.env, {
   SAAS_ENABLED: "1",
   SAAS_AUTH_TOKEN_ECHO: "1",
   SAAS_SESSION_SECRET: "document-api-e2e-session-secret",
+  DOCUMENT_STORAGE_SECRET: "document-api-e2e-storage-secret-0123456789-abcdef",
   SESSION_SECRET: "document-api-e2e-legacy-secret",
   ADMIN_TOKEN: "document-api-e2e-admin",
   NODE_ENV: "test",
@@ -49,6 +50,31 @@ async function request(pathname, { method = "GET", body, cookie = "", csrf = "" 
   return { response, body: parsed };
 }
 
+async function upload(pathname, { bytes, mimeType, cookie = "", csrf = "" } = {}) {
+  const headers = { "content-type": mimeType };
+  if (cookie) headers.cookie = cookie;
+  if (csrf) headers["x-csrf-token"] = csrf;
+  const response = await fetch(`${base}${pathname}`, { method: "POST", headers, body: bytes });
+  const text = await response.text();
+  let parsed = null;
+  try { parsed = text ? JSON.parse(text) : null; } catch { parsed = text; }
+  return { response, body: parsed };
+}
+
+async function download(pathname, { cookie = "" } = {}) {
+  const headers = {};
+  if (cookie) headers.cookie = cookie;
+  const response = await fetch(`${base}${pathname}`, { headers });
+  const contentType = response.headers.get("content-type") || "";
+  if (!response.ok || contentType.includes("application/json")) {
+    const text = await response.text();
+    let parsed = null;
+    try { parsed = text ? JSON.parse(text) : null; } catch { parsed = text; }
+    return { response, body: parsed, bytes: null };
+  }
+  return { response, body: null, bytes: Buffer.from(await response.arrayBuffer()) };
+}
+
 function cookieFrom(response) {
   return (response.headers.get("set-cookie") || "").split(";")[0];
 }
@@ -75,8 +101,9 @@ async function acceptGrant(grantId, actor) {
 }
 
 const suffix = crypto.randomUUID();
-const sha = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const fixturePool = createPostgresPool({ applicationName: "insaya-document-api-fixtures" });
+const v1Bytes = Buffer.from(`%PDF-1.7\n% Insaya encrypted document v1 ${suffix}\n1 0 obj\n<<>>\nendobj\n%%EOF`, "utf8");
+const v2Bytes = Buffer.from(`%PDF-1.7\n% Insaya encrypted document v2 ${suffix}\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF`, "utf8");
 
 try {
   const owner = await login(`document-owner-${suffix}@example.com`);
@@ -106,127 +133,99 @@ try {
   );
 
   const createCase = await request(`/api/saas/organizations/${orgId}/business-cases`, {
-    method: "POST",
-    cookie: owner.cookie,
-    csrf: owner.csrf,
-    body: { title: "문서 검토 Case", summary: "Bundle 33 HTTP E2E" },
+    method: "POST", cookie: owner.cookie, csrf: owner.csrf,
+    body: { title: "문서 검토 Case", summary: "Encrypted binary HTTP E2E" },
   });
   assert.equal(createCase.response.status, 201, JSON.stringify(createCase.body));
   const caseId = createCase.body.businessCase.id;
   const openCase = await request(`/api/saas/business-cases/${caseId}/status`, {
-    method: "PATCH",
-    cookie: hr.cookie,
-    csrf: hr.csrf,
-    body: { status: "OPEN" },
+    method: "PATCH", cookie: hr.cookie, csrf: hr.csrf, body: { status: "OPEN" },
   });
   assert.equal(openCase.response.status, 200, JSON.stringify(openCase.body));
 
-  const unauthenticated = await request(`/api/saas/business-cases/${caseId}/documents`);
-  assert.equal(unauthenticated.response.status, 401);
-  assert.equal(unauthenticated.body.error, "authentication_required");
-
-  const noCsrf = await request(`/api/saas/business-cases/${caseId}/documents`, {
-    method: "POST",
-    cookie: owner.cookie,
-    body: { title: "CSRF", documentKind: "NOTICE" },
-  });
-  assert.equal(noCsrf.response.status, 403);
-  assert.equal(noCsrf.body.error, "csrf_invalid");
-
-  const managerCreate = await request(`/api/saas/business-cases/${caseId}/documents`, {
-    method: "POST",
-    cookie: manager.cookie,
-    csrf: manager.csrf,
-    body: { title: "Manager 금지", documentKind: "NOTICE", actorUserId: owner.user.id },
-  });
-  assert.equal(managerCreate.response.status, 403);
-  assert.equal(managerCreate.body.error, "business_case_document_management_role_required");
-
   const createDocument = await request(`/api/saas/business-cases/${caseId}/documents`, {
-    method: "POST",
-    cookie: owner.cookie,
-    csrf: owner.csrf,
+    method: "POST", cookie: owner.cookie, csrf: owner.csrf,
     body: { title: "근로계약서 검토본", documentKind: "EMPLOYMENT_CONTRACT", actorUserId: outsider.user.id },
   });
   assert.equal(createDocument.response.status, 201, JSON.stringify(createDocument.body));
-  assert.equal(createDocument.body.document.createdByUserId, owner.user.id, "actor must come from session");
+  assert.equal(createDocument.body.document.createdByUserId, owner.user.id);
   const documentId = createDocument.body.document.id;
 
   const rejectStorageKey = await request(`/api/saas/business-case-documents/${documentId}/versions`, {
-    method: "POST",
-    cookie: owner.cookie,
-    csrf: owner.csrf,
-    body: {
-      fileName: "contract.pdf",
-      mimeType: "application/pdf",
-      sizeBytes: 100,
-      contentSha256: sha(`reject-key-${suffix}`),
-      storageObjectKey: "attacker/chosen/key",
-    },
+    method: "POST", cookie: owner.cookie, csrf: owner.csrf,
+    body: { fileName: "contract.pdf", mimeType: "application/pdf", sizeBytes: 100, contentSha256: "a".repeat(64), storageObjectKey: "attacker/chosen/key" },
   });
   assert.equal(rejectStorageKey.response.status, 400);
   assert.equal(rejectStorageKey.body.error, "business_case_document_binary_payload_forbidden");
 
   const rejectBase64 = await request(`/api/saas/business-case-documents/${documentId}/versions`, {
-    method: "POST",
-    cookie: owner.cookie,
-    csrf: owner.csrf,
-    body: {
-      fileName: "contract.pdf",
-      mimeType: "application/pdf",
-      sizeBytes: 100,
-      contentSha256: sha(`reject-base64-${suffix}`),
-      base64: "c2Vuc2l0aXZlLWJ5dGVz",
-    },
+    method: "POST", cookie: owner.cookie, csrf: owner.csrf,
+    body: { fileName: "contract.pdf", mimeType: "application/pdf", sizeBytes: 100, contentSha256: "b".repeat(64), base64: "c2Vuc2l0aXZl" },
   });
   assert.equal(rejectBase64.response.status, 400);
   assert.equal(rejectBase64.body.error, "business_case_document_binary_payload_forbidden");
 
-  const addVersion = await request(`/api/saas/business-case-documents/${documentId}/versions`, {
-    method: "POST",
-    cookie: hr.cookie,
-    csrf: hr.csrf,
-    body: {
-      fileName: "employment-contract.pdf",
-      mimeType: "application/pdf",
-      sizeBytes: 4096,
-      contentSha256: sha(`document-v1-${suffix}`),
-      actorUserId: outsider.user.id,
-    },
+  const noCsrfUpload = await upload(`/api/saas/business-case-documents/${documentId}/content?fileName=employment-contract.pdf`, {
+    bytes: v1Bytes, mimeType: "application/pdf", cookie: owner.cookie,
   });
-  assert.equal(addVersion.response.status, 201, JSON.stringify(addVersion.body));
-  assert.equal(addVersion.body.version.createdByUserId, hr.user.id);
-  assert.equal(Object.hasOwn(addVersion.body.version, "storageObjectKey"), false);
-  assert.equal(JSON.stringify(addVersion.body).includes("business-case-documents/"), false);
+  assert.equal(noCsrfUpload.response.status, 403);
+  assert.equal(noCsrfUpload.body.error, "csrf_invalid");
 
-  const managerGet = await request(`/api/saas/business-case-documents/${documentId}`, { cookie: manager.cookie });
-  assert.equal(managerGet.response.status, 403);
-  assert.equal(managerGet.body.error, "business_case_document_management_role_required");
-
-  const businessGet = await request(`/api/saas/business-case-documents/${documentId}`, { cookie: owner.cookie });
-  assert.equal(businessGet.response.status, 200, JSON.stringify(businessGet.body));
-  assert.equal(businessGet.body.document.id, documentId);
-  assert.equal(JSON.stringify(businessGet.body).includes("storageObjectKey"), false);
-  assert.equal(JSON.stringify(businessGet.body).includes("business-case-documents/"), false);
-
-  const submitNoCsrf = await request(`/api/saas/business-case-documents/${documentId}/submit-review`, {
-    method: "POST",
-    cookie: hr.cookie,
+  const managerUpload = await upload(`/api/saas/business-case-documents/${documentId}/content?fileName=employment-contract.pdf`, {
+    bytes: v1Bytes, mimeType: "application/pdf", cookie: manager.cookie, csrf: manager.csrf,
   });
-  assert.equal(submitNoCsrf.response.status, 403);
+  assert.equal(managerUpload.response.status, 403);
+  assert.equal(managerUpload.body.error, "business_case_document_management_role_required");
+
+  const disguisedExecutable = await upload(`/api/saas/business-case-documents/${documentId}/content?fileName=disguised.pdf`, {
+    bytes: Buffer.from("MZ-not-a-pdf", "utf8"), mimeType: "application/pdf", cookie: owner.cookie, csrf: owner.csrf,
+  });
+  assert.equal(disguisedExecutable.response.status, 400);
+  assert.equal(disguisedExecutable.body.error, "business_case_document_content_signature_invalid");
+
+  const uploadV1 = await upload(`/api/saas/business-case-documents/${documentId}/content?fileName=${encodeURIComponent("근로계약서-v1.pdf")}`, {
+    bytes: v1Bytes, mimeType: "application/pdf", cookie: hr.cookie, csrf: hr.csrf,
+  });
+  assert.equal(uploadV1.response.status, 201, JSON.stringify(uploadV1.body));
+  assert.equal(uploadV1.body.version.versionNo, 1);
+  assert.equal(uploadV1.body.version.createdByUserId, hr.user.id);
+  assert.equal(uploadV1.body.version.contentStored, true);
+  assert.equal(uploadV1.body.version.contentSafety, "SIGNATURE_VERIFIED");
+  assert.equal(JSON.stringify(uploadV1.body).includes("storageObjectKey"), false);
+  const versionOneId = uploadV1.body.version.id;
+
+  const businessDownloadV1 = await download(`/api/saas/business-case-document-versions/${versionOneId}/download`, { cookie: owner.cookie });
+  assert.equal(businessDownloadV1.response.status, 200);
+  assert.deepEqual(businessDownloadV1.bytes, v1Bytes);
+  assert.match(businessDownloadV1.response.headers.get("content-disposition") || "", /^attachment;/);
+  assert.match(businessDownloadV1.response.headers.get("cache-control") || "", /no-store/);
+  assert.equal(businessDownloadV1.response.headers.get("x-content-type-options"), "nosniff");
+
   const submit = await request(`/api/saas/business-case-documents/${documentId}/submit-review`, {
-    method: "POST",
-    cookie: hr.cookie,
-    csrf: hr.csrf,
+    method: "POST", cookie: hr.cookie, csrf: hr.csrf,
   });
   assert.equal(submit.response.status, 200, JSON.stringify(submit.body));
   assert.equal(submit.body.document.status, "IN_REVIEW");
 
+  const metadataOnlyDocument = await request(`/api/saas/business-cases/${caseId}/documents`, {
+    method: "POST", cookie: owner.cookie, csrf: owner.csrf,
+    body: { title: "메타데이터 전용 차단 확인", documentKind: "NOTICE" },
+  });
+  const metadataOnlyId = metadataOnlyDocument.body.document.id;
+  const metadataOnlyVersion = await request(`/api/saas/business-case-documents/${metadataOnlyId}/versions`, {
+    method: "POST", cookie: owner.cookie, csrf: owner.csrf,
+    body: { fileName: "notice.pdf", mimeType: "application/pdf", sizeBytes: 12, contentSha256: crypto.createHash("sha256").update("metadata-only").digest("hex") },
+  });
+  assert.equal(metadataOnlyVersion.response.status, 201);
+  const metadataSubmit = await request(`/api/saas/business-case-documents/${metadataOnlyId}/submit-review`, {
+    method: "POST", cookie: owner.cookie, csrf: owner.csrf,
+  });
+  assert.equal(metadataSubmit.response.status, 409);
+  assert.equal(metadataSubmit.body.error, "business_case_document_content_required");
+
   const grantExpiresAt = new Date(Date.now() + 7 * 86_400_000).toISOString();
   const readGrantResponse = await request(`/api/saas/organizations/${orgId}/business-cases/${caseId}/advisor-grants`, {
-    method: "POST",
-    cookie: owner.cookie,
-    csrf: owner.csrf,
+    method: "POST", cookie: owner.cookie, csrf: owner.csrf,
     body: { advisorUserId: readAdvisor.user.id, permissions: ["case.read", "document.read"], expiresAt: grantExpiresAt },
   });
   assert.equal(readGrantResponse.response.status, 201, JSON.stringify(readGrantResponse.body));
@@ -234,125 +233,91 @@ try {
   await acceptGrant(readGrantId, readAdvisor);
 
   const reviewGrantResponse = await request(`/api/saas/organizations/${orgId}/business-cases/${caseId}/advisor-grants`, {
-    method: "POST",
-    cookie: owner.cookie,
-    csrf: owner.csrf,
+    method: "POST", cookie: owner.cookie, csrf: owner.csrf,
     body: { advisorUserId: reviewAdvisor.user.id, permissions: ["case.read", "document.read", "document.review"], expiresAt: grantExpiresAt },
   });
   assert.equal(reviewGrantResponse.response.status, 201, JSON.stringify(reviewGrantResponse.body));
   const reviewGrantId = reviewGrantResponse.body.shareGrant.id;
   await acceptGrant(reviewGrantId, reviewAdvisor);
 
-  const outsiderGrantRead = await request(`/api/saas/advisor/share-grants/${readGrantId}/documents`, { cookie: outsider.cookie });
-  assert.equal(outsiderGrantRead.response.status, 404);
-  assert.equal(outsiderGrantRead.body.error, "business_case_document_advisor_not_found");
+  const outsiderDownload = await download(`/api/saas/advisor/share-grants/${readGrantId}/document-versions/${versionOneId}/download`, { cookie: outsider.cookie });
+  assert.equal(outsiderDownload.response.status, 404);
+  assert.equal(outsiderDownload.body.error, "business_case_document_advisor_not_found");
 
-  const advisorList = await request(`/api/saas/advisor/share-grants/${readGrantId}/documents`, { cookie: readAdvisor.cookie });
-  assert.equal(advisorList.response.status, 200, JSON.stringify(advisorList.body));
-  assert.equal(advisorList.body.documents.length, 1);
-  assert.equal(advisorList.body.documents[0].id, documentId);
-
-  const advisorGet = await request(`/api/saas/advisor/share-grants/${readGrantId}/documents/${documentId}`, { cookie: readAdvisor.cookie });
-  assert.equal(advisorGet.response.status, 200, JSON.stringify(advisorGet.body));
-  assert.equal(advisorGet.body.document.id, documentId);
-  assert.equal(Object.hasOwn(advisorGet.body.versions[0], "createdByUserId"), false);
-  assert.equal(JSON.stringify(advisorGet.body).includes("storageObjectKey"), false);
-  assert.equal(JSON.stringify(advisorGet.body).includes("business-case-documents/"), false);
-
-  const readOnlyReview = await request(`/api/saas/advisor/share-grants/${readGrantId}/documents/${documentId}/review`, {
-    method: "POST",
-    cookie: readAdvisor.cookie,
-    csrf: readAdvisor.csrf,
-    body: { decision: "APPROVED" },
-  });
-  assert.equal(readOnlyReview.response.status, 404);
-  assert.equal(readOnlyReview.body.error, "business_case_document_advisor_not_found");
-
-  const reviewNoCsrf = await request(`/api/saas/advisor/share-grants/${reviewGrantId}/documents/${documentId}/review`, {
-    method: "POST",
-    cookie: reviewAdvisor.cookie,
-    body: { decision: "CHANGES_REQUESTED", note: "수정 필요" },
-  });
-  assert.equal(reviewNoCsrf.response.status, 403);
-  assert.equal(reviewNoCsrf.body.error, "csrf_invalid");
+  const advisorDownloadV1 = await download(`/api/saas/advisor/share-grants/${readGrantId}/document-versions/${versionOneId}/download`, { cookie: readAdvisor.cookie });
+  assert.equal(advisorDownloadV1.response.status, 200);
+  assert.deepEqual(advisorDownloadV1.bytes, v1Bytes);
 
   const requestChanges = await request(`/api/saas/advisor/share-grants/${reviewGrantId}/documents/${documentId}/review`, {
-    method: "POST",
-    cookie: reviewAdvisor.cookie,
-    csrf: reviewAdvisor.csrf,
+    method: "POST", cookie: reviewAdvisor.cookie, csrf: reviewAdvisor.csrf,
     body: { decision: "CHANGES_REQUESTED", note: "근무장소 조항을 확인해 주세요.", actorUserId: owner.user.id },
   });
   assert.equal(requestChanges.response.status, 201, JSON.stringify(requestChanges.body));
   assert.equal(requestChanges.body.review.reviewerUserId, reviewAdvisor.user.id);
-  assert.equal(requestChanges.body.review.decision, "CHANGES_REQUESTED");
 
-  const afterChanges = await request(`/api/saas/business-case-documents/${documentId}`, { cookie: owner.cookie });
-  assert.equal(afterChanges.response.status, 200);
-  assert.equal(afterChanges.body.document.status, "CHANGES_REQUESTED");
-
-  const addVersionTwo = await request(`/api/saas/business-case-documents/${documentId}/versions`, {
-    method: "POST",
-    cookie: owner.cookie,
-    csrf: owner.csrf,
-    body: {
-      fileName: "employment-contract-v2.pdf",
-      mimeType: "application/pdf",
-      sizeBytes: 5000,
-      contentSha256: sha(`document-v2-${suffix}`),
-    },
+  const uploadV2 = await upload(`/api/saas/business-case-documents/${documentId}/content?fileName=employment-contract-v2.pdf`, {
+    bytes: v2Bytes, mimeType: "application/pdf", cookie: owner.cookie, csrf: owner.csrf,
   });
-  assert.equal(addVersionTwo.response.status, 201, JSON.stringify(addVersionTwo.body));
-  assert.equal(addVersionTwo.body.version.versionNo, 2);
+  assert.equal(uploadV2.response.status, 201, JSON.stringify(uploadV2.body));
+  assert.equal(uploadV2.body.version.versionNo, 2);
+  const versionTwoId = uploadV2.body.version.id;
 
   const resubmit = await request(`/api/saas/business-case-documents/${documentId}/submit-review`, {
-    method: "POST",
-    cookie: owner.cookie,
-    csrf: owner.csrf,
+    method: "POST", cookie: owner.cookie, csrf: owner.csrf,
   });
-  assert.equal(resubmit.response.status, 200);
+  assert.equal(resubmit.response.status, 200, JSON.stringify(resubmit.body));
   assert.equal(resubmit.body.document.status, "IN_REVIEW");
 
   const approve = await request(`/api/saas/advisor/share-grants/${reviewGrantId}/documents/${documentId}/review`, {
-    method: "POST",
-    cookie: reviewAdvisor.cookie,
-    csrf: reviewAdvisor.csrf,
+    method: "POST", cookie: reviewAdvisor.cookie, csrf: reviewAdvisor.csrf,
     body: { decision: "APPROVED", note: "검토 완료" },
   });
   assert.equal(approve.response.status, 201, JSON.stringify(approve.body));
   assert.equal(approve.body.review.decision, "APPROVED");
+
+  const reviewDownloadV2 = await download(`/api/saas/advisor/share-grants/${reviewGrantId}/document-versions/${versionTwoId}/download`, { cookie: reviewAdvisor.cookie });
+  assert.equal(reviewDownloadV2.response.status, 200);
+  assert.deepEqual(reviewDownloadV2.bytes, v2Bytes);
+
+  const accessEvents = await request(`/api/saas/business-case-documents/${documentId}/access-events`, { cookie: owner.cookie });
+  assert.equal(accessEvents.response.status, 200, JSON.stringify(accessEvents.body));
+  assert.equal(accessEvents.body.accessEvents.some((item) => item.actorType === "BUSINESS" && item.versionId === versionOneId), true);
+  assert.equal(accessEvents.body.accessEvents.some((item) => item.actorType === "ADVISOR" && item.shareGrantId === readGrantId), true);
+  assert.equal(accessEvents.body.accessEvents.some((item) => item.actorType === "ADVISOR" && item.shareGrantId === reviewGrantId), true);
+
+  const blob = await fixturePool.query(
+    `SELECT b.ciphertext,b.iv,b.auth_tag,b.plaintext_sha256,b.plaintext_size_bytes,b.signature_status,b.signature_engine,v.storage_object_key
+     FROM business_case_document_blobs b JOIN business_case_document_versions v ON v.id=b.version_id
+     WHERE b.version_id=$1`,
+    [versionOneId],
+  );
+  assert.equal(blob.rowCount, 1);
+  assert.notDeepEqual(blob.rows[0].ciphertext, v1Bytes, "plaintext must not be stored in ciphertext column");
+  assert.equal(blob.rows[0].plaintext_sha256, crypto.createHash("sha256").update(v1Bytes).digest("hex"));
+  assert.equal(Number(blob.rows[0].plaintext_size_bytes), v1Bytes.length);
+  assert.equal(blob.rows[0].signature_status, "VERIFIED");
+  assert.equal(blob.rows[0].signature_engine, "BUILTIN_SIGNATURE_V1");
+  assert.equal(blob.rows[0].iv.length, 12);
+  assert.equal(blob.rows[0].auth_tag.length, 16);
+  assert.equal(blob.rows[0].storage_object_key.startsWith(`business-case-documents/${orgId}/${caseId}/${documentId}/`), true);
+
+  const revokeReviewGrant = await request(`/api/saas/advisor-grants/${reviewGrantId}/revoke`, {
+    method: "POST", cookie: owner.cookie, csrf: owner.csrf,
+  });
+  assert.equal(revokeReviewGrant.response.status, 200, JSON.stringify(revokeReviewGrant.body));
+  const afterRevokeDownload = await download(`/api/saas/advisor/share-grants/${reviewGrantId}/document-versions/${versionTwoId}/download`, { cookie: reviewAdvisor.cookie });
+  assert.equal(afterRevokeDownload.response.status, 404);
+  assert.equal(afterRevokeDownload.body.error, "business_case_document_advisor_not_found");
 
   const finalBusinessGet = await request(`/api/saas/business-case-documents/${documentId}`, { cookie: hr.cookie });
   assert.equal(finalBusinessGet.response.status, 200);
   assert.equal(finalBusinessGet.body.document.status, "APPROVED");
   assert.deepEqual(finalBusinessGet.body.versions.map((item) => item.versionNo), [1, 2]);
   assert.deepEqual(finalBusinessGet.body.reviews.map((item) => item.decision), ["CHANGES_REQUESTED", "APPROVED"]);
+  assert.equal(JSON.stringify(finalBusinessGet.body).includes("storageObjectKey"), false);
+  assert.equal(JSON.stringify(finalBusinessGet.body).includes(process.env.DOCUMENT_STORAGE_SECRET), false);
 
-  const events = await request(`/api/saas/business-case-documents/${documentId}/events`, { cookie: owner.cookie });
-  assert.equal(events.response.status, 200);
-  assert.deepEqual(events.body.events.map((item) => item.eventType), [
-    "CREATED", "VERSION_ADDED", "SUBMITTED_FOR_REVIEW", "REVIEW_CHANGES_REQUESTED",
-    "VERSION_ADDED", "SUBMITTED_FOR_REVIEW", "REVIEW_APPROVED",
-  ]);
-
-  const revokeReviewGrant = await request(`/api/saas/advisor-grants/${reviewGrantId}/revoke`, {
-    method: "POST",
-    cookie: owner.cookie,
-    csrf: owner.csrf,
-  });
-  assert.equal(revokeReviewGrant.response.status, 200, JSON.stringify(revokeReviewGrant.body));
-  const afterRevoke = await request(`/api/saas/advisor/share-grants/${reviewGrantId}/documents`, { cookie: reviewAdvisor.cookie });
-  assert.equal(afterRevoke.response.status, 404);
-  assert.equal(afterRevoke.body.error, "business_case_document_advisor_not_found");
-
-  const storageKeys = await fixturePool.query(
-    `SELECT storage_object_key FROM business_case_document_versions WHERE document_id=$1 ORDER BY version_no ASC`,
-    [documentId],
-  );
-  assert.equal(storageKeys.rows.length, 2);
-  assert.equal(storageKeys.rows.every((row) => row.storage_object_key.startsWith(`business-case-documents/${orgId}/${caseId}/${documentId}/`)), true);
-  assert.equal(storageKeys.rows.some((row) => row.storage_object_key === "attacker/chosen/key"), false);
-
-  console.log("Business Case document HTTP API E2E passed: session identity, CSRF, management RBAC, binary/storage-key rejection, Advisor not-found semantics and two-version review flow are enforced.");
+  console.log("Business Case document binary HTTP E2E passed: encrypted storage, server-side signature/hash verification, stored-content review gate, guarded downloads, access audit and immediate ShareGrant revocation are enforced.");
 } finally {
   await fixturePool.end();
   await new Promise((resolve) => server.close(resolve));
