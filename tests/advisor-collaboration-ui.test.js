@@ -21,9 +21,11 @@ test("advisor portal keeps invitation tokens out of persistent browser storage a
   assert.match(js,/\/advisor\/share-grants/);
   assert.match(js,/\/review-notes/);
   assert.match(js,/comment\.create/);
+  assert.match(js,/document\.read/);
+  assert.match(js,/document\.review/);
 });
 
-test("Business collaboration UI uses email invitations with case.read and comment.create only",()=>{
+test("Business collaboration UI uses email invitations with the minimum Case and document review scope",()=>{
   const html=read("business.html");
   const js=read("business-advisor.js");
   assert.match(html,/data-view="collaboration"/);
@@ -31,9 +33,10 @@ test("Business collaboration UI uses email invitations with case.read and commen
   assert.match(html,/회사 Membership이 생성되지 않습니다/);
   assert.match(js,/advisorEmail/);
   assert.doesNotMatch(js,/advisorUserId/,"Business UI must not expose opaque advisor user IDs");
-  assert.match(js,/permissions:\["case\.read","comment\.create"\]/);
+  assert.match(js,/const DOC_PERMISSIONS=\["case\.read","comment\.create","document\.read","document\.review"\]/);
   assert.match(js,/invitationFragmentPath/);
   assert.match(js,/\/advisor-invitations\//);
   assert.match(js,/\/review-notes/);
-  assert.match(js,/case\.read<\/b>와 <b>comment\.create/);
+  assert.match(js,/Case 열람 · 의견 작성 · 문서 열람 · 문서 검토/);
+  assert.doesNotMatch(js,/employee\.read|payroll|billing|organization\.manage/);
 });
