@@ -183,6 +183,12 @@ try {
   assert.equal(disguisedExecutable.response.status, 400);
   assert.equal(disguisedExecutable.body.error, "business_case_document_content_signature_invalid");
 
+  const activePdf = await upload(`/api/saas/business-case-documents/${documentId}/content?fileName=active.pdf`, {
+    bytes: Buffer.from("%PDF-1.7\n/OpenAction << /S /JavaScript >>\n%%EOF", "utf8"), mimeType: "application/pdf", cookie: owner.cookie, csrf: owner.csrf,
+  });
+  assert.equal(activePdf.response.status, 400);
+  assert.equal(activePdf.body.error, "business_case_document_content_active_content_forbidden");
+
   const uploadV1 = await upload(`/api/saas/business-case-documents/${documentId}/content?fileName=${encodeURIComponent("근로계약서-v1.pdf")}`, {
     bytes: v1Bytes, mimeType: "application/pdf", cookie: hr.cookie, csrf: hr.csrf,
   });
@@ -190,7 +196,8 @@ try {
   assert.equal(uploadV1.body.version.versionNo, 1);
   assert.equal(uploadV1.body.version.createdByUserId, hr.user.id);
   assert.equal(uploadV1.body.version.contentStored, true);
-  assert.equal(uploadV1.body.version.contentSafety, "SIGNATURE_VERIFIED");
+  assert.equal(uploadV1.body.version.storageState, "VERIFIED");
+  assert.equal(uploadV1.body.version.scanState, "CLEAN");
   assert.equal(JSON.stringify(uploadV1.body).includes("storageObjectKey"), false);
   const versionOneId = uploadV1.body.version.id;
 
@@ -260,6 +267,8 @@ try {
   });
   assert.equal(uploadV2.response.status, 201, JSON.stringify(uploadV2.body));
   assert.equal(uploadV2.body.version.versionNo, 2);
+  assert.equal(uploadV2.body.version.storageState, "VERIFIED");
+  assert.equal(uploadV2.body.version.scanState, "CLEAN");
   const versionTwoId = uploadV2.body.version.id;
 
   const resubmit = await request(`/api/saas/business-case-documents/${documentId}/submit-review`, {
@@ -286,7 +295,8 @@ try {
   assert.equal(accessEvents.body.accessEvents.some((item) => item.actorType === "ADVISOR" && item.shareGrantId === reviewGrantId), true);
 
   const blob = await fixturePool.query(
-    `SELECT b.ciphertext,b.iv,b.auth_tag,b.plaintext_sha256,b.plaintext_size_bytes,b.signature_status,b.signature_engine,v.storage_object_key
+    `SELECT b.ciphertext,b.iv,b.auth_tag,b.plaintext_sha256,b.plaintext_size_bytes,b.signature_engine,
+            v.storage_object_key,v.storage_state,v.scan_state,v.uploaded_at,v.verified_at
      FROM business_case_document_blobs b JOIN business_case_document_versions v ON v.id=b.version_id
      WHERE b.version_id=$1`,
     [versionOneId],
@@ -295,11 +305,58 @@ try {
   assert.notDeepEqual(blob.rows[0].ciphertext, v1Bytes, "plaintext must not be stored in ciphertext column");
   assert.equal(blob.rows[0].plaintext_sha256, crypto.createHash("sha256").update(v1Bytes).digest("hex"));
   assert.equal(Number(blob.rows[0].plaintext_size_bytes), v1Bytes.length);
-  assert.equal(blob.rows[0].signature_status, "VERIFIED");
-  assert.equal(blob.rows[0].signature_engine, "BUILTIN_SIGNATURE_V1");
+  assert.equal(blob.rows[0].signature_engine, "BUILTIN_SAFE_CONTENT_V1");
   assert.equal(blob.rows[0].iv.length, 12);
   assert.equal(blob.rows[0].auth_tag.length, 16);
+  assert.equal(blob.rows[0].storage_state, "VERIFIED");
+  assert.equal(blob.rows[0].scan_state, "CLEAN");
+  assert.ok(blob.rows[0].uploaded_at);
+  assert.ok(blob.rows[0].verified_at);
   assert.equal(blob.rows[0].storage_object_key.startsWith(`business-case-documents/${orgId}/${caseId}/${documentId}/`), true);
+
+  const uploadIntent = await fixturePool.query(
+    `SELECT status,token_hash,expected_file_name,expected_mime_type,expected_size_bytes,expected_content_sha256
+     FROM business_case_document_upload_intents WHERE version_id=$1`,
+    [versionOneId],
+  );
+  assert.equal(uploadIntent.rowCount, 1);
+  assert.equal(uploadIntent.rows[0].status, "CONSUMED");
+  assert.match(uploadIntent.rows[0].token_hash, /^[0-9a-f]{64}$/);
+  assert.equal(uploadIntent.rows[0].expected_file_name, "근로계약서-v1.pdf");
+  assert.equal(Number(uploadIntent.rows[0].expected_size_bytes), v1Bytes.length);
+
+  const verification = await fixturePool.query(
+    `SELECT metadata_match,scan_state,scanner_name,completed_at
+     FROM business_case_document_storage_verifications WHERE version_id=$1`,
+    [versionOneId],
+  );
+  assert.equal(verification.rowCount, 1);
+  assert.equal(verification.rows[0].metadata_match, true);
+  assert.equal(verification.rows[0].scan_state, "CLEAN");
+  assert.equal(verification.rows[0].scanner_name, "BUILTIN_SAFE_CONTENT_V1");
+  assert.ok(verification.rows[0].completed_at);
+
+  const downloadGrants = await fixturePool.query(
+    `SELECT status,actor_type,share_grant_id,token_hash,consumed_at
+     FROM business_case_document_download_grants
+     WHERE version_id IN ($1,$2) ORDER BY issued_at ASC`,
+    [versionOneId, versionTwoId],
+  );
+  assert.ok(downloadGrants.rowCount >= 3);
+  assert.equal(downloadGrants.rows.every((row) => row.status === "CONSUMED" && row.consumed_at), true);
+  assert.equal(downloadGrants.rows.every((row) => /^[0-9a-f]{64}$/.test(row.token_hash)), true);
+  assert.equal(downloadGrants.rows.some((row) => row.actor_type === "ADVISOR" && row.share_grant_id === readGrantId), true);
+  assert.equal(downloadGrants.rows.some((row) => row.actor_type === "ADVISOR" && row.share_grant_id === reviewGrantId), true);
+
+  const storageEvents = await fixturePool.query(
+    `SELECT event_type,actor_type FROM business_case_document_storage_events
+     WHERE version_id=$1 ORDER BY created_at ASC,id ASC`,
+    [versionOneId],
+  );
+  const storageEventTypes = storageEvents.rows.map((row) => row.event_type);
+  for (const expected of ["UPLOAD_INTENT_ISSUED", "UPLOAD_RECORDED", "CONTENT_VERIFIED", "SCAN_CLEAN", "DOWNLOAD_GRANT_ISSUED", "DOWNLOAD_GRANT_CONSUMED"]) {
+    assert.equal(storageEventTypes.includes(expected), true, `missing storage event ${expected}`);
+  }
 
   const revokeReviewGrant = await request(`/api/saas/advisor-grants/${reviewGrantId}/revoke`, {
     method: "POST", cookie: owner.cookie, csrf: owner.csrf,
@@ -317,7 +374,7 @@ try {
   assert.equal(JSON.stringify(finalBusinessGet.body).includes("storageObjectKey"), false);
   assert.equal(JSON.stringify(finalBusinessGet.body).includes(process.env.DOCUMENT_STORAGE_SECRET), false);
 
-  console.log("Business Case document binary HTTP E2E passed: encrypted storage, server-side signature/hash verification, stored-content review gate, guarded downloads, access audit and immediate ShareGrant revocation are enforced.");
+  console.log("Business Case document binary HTTP E2E passed: encrypted adapter storage, control-plane upload/verification/download lifecycle, server-side content validation, stored-content review gate, access audit and immediate ShareGrant revocation are enforced.");
 } finally {
   await fixturePool.end();
   await new Promise((resolve) => server.close(resolve));
