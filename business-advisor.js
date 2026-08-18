@@ -1,5 +1,5 @@
 const COLLAB_API = "/api/saas";
-const collab = { csrf: "", orgId: "", cases: [], invitations: [], notesByCase: {}, expandedCaseId: "", initialized: false };
+const collab = { csrf: "", orgId: "", cases: [], invitations: [], notesByCase: {}, expandedCaseId: "", initialized: false, loadSeq: 0 };
 const c$ = (id) => document.getElementById(id);
 const cEsc = (value) => String(value ?? "").replace(/[&<>'"]/g,(ch)=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[ch]));
 const cFmt = (value) => value ? new Intl.DateTimeFormat("ko-KR",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(value)) : "-";
@@ -70,7 +70,8 @@ async function ensureCollabSession(){
 }
 
 async function loadCollaboration({quiet=false}={}){
-  const orgId=c$("org-picker")?.value||""; if(!orgId)return;
+  const orgId=c$("org-picker")?.value||""; if(!orgId)return false;
+  const loadSeq=++collab.loadSeq;
   if(collab.orgId&&collab.orgId!==orgId){collab.notesByCase={};collab.expandedCaseId="";}
   collab.orgId=orgId;
   try{
@@ -79,18 +80,25 @@ async function loadCollaboration({quiet=false}={}){
       collabApi(`/organizations/${encodeURIComponent(orgId)}/business-cases`),
       collabApi(`/organizations/${encodeURIComponent(orgId)}/advisor-invitations`),
     ]);
+    if(loadSeq!==collab.loadSeq||collab.orgId!==orgId||c$("org-picker")?.value!==orgId)return false;
     collab.cases=cases.businessCases||[]; collab.invitations=invitations.invitations||[];
     renderCases(); renderInvitations();
     if(collab.expandedCaseId&&collab.cases.some(item=>item.id===collab.expandedCaseId)) await loadCaseNotes(collab.expandedCaseId,{quiet:true});
-  }catch(error){if(!quiet)collabFlash(`협업 정보 조회 실패: ${error.message}`,"error");}
+    return true;
+  }catch(error){
+    if(loadSeq===collab.loadSeq&&!quiet)collabFlash(`협업 정보 조회 실패: ${error.message}`,"error");
+    return false;
+  }
 }
 
 async function createCase(event){
   event.preventDefault(); const form=event.currentTarget; const data=new FormData(form);
   try{
     const result=await collabApi(`/organizations/${encodeURIComponent(collab.orgId)}/business-cases`,{method:"POST",body:{title:String(data.get("title")||"").trim(),summary:String(data.get("summary")||"").trim()}});
-    form.reset(); collabFlash("Business Case를 만들었습니다. OPEN 상태로 전환하면 외부 전문가에게 공유할 수 있습니다.");
-    await loadCollaboration({quiet:true});
+    form.reset();
+    const refreshed=await loadCollaboration({quiet:true});
+    if(!refreshed){collabFlash("Case는 생성됐지만 목록 새로고침에 실패했습니다. 협업 화면을 새로고침해 주세요.","error");return;}
+    collabFlash("Business Case를 만들었습니다. OPEN 상태로 전환하면 외부 전문가에게 공유할 수 있습니다.");
     const card=document.querySelector(`[data-business-case-id="${CSS.escape(result.businessCase.id)}"]`); card?.scrollIntoView({behavior:"smooth",block:"center"});
   }catch(error){collabFlash(`Case 생성 실패: ${error.message}`,"error");}
 }
@@ -100,7 +108,12 @@ async function transitionCase(button){
   let resolutionNote="";
   if(status==="RESOLVED") resolutionNote="Business Workspace에서 해결 처리";
   button.disabled=true;
-  try{await collabApi(`/business-cases/${encodeURIComponent(caseId)}/status`,{method:"PATCH",body:{status,resolutionNote}});collabFlash(`Case 상태를 ${status}로 변경했습니다.`);await loadCollaboration({quiet:true});}
+  try{
+    await collabApi(`/business-cases/${encodeURIComponent(caseId)}/status`,{method:"PATCH",body:{status,resolutionNote}});
+    const refreshed=await loadCollaboration({quiet:true});
+    if(!refreshed)collabFlash(`Case 상태는 ${status}로 변경됐지만 목록 새로고침에 실패했습니다.`,"error");
+    else collabFlash(`Case 상태를 ${status}로 변경했습니다.`);
+  }
   catch(error){collabFlash(`Case 상태 변경 실패: ${error.message}`,"error");}
   finally{button.disabled=false;}
 }
@@ -110,7 +123,8 @@ async function loadCaseNotes(caseId,{quiet=false}={}){
     const data=await collabApi(`/organizations/${encodeURIComponent(collab.orgId)}/business-cases/${encodeURIComponent(caseId)}/review-notes`);
     collab.notesByCase[caseId]=data.reviewNotes||[];
     renderCases();
-  }catch(error){if(!quiet)collabFlash(`검토 의견 조회 실패: ${error.message}`,"error");}
+    return true;
+  }catch(error){if(!quiet)collabFlash(`검토 의견 조회 실패: ${error.message}`,"error");return false;}
 }
 
 async function toggleCaseNotes(caseId){
@@ -129,7 +143,10 @@ async function createBusinessReviewNote(event){
   const button=form.querySelector("button[type=submit]"); if(button)button.disabled=true;
   try{
     await collabApi(`/organizations/${encodeURIComponent(collab.orgId)}/business-cases/${encodeURIComponent(caseId)}/review-notes`,{method:"POST",body:{body}});
-    form.reset(); collabFlash("회사 의견을 남겼습니다."); await loadCaseNotes(caseId,{quiet:true});
+    form.reset();
+    const refreshed=await loadCaseNotes(caseId,{quiet:true});
+    if(!refreshed)collabFlash("회사 의견은 저장됐지만 목록 새로고침에 실패했습니다.","error");
+    else collabFlash("회사 의견을 남겼습니다.");
   }catch(error){collabFlash(`검토 의견 저장 실패: ${error.message}`,"error");}
   finally{if(button)button.disabled=false;}
 }
@@ -140,13 +157,24 @@ async function issueInvitation(event){
   try{
     const result=await collabApi(`/organizations/${encodeURIComponent(collab.orgId)}/business-cases/${encodeURIComponent(caseId)}/advisor-invitations`,{method:"POST",body:{advisorEmail,permissions:["case.read","comment.create"],grantExpiresAt:grantExpiryIso(days)}});
     const path=result.invitationFragmentPath||""; const absolute=new URL(path,location.origin).href;
-    const box=c$("advisor-invite-link-box"); c$("advisor-invite-link").value=absolute; box.hidden=false;
-    form.elements.advisorEmail.value=""; collabFlash("초대를 만들었습니다. 아래 링크는 이번 응답에서만 표시됩니다."); await loadCollaboration({quiet:true});
+    const box=c$("advisor-invite-link-box"); c$("advisor-invite-link").value=absolute;
+    form.elements.advisorEmail.value="";
+    const refreshed=await loadCollaboration({quiet:true});
+    box.hidden=false;
+    if(!refreshed)collabFlash("초대는 생성됐지만 목록 새로고침에 실패했습니다. 아래 1회용 링크는 안전한 채널로 전달해 주세요.","error");
+    else collabFlash("초대를 만들었습니다. 아래 링크는 이번 응답에서만 표시됩니다.");
   }catch(error){collabFlash(`초대 생성 실패: ${error.message}`,"error");}
 }
 
 async function revokeInvitation(button){
-  button.disabled=true; try{await collabApi(`/advisor-invitations/${encodeURIComponent(button.dataset.inviteRevoke)}/revoke`,{method:"POST",body:{}});collabFlash("초대를 철회했습니다.");await loadCollaboration({quiet:true});}catch(error){collabFlash(`초대 철회 실패: ${error.message}`,"error");}finally{button.disabled=false;}
+  button.disabled=true;
+  try{
+    await collabApi(`/advisor-invitations/${encodeURIComponent(button.dataset.inviteRevoke)}/revoke`,{method:"POST",body:{}});
+    const refreshed=await loadCollaboration({quiet:true});
+    if(!refreshed)collabFlash("초대는 철회됐지만 목록 새로고침에 실패했습니다.","error");
+    else collabFlash("초대를 철회했습니다.");
+  }catch(error){collabFlash(`초대 철회 실패: ${error.message}`,"error");}
+  finally{button.disabled=false;}
 }
 
 async function copyInvitationLink(){
