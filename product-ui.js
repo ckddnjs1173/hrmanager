@@ -24,10 +24,14 @@
     const greeting=document.getElementById("greeting");
     if(!greeting||greeting.dataset.uiV2)return;
     greeting.dataset.uiV2="1";
+    const oldPreview=greeting.querySelector(".hero-demo");if(oldPreview)oldPreview.style.display="none";
     const eyebrow=greeting.querySelector(".hero-eb");
     const heading=greeting.querySelector(".hero-h");
     const lead=greeting.querySelector(".lead");
     if(eyebrow&&heading&&lead){
+      eyebrow.textContent="AI 노무상담 · 계산 · 증거 · 다음 행동";
+      heading.innerHTML="노동문제, 어디서부터<br>해야 할지 모르겠다면<br>상황부터 정리해 드릴게요.";
+      lead.textContent="AI가 내 상황을 분석하고, 확인해야 할 권리와 예상 금액, 준비할 증거와 다음 행동까지 순서대로 안내합니다.";
       const copy=document.createElement("div");copy.className="ui-hero-copy";
       greeting.insertBefore(copy,greeting.firstChild);copy.append(eyebrow,heading,lead);
       const start=document.createElement("button");start.type="button";start.className="ui-hero-start";start.innerHTML='내 문제 시작하기 <span aria-hidden="true">→</span>';
@@ -53,6 +57,7 @@
 
     const label=greeting.querySelector(".he-label");const entries=greeting.querySelector(".home-entry");
     if(label&&entries){
+      label.textContent="다른 기능 바로가기";
       const tools=document.createElement("div");tools.className="ui-tools-wrap";tools.style.gridArea="tools";tools.style.width="100%";
       label.before(tools);tools.append(label,entries);label.style.gridArea="auto";entries.style.gridArea="auto";entries.style.marginTop="8px";
     }
