@@ -4,6 +4,7 @@ import fs from "node:fs";
 
 const html = fs.readFileSync(new URL("../business.html", import.meta.url), "utf8");
 const js = fs.readFileSync(new URL("../business.js", import.meta.url), "utf8");
+const advisorJs = fs.readFileSync(new URL("../business-advisor.js", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../business.css", import.meta.url), "utf8");
 
 test("Business workspace has the required product surfaces", () => {
@@ -56,6 +57,18 @@ test("Business notification inbox exposes unread and read flows without external
 test("Business async forms retain stable form references across await boundaries", () => {
   assert.doesNotMatch(js, /e\.currentTarget\.(?:reset|hidden)/);
   assert.match(js, /const form=e\.currentTarget/);
+});
+
+test("Advisor collaboration ignores stale list responses and reports success only after refresh", () => {
+  assert.match(advisorJs, /loadSeq:\s*0/);
+  assert.match(advisorJs, /const loadSeq=\+\+collab\.loadSeq/);
+  assert.match(advisorJs, /loadSeq!==collab\.loadSeq/);
+  assert.match(advisorJs, /const refreshed=await loadCollaboration\(\{quiet:true\}\)/);
+  assert.match(advisorJs, /Case는 생성됐지만 목록 새로고침에 실패했습니다/);
+  assert.match(advisorJs, /초대는 생성됐지만 목록 새로고침에 실패했습니다/);
+  const invitationRefresh = advisorJs.indexOf("const refreshed=await loadCollaboration({quiet:true});", advisorJs.indexOf("async function issueInvitation"));
+  const invitationVisible = advisorJs.indexOf("box.hidden=false", advisorJs.indexOf("async function issueInvitation"));
+  assert.ok(invitationRefresh >= 0 && invitationVisible > invitationRefresh, "one-time invite link must appear only after the post-mutation refresh attempt");
 });
 
 test("Business organization picker uses the public API response shape", () => {
