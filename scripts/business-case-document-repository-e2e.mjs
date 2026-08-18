@@ -130,6 +130,7 @@ try {
   assert.equal(draft.status, "DRAFT");
   assert.equal(draft.businessCaseId, caseId);
 
+  current = new Date("2026-08-18T03:11:00Z");
   const versionOne = await repo.addVersion({
     documentId: draft.id,
     actorUserId: hrId,
@@ -232,6 +233,7 @@ try {
     /business_case_document_advisor_not_found/,
   );
 
+  current = new Date("2026-08-18T03:21:00Z");
   const changeRequest = await repo.reviewForAdvisor({
     grantId: reviewGrantId,
     advisorUserId: reviewAdvisorId,
@@ -255,6 +257,8 @@ try {
     contentSha256: sha(`v2-${suffix}`),
   });
   assert.equal(versionTwo.versionNo, 2);
+
+  current = new Date("2026-08-18T03:31:00Z");
   await repo.submitForReview({ documentId: draft.id, actorUserId: ownerId });
 
   current = new Date("2026-08-18T03:40:00Z");
