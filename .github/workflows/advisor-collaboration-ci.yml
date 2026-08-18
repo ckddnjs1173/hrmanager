@@ -41,6 +41,10 @@ jobs:
           cache: npm
       - name: Install app dependencies
         run: npm ci
+      - name: Business Case Document Security E2E
+        env:
+          DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_advisor_ui
+        run: node scripts/business-case-document-security-e2e.mjs
       - name: Install Playwright runtime
         run: npm install --no-save --package-lock=false playwright@1.62.0
       - name: Install Chromium
