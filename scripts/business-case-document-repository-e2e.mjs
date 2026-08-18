@@ -255,6 +255,8 @@ try {
     contentSha256: sha(`v2-${suffix}`),
   });
   assert.equal(versionTwo.versionNo, 2);
+
+  current = new Date("2026-08-18T03:31:00Z");
   await repo.submitForReview({ documentId: draft.id, actorUserId: ownerId });
 
   current = new Date("2026-08-18T03:40:00Z");
