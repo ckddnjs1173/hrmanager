@@ -31,6 +31,8 @@ services:
         generateValue: true    # 운영자 대시보드 토큰 자동 생성(대시보드에서 확인)
       - key: SESSION_SECRET
         generateValue: true    # 세션 쿠키 서명 키 자동 생성
+      - key: DOCUMENT_STORAGE_SECRET
+        generateValue: true    # Business Case 문서 AES-256-GCM 암호화 키 파생용. 임의 회전 금지
       - key: SITE_URL
         sync: false            # 비워두면 빌드 시 RENDER_EXTERNAL_URL 자동 사용
       - key: REQUIRE_PERSISTENT_DB
@@ -40,6 +42,7 @@ services:
 
 # 중요: 현재 무료 플랜의 파일시스템은 장기 영속 저장을 전제로 하지 않습니다.
 # Case·예약·리드 등 운영 데이터는 SQLite DB 파일에 저장되므로 장기 운영 전 영속 저장소가 필요합니다.
+# Business Case 문서 원본은 SAAS/PostgreSQL 런타임에서 평문 파일시스템이 아니라 암호화된 PostgreSQL bytea로 저장합니다.
 # 유료 persistent disk를 선택할 경우 예시:
 #    disk:
 #      name: data
