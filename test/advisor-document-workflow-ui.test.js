@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
+const businessHtml = fs.readFileSync(new URL("../business.html", import.meta.url), "utf8");
 const business = fs.readFileSync(new URL("../business-advisor.js", import.meta.url), "utf8");
 const advisor = fs.readFileSync(new URL("../advisor.js", import.meta.url), "utf8");
 const businessCss = fs.readFileSync(new URL("../business-advisor.css", import.meta.url), "utf8");
@@ -18,6 +19,9 @@ test("Business collaboration UI exposes the complete document review journey", (
   for (const label of ["문서 추가", "전문가 검토 요청", "수정본 검토 다시 요청", "접근 종료"]) {
     assert.ok(business.includes(label), `missing Business workflow label ${label}`);
   }
+  assert.match(businessHtml, /id="advisor-active-grant-list"/);
+  assert.match(businessHtml, /현재 접근 중/);
+  assert.match(businessHtml, /Case 열람 · 의견 작성 · 문서 열람 · 문서 검토/);
   assert.match(business, /10\*1024\*1024/);
   assert.match(business, /PDF, DOCX, HWP, HWPX/);
   assert.doesNotMatch(business, /localStorage|sessionStorage/);
