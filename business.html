@@ -122,8 +122,8 @@
         </section>
 
         <section id="view-collaboration" class="view-section" hidden>
-          <div class="section-intro"><p>회사 내부 계정 권한을 주지 않고, 특정 Business Case에만 기간 제한 접근권한을 부여합니다. 초대 대상의 인사야 가입 여부는 회사에 공개하지 않습니다.</p></div>
-          <div class="collab-safety">외부 전문가는 회사의 직원·급여·조직설정·결제 데이터에 접근할 수 없습니다. 현재 UI에서 발급하는 권한은 <b>case.read</b>만입니다.</div>
+          <div class="section-intro"><p>회사 내부 계정 권한을 주지 않고, 특정 Business Case와 그 Case의 검토 문서에만 기간 제한 접근권한을 부여합니다. 초대 대상의 인사야 가입 여부는 회사에 공개하지 않습니다.</p></div>
+          <div class="collab-safety">외부 전문가는 <b>선택한 Business Case와 그 Case에 올린 검토 문서</b>만 볼 수 있습니다. 직원·급여·조직설정·결제 데이터에는 접근할 수 없고, 회사 Membership이 생성되지 않습니다.</div>
           <div class="panel-head" style="margin-top:18px"><div><span class="eyebrow">EXTERNAL ADVISOR</span><h2>외부 노무전문가 협업</h2></div><button id="collaboration-refresh" class="text-button" type="button">새로고침</button></div>
           <div class="collab-grid">
             <div class="collab-stack">
@@ -147,7 +147,7 @@
                   <label>공유할 Case<select id="advisor-case-select" name="caseId" required><option value="">OPEN/RESOLVED Case 선택</option></select></label>
                   <label>전문가 이메일<input name="advisorEmail" type="email" autocomplete="off" required placeholder="advisor@example.com"></label>
                   <label>Case 접근기간<select name="grantDays"><option value="30">30일</option><option value="60">60일</option><option value="90">90일</option></select></label>
-                  <div class="collab-permission">발급 권한: <b>case.read</b> · 외부 전문가는 회사 Membership이 생성되지 않습니다.</div>
+                  <div class="collab-permission">초대 권한: <b>Case 열람 · 의견 작성 · 문서 열람 · 문서 검토</b> · 외부 전문가에게 회사 Membership이 생성되지 않습니다.</div>
                   <button id="advisor-invite-submit" class="primary-button" type="submit">전문가 초대 만들기</button>
                 </form>
                 <div id="advisor-invite-link-box" class="invite-link-box" hidden style="margin-top:14px">
@@ -159,6 +159,10 @@
               <article class="panel-card">
                 <div class="panel-head"><div><span class="eyebrow">INVITATIONS</span><h2>보낸 초대</h2></div></div>
                 <div id="advisor-invitation-list" class="collab-stack"><div class="collab-empty">보낸 초대를 불러오는 중입니다.</div></div>
+              </article>
+              <article class="panel-card">
+                <div class="panel-head"><div><span class="eyebrow">ACTIVE ACCESS</span><h2>현재 접근 중</h2></div></div>
+                <div id="advisor-active-grant-list" class="collab-stack"><div class="collab-empty">현재 접근권한을 불러오는 중입니다.</div></div>
               </article>
             </div>
           </div>
