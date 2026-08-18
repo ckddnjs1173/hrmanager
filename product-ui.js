@@ -16,10 +16,7 @@
   };
 
   function callGlobal(name,...args){
-    try{
-      const fn=window[name];
-      if(typeof fn==="function")return fn(...args);
-    }catch{}
+    try{const fn=window[name];if(typeof fn==="function")return fn(...args);}catch{}
     return undefined;
   }
 
@@ -32,8 +29,7 @@
     const lead=greeting.querySelector(".lead");
     if(eyebrow&&heading&&lead){
       const copy=document.createElement("div");copy.className="ui-hero-copy";
-      greeting.insertBefore(copy,greeting.firstChild);
-      copy.append(eyebrow,heading,lead);
+      greeting.insertBefore(copy,greeting.firstChild);copy.append(eyebrow,heading,lead);
       const start=document.createElement("button");start.type="button";start.className="ui-hero-start";start.innerHTML='내 문제 시작하기 <span aria-hidden="true">→</span>';
       start.addEventListener("click",()=>{const input=document.getElementById("composerInput");input?.scrollIntoView({behavior:"smooth",block:"center"});input?.focus();});
       copy.append(start);
@@ -41,7 +37,7 @@
 
     const visual=document.createElement("div");visual.className="ui-hero-visual";visual.setAttribute("aria-hidden","true");
     visual.innerHTML='<div class="person"></div><div class="phone"></div><span class="ui-float f1">'+icons.facts+'</span><span class="ui-float f2">'+icons.money+'</span><span class="ui-float f3">'+icons.docs+'</span><span class="ui-float f4">'+icons.action+'</span>';
-    const copy=greeting.querySelector(".ui-hero-copy");copy?.after(visual);
+    greeting.querySelector(".ui-hero-copy")?.after(visual);
 
     const problems=document.createElement("section");problems.className="ui-problems";problems.setAttribute("aria-label","자주 발생하는 노동문제");
     const items=[
@@ -53,10 +49,13 @@
     ];
     problems.innerHTML=`<div class="ui-problems-head"><strong>자주 발생하는 노동문제</strong><span>선택하면 바로 상황 확인을 시작합니다.</span></div><div class="ui-problem-grid">${items.map(([key,title,desc])=>`<button type="button" class="ui-problem" data-ui-problem="${key}"><span class="ic">${icons[key]}</span><b>${title}</b><small>${desc}</small></button>`).join("")}</div>`;
     visual.after(problems);
-    problems.addEventListener("click",(event)=>{const button=event.target.closest("[data-ui-problem]");if(!button)return;callGlobal("startCase",button.dataset.uiProblem);});
+    problems.addEventListener("click",(event)=>{const button=event.target.closest("[data-ui-problem]");if(button)callGlobal("startCase",button.dataset.uiProblem);});
 
     const label=greeting.querySelector(".he-label");const entries=greeting.querySelector(".home-entry");
-    if(label&&entries){const tools=document.createElement("div");tools.className="ui-tools-wrap";label.before(tools);tools.append(label,entries);}
+    if(label&&entries){
+      const tools=document.createElement("div");tools.className="ui-tools-wrap";tools.style.gridArea="tools";tools.style.width="100%";
+      label.before(tools);tools.append(label,entries);label.style.gridArea="auto";entries.style.gridArea="auto";entries.style.marginTop="8px";
+    }
   }
 
   function addStepper(){
@@ -65,23 +64,13 @@
     const stepper=document.createElement("div");stepper.className="ui-chat-stepper";stepper.setAttribute("aria-label","상담 진행 단계");
     stepper.innerHTML='<div class="ui-step">문제 선택</div><div class="ui-step">상황 입력</div><div class="ui-step">핵심 사실 확인</div>';
     prog.after(stepper);
-    const sync=()=>{
-      const count=Math.max(home.classList.contains("chatting")?1:0,prog.querySelectorAll("i.on").length);
-      [...stepper.children].forEach((node,index)=>node.classList.toggle("on",index<Math.min(3,count||1)));
-    };
+    const sync=()=>{const count=Math.max(home.classList.contains("chatting")?1:0,prog.querySelectorAll("i.on").length);[...stepper.children].forEach((node,index)=>node.classList.toggle("on",index<Math.min(3,count||1)));};
     new MutationObserver(sync).observe(prog,{childList:true,subtree:true,attributes:true});
-    new MutationObserver(sync).observe(home,{attributes:true,attributeFilter:["class"]});
-    sync();
+    new MutationObserver(sync).observe(home,{attributes:true,attributeFilter:["class"]});sync();
   }
 
   const railItems=[
-    ["result","개요","overview"],
-    ["summary","사실","facts"],
-    ["calc","금액","money"],
-    ["report","증거","evidence"],
-    ["official","행동","action"],
-    ["docs","문서","docs"],
-    ["solve","근거","law"],
+    ["result","개요","overview"],["summary","사실","facts"],["calc","금액","money"],["report","증거","evidence"],["official","행동","action"],["docs","문서","docs"],["solve","근거","law"],
   ];
   function addCaseRails(){
     for(const [screenId] of railItems){
@@ -90,23 +79,15 @@
       screen.classList.add("ui-case-screen");
       const rail=document.createElement("nav");rail.className="ui-case-rail";rail.setAttribute("aria-label","사건 분석 메뉴");
       rail.innerHTML=`<div class="rail-title">내 사건</div>${railItems.map(([id,label,icon])=>`<button type="button" class="${id===screenId?"on":""}" data-ui-rail="${id}">${icons[icon]}<span>${label}</span></button>`).join("")}`;
-      screen.insertBefore(rail,wrap);
-      rail.addEventListener("click",(event)=>{const button=event.target.closest("[data-ui-rail]");if(button)callGlobal("nav",button.dataset.uiRail);});
+      screen.insertBefore(rail,wrap);rail.addEventListener("click",(event)=>{const button=event.target.closest("[data-ui-rail]");if(button)callGlobal("nav",button.dataset.uiRail);});
     }
   }
 
   function normalizeText(){
-    const map=[
-      ["AI 상황 진단 결과","분석 결과"],
-      ["상담 요약서","핵심 사실 요약"],
-      ["노동청 진정 절차","공식 절차 안내"],
-    ];
+    const map=[["AI 상황 진단 결과","분석 결과"],["상담 요약서","핵심 사실 요약"],["노동청 진정 절차","공식 절차 안내"]];
     document.querySelectorAll("h1,h2").forEach((node)=>{for(const [from,to] of map){if(node.textContent.trim()===from)node.textContent=to;}});
   }
 
-  function init(){
-    document.body.classList.add("ui-v2");
-    enhanceHome();addStepper();addCaseRails();normalizeText();
-  }
+  function init(){document.body.classList.add("ui-v2");enhanceHome();addStepper();addCaseRails();normalizeText();}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
