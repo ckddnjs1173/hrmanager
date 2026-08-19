@@ -11,3 +11,16 @@ test("user-facing HTML injection adds assets once in stable locations",()=>{
   assert.equal((twice.match(/\/ui\.css/g)||[]).length,1);
   assert.equal((twice.match(/\/ui\.js/g)||[]).length,1);
 });
+
+test("user-facing body injection targets the real final closing body",()=>{
+  const template="const printPage=()=>`<html><body><p>x</p></body></html>`;";
+  const html=`<!doctype html><html><head><title>x</title></head><body><main>x</main><script>${template}</script></body></html>`;
+  const transformed=transformUserFacingHtml(html,{scripts:["/runtime.js"]});
+  const templateClose=transformed.indexOf("</body></html>`;");
+  const runtimeIndex=transformed.indexOf('<script src="/runtime.js"></script>');
+  const actualClose=transformed.lastIndexOf("</body>");
+
+  assert.ok(templateClose>=0,"inline print template must remain intact");
+  assert.ok(runtimeIndex>templateClose,"runtime script must not be injected inside the inline template");
+  assert.ok(runtimeIndex<actualClose,"runtime script must be before the actual document closing body");
+});
