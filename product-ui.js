@@ -20,6 +20,26 @@
     return undefined;
   }
 
+  function normalizeTopBrand(){
+    const logo=document.querySelector(".gn-logo");
+    const image=logo?.querySelector("img");
+    if(!logo||!image||logo.querySelector("[data-ui-brand-word]"))return;
+    // Text inside an externally loaded SVG does not inherit the document webfont and can
+    // render as tofu on Linux/Chromium. Keep the SVG purely pictorial and render Korean
+    // branding as real HTML so the local Pretendard font is authoritative everywhere.
+    image.src="/assets/brand/favicon.svg";
+    image.alt="";
+    image.setAttribute("aria-hidden","true");
+    image.style.width="24px";image.style.height="24px";image.style.flex="0 0 24px";
+    logo.style.display="inline-flex";logo.style.alignItems="center";logo.style.gap="6px";
+    const word=document.createElement("span");word.dataset.uiBrandWord="1";word.setAttribute("aria-hidden","true");
+    word.style.cssText="display:inline-flex;align-items:baseline;font-size:14px;font-weight:850;letter-spacing:-.04em;color:#18181f;white-space:nowrap";
+    word.innerHTML='<span>인사</span><span style="color:#5b4bff">야</span>';
+    const sub=document.createElement("span");sub.dataset.uiBrandSub="1";sub.setAttribute("aria-hidden","true");
+    sub.textContent="노무 AI";sub.style.cssText="font-size:9px;font-weight:700;color:#9a97a2;white-space:nowrap";
+    logo.append(word,sub);
+  }
+
   function enhanceHome(){
     const greeting=document.getElementById("greeting");
     if(!greeting||greeting.dataset.uiV2)return;
@@ -93,6 +113,6 @@
     document.querySelectorAll("h1,h2").forEach((node)=>{for(const [from,to] of map){if(node.textContent.trim()===from)node.textContent=to;}});
   }
 
-  function init(){document.body.classList.add("ui-v2");enhanceHome();addStepper();addCaseRails();normalizeText();}
+  function init(){document.body.classList.add("ui-v2");normalizeTopBrand();enhanceHome();addStepper();addCaseRails();normalizeText();}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
