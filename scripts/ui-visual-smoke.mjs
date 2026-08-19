@@ -96,7 +96,15 @@ async function captureCase(browser,name,viewport){
   assert.deepEqual(errors,[],`case-${name} browser errors:\n${errors.join("\n")}`);await context.close();
 }
 async function captureConversation(browser){
-  const context=await browser.newContext({viewport:{width:1365,height:900}});const page=await context.newPage();const errors=await errorsFor(context,page);
+  const context=await browser.newContext({viewport:{width:1365,height:900}});
+  // Visual QA must not depend on a live model/provider key. The production `/api/chat`
+  // fail-closed behavior is covered elsewhere; here we exercise only the real browser UI.
+  await context.route("**/api/chat",route=>route.fulfill({
+    status:200,
+    contentType:"text/plain; charset=utf-8",
+    body:"상황을 확인할게요. 먼저 임금이 지급되지 않은 기간과 금액을 알려주세요.",
+  }));
+  const page=await context.newPage();const errors=await errorsFor(context,page);
   await page.goto(`${BASE}/`,{waitUntil:"networkidle"});
   await page.locator('[data-ui-problem="wage"]').click();
   await page.locator("#home.chatting").waitFor();await page.locator(".ui-chat-stepper").waitFor();
