@@ -73,7 +73,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm install --no-save --package-lock=false playwright@1.62.0
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - name: Monthly Compliance Close Chromium E2E
         env:
           DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_close_browser
