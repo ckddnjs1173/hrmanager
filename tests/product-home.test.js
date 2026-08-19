@@ -10,6 +10,7 @@ import {
   PRODUCT_GUIDE_CATALOG_SCRIPT,
   PRODUCT_HOME_CONTENT_SCRIPT,
   PRODUCT_HOME_SCRIPT,
+  PRODUCT_UI_SCRIPT,
   createProductHomeHandler,
   injectProductGuideCatalogScript,
   injectProductHomeContentScript,
@@ -97,4 +98,18 @@ test("prepareProductHomeHtml safely injects release assets once without regex-re
   assert.equal((first.match(/wage-intake-launcher\.js/g) || []).length, 1);
   assert.match(first, /const SITES=\{\}/);
   assert.match(first, /const TOPICS=\{/);
+});
+
+test("body script injection ignores closing-body text inside an inline JavaScript template", () => {
+  const printTemplate = "const printPage=()=>`<!doctype html><html><body><p>print</p></body></html>`;";
+  const source = `<!doctype html><html><head></head><body><main>home</main><script>${printTemplate}</script></body></html>`;
+  const transformed = prepareProductHomeHtml(source);
+  const templateBodyClose = transformed.indexOf("</body></html>`;");
+  const actualBodyClose = transformed.lastIndexOf("</body>");
+  const uiScriptIndex = transformed.indexOf(PRODUCT_UI_SCRIPT);
+
+  assert.ok(templateBodyClose >= 0, "print template must remain intact");
+  assert.ok(uiScriptIndex > templateBodyClose, "injected UI script must not enter the print template");
+  assert.ok(uiScriptIndex < actualBodyClose, "injected UI script must be before the real document body close");
+  assert.match(transformed, /const printPage=\(\)=>`<!doctype html><html><body><p>print<\/p><\/body><\/html>`;/);
 });
