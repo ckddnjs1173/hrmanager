@@ -44,7 +44,10 @@ jobs:
       - name: Install Playwright runtime
         run: npm install --no-save --package-lock=false playwright@1.62.0
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        # ubuntu-latest already includes the shared browser runtime libraries used by the
+        # main CI browser jobs. Avoid apt/font installation here: the product serves its
+        # own Pretendard webfont, and apt mirror stalls should not consume the visual gate.
+        run: npx playwright install chromium
       - name: Render and validate representative UI
         run: node scripts/ui-visual-smoke.mjs
       - name: Upload screenshots
