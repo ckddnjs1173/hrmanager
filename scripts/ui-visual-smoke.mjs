@@ -24,14 +24,24 @@ async function ready(){
   throw new Error(`server not ready\n${output}`);
 }
 
-function errorsFor(page){const errors=[];page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});page.on("pageerror",e=>errors.push(e.message));return errors;}
+function errorsFor(page){
+  const errors=[];
+  page.on("console",m=>{
+    if(m.type()!=="error")return;
+    const at=m.location();
+    errors.push(`console: ${m.text()}${at?.url?` @ ${at.url}:${(at.lineNumber??0)+1}:${(at.columnNumber??0)+1}`:""}`);
+  });
+  page.on("pageerror",e=>errors.push(`pageerror: ${e.stack||e.message}`));
+  page.on("response",response=>{
+    if(response.status()>=400)errors.push(`HTTP ${response.status()} ${response.url()}`);
+  });
+  return errors;
+}
 async function assertNoOverflow(page,label){
   const dimensions=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
   assert.ok(dimensions.scroll<=dimensions.client+2,`${label} horizontal overflow: ${dimensions.scroll} > ${dimensions.client}`);
 }
-async function snap(page,path){
-  await page.screenshot({path,fullPage:false,animations:"disabled",caret:"hide",timeout:60000});
-}
+async function snap(page,path){await page.screenshot({path,fullPage:false,animations:"disabled",caret:"hide",timeout:60000});}
 async function captureHome(browser,name,viewport){
   const context=await browser.newContext({viewport});const page=await context.newPage();const errors=errorsFor(page);
   await page.goto(`${BASE}/`,{waitUntil:"networkidle"});
@@ -40,9 +50,8 @@ async function captureHome(browser,name,viewport){
   assert.match(await page.locator(".hero-h").innerText(),/어디서부터[\s\S]*상황부터/);
   const tokens=await page.evaluate(()=>({font:getComputedStyle(document.documentElement).fontSize,primary:getComputedStyle(document.documentElement).getPropertyValue("--ui-primary").trim(),family:getComputedStyle(document.body).fontFamily}));
   assert.equal(tokens.font,"16px");assert.equal(tokens.primary.toLowerCase(),"#5b4bff");assert.match(tokens.family,/Pretendard/);
-  await assertNoOverflow(page,`home-${name}`);
-  await snap(page,`${OUT}/home-${name}.png`);
-  assert.deepEqual(errors,[],`home-${name} console errors:\n${errors.join("\n")}`);await context.close();
+  await assertNoOverflow(page,`home-${name}`);await snap(page,`${OUT}/home-${name}.png`);
+  assert.deepEqual(errors,[],`home-${name} browser errors:\n${errors.join("\n")}`);await context.close();
 }
 async function captureCase(browser,name,viewport){
   const context=await browser.newContext({viewport});const page=await context.newPage();const errors=errorsFor(page);
@@ -50,19 +59,16 @@ async function captureCase(browser,name,viewport){
   await page.getByRole("heading",{name:/못 받은 임금을/}).waitFor();
   assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).fontSize),"16px");
   assert.equal((await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue("--blue").trim())).toLowerCase(),"#5b4bff");
-  await assertNoOverflow(page,`case-${name}`);
-  await snap(page,`${OUT}/wage-intake-${name}.png`);
-  assert.deepEqual(errors,[],`case-${name} console errors:\n${errors.join("\n")}`);await context.close();
+  await assertNoOverflow(page,`case-${name}`);await snap(page,`${OUT}/wage-intake-${name}.png`);
+  assert.deepEqual(errors,[],`case-${name} browser errors:\n${errors.join("\n")}`);await context.close();
 }
 async function captureConversation(browser){
   const context=await browser.newContext({viewport:{width:1365,height:900}});const page=await context.newPage();const errors=errorsFor(page);
   await page.goto(`${BASE}/`,{waitUntil:"networkidle"});
   await page.locator('[data-ui-problem="wage"]').click();
-  await page.locator("#home.chatting").waitFor();
-  await page.locator(".ui-chat-stepper").waitFor();
-  assert.ok(await page.locator(".ui-step.on").count()>=1);
-  await snap(page,`${OUT}/conversation-desktop.png`);
-  assert.deepEqual(errors,[],`conversation console errors:\n${errors.join("\n")}`);await context.close();
+  await page.locator("#home.chatting").waitFor();await page.locator(".ui-chat-stepper").waitFor();
+  assert.ok(await page.locator(".ui-step.on").count()>=1);await snap(page,`${OUT}/conversation-desktop.png`);
+  assert.deepEqual(errors,[],`conversation browser errors:\n${errors.join("\n")}`);await context.close();
 }
 
 let browser;
@@ -74,7 +80,4 @@ try{
   await captureCase(browser,"mobile",{width:390,height:844});
   await captureConversation(browser);
   console.log(`UI visual smoke passed. screenshots=${OUT}`);
-}finally{
-  if(browser)await browser.close();
-  server.kill("SIGTERM");
-}
+}finally{if(browser)await browser.close();server.kill("SIGTERM");}
