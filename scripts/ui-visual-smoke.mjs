@@ -61,8 +61,16 @@ async function errorsFor(context,page){
   return errors;
 }
 async function assertNoOverflow(page,label){
-  const dimensions=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
-  assert.ok(dimensions.scroll<=dimensions.client+2,`${label} horizontal overflow: ${dimensions.scroll} > ${dimensions.client}`);
+  const report=await page.evaluate(()=>{
+    const client=document.documentElement.clientWidth;
+    const scroll=document.documentElement.scrollWidth;
+    const offenders=[...document.querySelectorAll("body *")].map((element)=>{
+      const rect=element.getBoundingClientRect();
+      return {tag:element.tagName.toLowerCase(),id:element.id||"",cls:typeof element.className==="string"?element.className.trim().replace(/\s+/g,".").slice(0,120):"",left:Math.round(rect.left),right:Math.round(rect.right),width:Math.round(rect.width),scrollWidth:element.scrollWidth};
+    }).filter((item)=>item.right>client+2||item.left<-2||item.width>client+2||item.scrollWidth>client+2).sort((a,b)=>Math.max(b.right-client,b.width-client,b.scrollWidth-client)-Math.max(a.right-client,a.width-client,a.scrollWidth-client)).slice(0,12);
+    return {scroll,client,offenders};
+  });
+  assert.ok(report.scroll<=report.client+2,`${label} horizontal overflow: ${report.scroll} > ${report.client}\n${report.offenders.map(item=>`${item.tag}${item.id?`#${item.id}`:""}${item.cls?`.${item.cls}`:""} left=${item.left} right=${item.right} width=${item.width} scrollWidth=${item.scrollWidth}`).join("\n")}`);
 }
 async function snap(page,path){await page.screenshot({path,fullPage:false,animations:"disabled",caret:"hide",timeout:60000});}
 async function captureHome(browser,name,viewport){
@@ -75,7 +83,7 @@ async function captureHome(browser,name,viewport){
   assert.equal(tokens.font,"16px");assert.equal(tokens.primary.toLowerCase(),"#5b4bff");assert.match(tokens.family,/Pretendard/);
   const literalImages=await page.evaluate(()=>[...document.images].filter(img=>(img.getAttribute("src")||"").includes("${")).map(img=>img.outerHTML));
   if(literalImages.length)errors.push(`literal-template-images: ${literalImages.join(" | ")}`);
-  await assertNoOverflow(page,`home-${name}`);await snap(page,`${OUT}/home-${name}.png`);
+  await snap(page,`${OUT}/home-${name}.png`);await assertNoOverflow(page,`home-${name}`);
   assert.deepEqual(errors,[],`home-${name} browser errors:\n${errors.join("\n")}`);await context.close();
 }
 async function captureCase(browser,name,viewport){
@@ -84,7 +92,7 @@ async function captureCase(browser,name,viewport){
   await page.getByRole("heading",{name:/못 받은 임금을/}).waitFor();
   assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).fontSize),"16px");
   assert.equal((await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue("--blue").trim())).toLowerCase(),"#5b4bff");
-  await assertNoOverflow(page,`case-${name}`);await snap(page,`${OUT}/wage-intake-${name}.png`);
+  await snap(page,`${OUT}/wage-intake-${name}.png`);await assertNoOverflow(page,`case-${name}`);
   assert.deepEqual(errors,[],`case-${name} browser errors:\n${errors.join("\n")}`);await context.close();
 }
 async function captureConversation(browser){
