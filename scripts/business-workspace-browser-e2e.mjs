@@ -157,7 +157,7 @@ try {
     await page.getByText("조치 상태를 변경했습니다.").waitFor();
 
     const inProgressAction = actionList.locator(".action-card", { hasText: "최저임금 기준으로 시급 검토" });
-    assert.match(await inProgressAction.innerText(), /IN_PROGRESS/);
+    assert.match(await inProgressAction.innerText(), /상태:\s*진행 중/);
     await inProgressAction.locator('button[data-action-status="DONE"]').click();
     await page.getByText(/다음 Risk Scan에서 실제 해소 여부/).waitFor();
 
