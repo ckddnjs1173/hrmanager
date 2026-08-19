@@ -4,17 +4,17 @@ services:
   - type: web
     name: insaya
     runtime: node
-    plan: free                 # 무료 플랜(일정 시간 미사용 시 절전 → 첫 접속 시 콜드스타트)
-    buildCommand: npm install && npm run build   # 의존성 설치 + 정적 SEO 페이지 생성
+    plan: free                 # 현재 공개 서비스 기본. Business SaaS production 전환 시 durable PostgreSQL 운영 조건을 별도 검증합니다.
+    buildCommand: npm install && npm run build
     startCommand: npm start
-    # /api/health는 rate limit 바깥의 가벼운 liveness probe.
-    # 상세 DB/Case/Legal readiness는 /api/readiness가 제공하며 main production smoke가 exact SHA와 함께 검증한다.
+    # /api/health는 liveness. 상세 DB/Case/Legal/production-config readiness는 /api/readiness가 검증합니다.
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
       - key: NODE_VERSION
-        value: "24"            # node:sqlite + online backup API 사용 가능
-      # AI provider 자동 선택: ANTHROPIC_API_KEY 있으면 Claude, 없고 GEMINI_API_KEY 있으면 Gemini, 둘 다 없으면 데모.
+        value: "24"
+
+      # AI provider — 하나 이상 설정. 모두 비우면 상담 AI는 demo mode이며 다른 기능은 유지됩니다.
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: ANTHROPIC_MODEL
@@ -27,37 +27,77 @@ services:
         sync: false
       - key: GROQ_MODEL
         value: qwen/qwen3-32b
+
+      # 기존 Admin/Partner 보안
       - key: ADMIN_TOKEN
         generateValue: true
       - key: SESSION_SECRET
         generateValue: true
-      - key: DOCUMENT_STORAGE_SECRET
-        generateValue: true
-      - key: SITE_URL
+
+      # Storage. 현재 Blueprint는 안전하게 SQLite / persistence 미검증 상태로 시작합니다.
+      # Business SaaS 활성화 전에는 PostgreSQL migration/cutover 및 restart/redeploy 생존 검증이 선행돼야 합니다.
+      - key: STORAGE_DRIVER
+        value: "sqlite"
+      - key: DATABASE_URL
         sync: false
-      # Optional production Business magic-link delivery. Provider remains blank until explicitly configured.
-      - key: SAAS_EMAIL_PROVIDER
-        sync: false
-      - key: RESEND_API_KEY
-        sync: false
-      - key: SAAS_EMAIL_FROM
+      - key: DB_PATH
         sync: false
       - key: REQUIRE_PERSISTENT_DB
         value: "0"
       - key: PERSISTENT_STORAGE
         value: "0"
 
-# 중요: 현재 무료 플랜의 파일시스템은 장기 영속 저장을 전제로 하지 않습니다.
-# Case·예약·리드 등 운영 데이터는 SQLite DB 파일에 저장되므로 장기 운영 전 영속 저장소가 필요합니다.
-# Business Case 문서 원본은 SAAS/PostgreSQL 런타임에서 평문 파일시스템이 아니라 암호화된 PostgreSQL bytea로 저장합니다.
-# SAAS_EMAIL_PROVIDER는 자동 활성화하지 않습니다. verified sender/domain과 SITE_URL 검증 후 운영자가 명시적으로 설정합니다.
-# 유료 persistent disk를 선택할 경우 예시:
-#    disk:
-#      name: data
-#      mountPath: /opt/render/project/src/data
-#      sizeGB: 1
-# 그리고 환경변수:
-#   DB_PATH=/opt/render/project/src/data/app.db
+      # Business Case 문서 AES-256-GCM 키 파생용. 생성된 값은 기존 문서 복호화에 필요하므로 임의 회전 금지.
+      - key: DOCUMENT_STORAGE_SECRET
+        generateValue: true
+
+      # Business / Advisor SaaS — 명시적으로 OFF. 운영자가 아래 production prerequisites를 모두 검증한 뒤에만 1.
+      - key: SAAS_ENABLED
+        value: "0"
+      - key: SAAS_SESSION_SECRET
+        generateValue: true
+      - key: SAAS_AUTH_TOKEN_ECHO
+        value: "0"
+      - key: SAAS_SESSION_TTL_DAYS
+        value: "30"
+      - key: SAAS_AUTH_CHALLENGE_TTL_MINUTES
+        value: "15"
+      - key: SAAS_INVITATION_TTL_DAYS
+        value: "7"
+      - key: SAAS_SESSION_COOKIE
+        value: "insaya_saas_session"
+
+      # 정확한 HTTPS production origin. 이메일 로그인/초대 링크와 release gate가 사용합니다.
+      - key: SITE_URL
+        sync: false
+
+      # Production 로그인/회사 구성원/외부 Advisor 이메일 전달. provider는 verified sender/domain 준비 전 비워둡니다.
+      - key: SAAS_EMAIL_PROVIDER
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: SAAS_EMAIL_FROM
+        sync: false
+
+# ===== Production Business SaaS 전환 조건 =====
+# 소스 기본값은 위처럼 계속 fail-closed입니다. 다음을 실제 운영환경에서 완료한 뒤에만 전환합니다.
+#   STORAGE_DRIVER=postgres
+#   DATABASE_URL=<durable PostgreSQL secret>
 #   REQUIRE_PERSISTENT_DB=1
-#   PERSISTENT_STORAGE=1   # 실제 restart/redeploy survival test를 통과한 뒤에만 설정
-# 전환 후 npm run db:backup / db:restore-check 및 재시작·재배포 데이터 유지 검증을 수행하세요.
+#   PERSISTENT_STORAGE=1   # 실제 restart/redeploy survival test 이후
+#   SAAS_ENABLED=1
+#   SAAS_AUTH_TOKEN_ECHO=0
+#   SITE_URL=https://<production-origin>
+#   SAAS_EMAIL_PROVIDER=resend
+#   RESEND_API_KEY=<secret>
+#   SAAS_EMAIL_FROM=인사야 <no-reply@verified-domain>
+#
+# 그리고 반드시:
+#   npm run db:pg:migrate
+#   npm run db:pg:validate
+#   npm run db:pg:cutover-check
+#   npm run release:check
+# 를 수행하고 docs/PREDEPLOY_CHECKLIST.md의 smoke/rollback 절차를 완료합니다.
+#
+# 현재 Render free filesystem은 장기 영속 저장으로 간주하지 않습니다. 기존 공개 SQLite 데이터의 장기운영이 필요하면
+# durable disk 또는 PostgreSQL migration을 별도 완료해야 하며, PERSISTENT_STORAGE=1을 단순히 켜는 것으로 해결되지 않습니다.

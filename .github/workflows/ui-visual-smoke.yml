@@ -1,0 +1,60 @@
+name: UI Visual Smoke
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "index.html"
+      - "product-ui.js"
+      - "business*.html"
+      - "business*.js"
+      - "advisor*.html"
+      - "advisor*.js"
+      - "*-intake.html"
+      - "*-intake.css"
+      - "case-workspace-core.css"
+      - "assets/brand/**"
+      - "lib/application.js"
+      - "lib/product-home.js"
+      - "lib/user-facing-page.js"
+      - "scripts/ui-visual-smoke.mjs"
+      - ".github/workflows/ui-visual-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-visual-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install app dependencies
+        run: npm ci
+      - name: Install Playwright runtime
+        run: npm install --no-save --package-lock=false playwright@1.62.0
+      - name: Install Chromium
+        # ubuntu-latest already includes the shared browser runtime libraries used by the
+        # main CI browser jobs. Avoid apt/font installation here: the product serves its
+        # own Pretendard webfont, and apt mirror stalls should not consume the visual gate.
+        run: npx playwright install chromium
+      - name: Render and validate representative UI
+        run: node scripts/ui-visual-smoke.mjs
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-visual-${{ github.event.pull_request.number }}-${{ github.run_attempt }}
+          path: artifacts/ui-visual/*.png
+          if-no-files-found: warn
+          retention-days: 7

@@ -10,6 +10,7 @@ import {
   PRODUCT_GUIDE_CATALOG_SCRIPT,
   PRODUCT_HOME_CONTENT_SCRIPT,
   PRODUCT_HOME_SCRIPT,
+  PRODUCT_UI_SCRIPT,
   createProductHomeHandler,
   injectProductGuideCatalogScript,
   injectProductHomeContentScript,
@@ -58,7 +59,7 @@ test("legacy guide topic definitions are replaced by the canonical catalog bindi
   assert.match(migrated, /function renderHub\(which\)/);
 });
 
-test("product home handler serves transformed index with canonical content sources and Case launcher", async (t) => {
+test("product home handler preserves the working inline runtime while loading canonical sources and Case launcher", async (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "insaya-home-"));
   fs.writeFileSync(path.join(dir, "index.html"), `<!doctype html><html><head></head><body><h1>인사야</h1><script>\nconst SITES={\n worker:{wm:'근로자'}\n};\nconst CATS={\n worker:[], employer:[]\n};\nlet currentSite=null;\nconst TOPICS={\n worker:[{k:'wage'}], employer:[]\n};\nfunction renderHub(which){}\n</script></body></html>`);
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -79,11 +80,14 @@ test("product home handler serves transformed index with canonical content sourc
   assert.equal(html.includes(PRODUCT_HOME_CONTENT_SCRIPT), true);
   assert.equal(html.includes(PRODUCT_GUIDE_CATALOG_SCRIPT), true);
   assert.equal(html.includes(PRODUCT_HOME_SCRIPT), true);
-  assert.match(html, /window\.INSAYA_HOME_NAV/);
-  assert.match(html, /window\.INSAYA_GUIDE_CATALOG/);
+  assert.match(html, /const SITES=\{/);
+  assert.match(html, /const CATS=\{/);
+  assert.match(html, /const TOPICS=\{/);
+  assert.doesNotMatch(html, /window\.INSAYA_HOME_NAV\?\.SITES/);
+  assert.doesNotMatch(html, /window\.INSAYA_GUIDE_CATALOG\?\.TOPICS/);
 });
 
-test("prepareProductHomeHtml applies content migrations and injections once", () => {
+test("prepareProductHomeHtml safely injects release assets once without regex-rewriting inline runtime", () => {
   const source = `<!doctype html><html><head></head><body><script>\nconst SITES={};\nconst CATS={\n worker:[], employer:[]\n};\nlet currentSite=null;\nconst TOPICS={\n worker:[], employer:[]\n};\nfunction renderHub(which){}\n</script></body></html>`;
   const first = prepareProductHomeHtml(source);
   const second = prepareProductHomeHtml(first);
@@ -92,4 +96,20 @@ test("prepareProductHomeHtml applies content migrations and injections once", ()
   assert.equal((first.match(/home-navigation\.js/g) || []).length, 1);
   assert.equal((first.match(/guide-catalog\.js/g) || []).length, 1);
   assert.equal((first.match(/wage-intake-launcher\.js/g) || []).length, 1);
+  assert.match(first, /const SITES=\{\}/);
+  assert.match(first, /const TOPICS=\{/);
+});
+
+test("body script injection ignores closing-body text inside an inline JavaScript template", () => {
+  const printTemplate = "const printPage=()=>`<!doctype html><html><body><p>print</p></body></html>`;";
+  const source = `<!doctype html><html><head></head><body><main>home</main><script>${printTemplate}</script></body></html>`;
+  const transformed = prepareProductHomeHtml(source);
+  const templateBodyClose = transformed.indexOf("</body></html>`;");
+  const actualBodyClose = transformed.lastIndexOf("</body>");
+  const uiScriptIndex = transformed.indexOf(PRODUCT_UI_SCRIPT);
+
+  assert.ok(templateBodyClose >= 0, "print template must remain intact");
+  assert.ok(uiScriptIndex > templateBodyClose, "injected UI script must not enter the print template");
+  assert.ok(uiScriptIndex < actualBodyClose, "injected UI script must be before the real document body close");
+  assert.match(transformed, /const printPage=\(\)=>`<!doctype html><html><body><p>print<\/p><\/body><\/html>`;/);
 });
