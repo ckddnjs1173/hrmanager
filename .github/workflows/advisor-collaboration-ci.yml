@@ -44,7 +44,10 @@ jobs:
       - name: Install Playwright runtime
         run: npm install --no-save --package-lock=false playwright@1.62.0
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        # The hosted Ubuntu image already provides the shared browser libraries used by
+        # the main browser CI. Keep this dedicated gate deterministic and independent of
+        # slow apt/font mirrors; product typography is served as a local webfont.
+        run: npx playwright install chromium
       - name: Business to Advisor collaboration Chromium E2E
         env:
           DATABASE_URL: postgresql://insaya:insaya_test@127.0.0.1:5432/insaya_advisor_ui
