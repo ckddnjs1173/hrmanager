@@ -9,8 +9,7 @@ const BASE=`http://127.0.0.1:${PORT}`;
 const OUT=process.env.UI_SCREENSHOT_DIR||"artifacts/ui-visual";
 fs.mkdirSync(OUT,{recursive:true});
 
-function validateInlineClassicScripts(filePath){
-  const html=fs.readFileSync(filePath,"utf8");
+function validateInlineClassicScriptsFromHtml(html,label){
   const pattern=/<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
   let match;let index=0;
   while((match=pattern.exec(html))){
@@ -18,11 +17,11 @@ function validateInlineClassicScripts(filePath){
     if(/\bsrc\s*=/.test(attrs))continue;
     const type=(attrs.match(/\btype\s*=\s*["']([^"']+)["']/i)||[])[1]||"text/javascript";
     if(!/^(?:text|application)\/javascript$/i.test(type))continue;
-    try{new vm.Script(code,{filename:`${filePath}:inline-script-${index}`});}
-    catch(error){throw new Error(`Inline script syntax check failed for ${filePath} script ${index}:\n${error.stack||error.message}`);}
+    try{new vm.Script(code,{filename:`${label}:inline-script-${index}`});}
+    catch(error){throw new Error(`Inline script syntax check failed for ${label} script ${index}:\n${error.stack||error.message}`);}
   }
 }
-validateInlineClassicScripts("index.html");
+validateInlineClassicScriptsFromHtml(fs.readFileSync("index.html","utf8"),"index.html");
 
 const server=spawn(process.execPath,["server.js"],{
   env:{...process.env,PORT:String(PORT),DB_PATH:":memory:",NODE_ENV:"test",SITE_URL:BASE},
@@ -40,7 +39,7 @@ async function ready(){
   throw new Error(`server not ready\n${output}`);
 }
 
-function errorsFor(page){
+async function errorsFor(context,page){
   const errors=[];
   page.on("console",m=>{
     if(m.type()!=="error")return;
@@ -48,8 +47,16 @@ function errorsFor(page){
     errors.push(`console: ${m.text()}${at?.url?` @ ${at.url}:${(at.lineNumber??0)+1}:${(at.columnNumber??0)+1}`:""}`);
   });
   page.on("pageerror",e=>errors.push(`pageerror: ${e.stack||e.message}`));
-  page.on("response",response=>{
-    if(response.status()>=400)errors.push(`HTTP ${response.status()} ${response.url()}`);
+  page.on("response",response=>{if(response.status()>=400)errors.push(`HTTP ${response.status()} ${response.url()}`);});
+  const cdp=await context.newCDPSession(page);await cdp.send("Runtime.enable");await cdp.send("Network.enable");
+  cdp.on("Runtime.exceptionThrown",({exceptionDetails:d})=>{
+    const desc=d.exception?.description||d.text||"exception";
+    errors.push(`cdp-exception: ${desc} @ ${d.url||"<anonymous>"}:${(d.lineNumber??0)+1}:${(d.columnNumber??0)+1}`);
+  });
+  cdp.on("Network.requestWillBeSent",({request,initiator})=>{
+    if(!/%24%7B|\$%7B|\$\{/.test(request.url))return;
+    const frame=(initiator?.stack?.callFrames||[])[0];
+    errors.push(`literal-template-request: ${request.url}${frame?` initiated @ ${frame.url}:${frame.lineNumber+1}:${frame.columnNumber+1}`:""}`);
   });
   return errors;
 }
@@ -59,18 +66,20 @@ async function assertNoOverflow(page,label){
 }
 async function snap(page,path){await page.screenshot({path,fullPage:false,animations:"disabled",caret:"hide",timeout:60000});}
 async function captureHome(browser,name,viewport){
-  const context=await browser.newContext({viewport});const page=await context.newPage();const errors=errorsFor(page);
+  const context=await browser.newContext({viewport});const page=await context.newPage();const errors=await errorsFor(context,page);
   await page.goto(`${BASE}/`,{waitUntil:"networkidle"});
   await page.locator("body.ui-v2").waitFor();
   assert.equal(await page.locator(".ui-problem").count(),5);
   assert.match(await page.locator(".hero-h").innerText(),/어디서부터[\s\S]*상황부터/);
   const tokens=await page.evaluate(()=>({font:getComputedStyle(document.documentElement).fontSize,primary:getComputedStyle(document.documentElement).getPropertyValue("--ui-primary").trim(),family:getComputedStyle(document.body).fontFamily}));
   assert.equal(tokens.font,"16px");assert.equal(tokens.primary.toLowerCase(),"#5b4bff");assert.match(tokens.family,/Pretendard/);
+  const literalImages=await page.evaluate(()=>[...document.images].filter(img=>(img.getAttribute("src")||"").includes("${")).map(img=>img.outerHTML));
+  if(literalImages.length)errors.push(`literal-template-images: ${literalImages.join(" | ")}`);
   await assertNoOverflow(page,`home-${name}`);await snap(page,`${OUT}/home-${name}.png`);
   assert.deepEqual(errors,[],`home-${name} browser errors:\n${errors.join("\n")}`);await context.close();
 }
 async function captureCase(browser,name,viewport){
-  const context=await browser.newContext({viewport});const page=await context.newPage();const errors=errorsFor(page);
+  const context=await browser.newContext({viewport});const page=await context.newPage();const errors=await errorsFor(context,page);
   await page.goto(`${BASE}/wage-intake`,{waitUntil:"networkidle"});
   await page.getByRole("heading",{name:/못 받은 임금을/}).waitFor();
   assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).fontSize),"16px");
@@ -79,7 +88,7 @@ async function captureCase(browser,name,viewport){
   assert.deepEqual(errors,[],`case-${name} browser errors:\n${errors.join("\n")}`);await context.close();
 }
 async function captureConversation(browser){
-  const context=await browser.newContext({viewport:{width:1365,height:900}});const page=await context.newPage();const errors=errorsFor(page);
+  const context=await browser.newContext({viewport:{width:1365,height:900}});const page=await context.newPage();const errors=await errorsFor(context,page);
   await page.goto(`${BASE}/`,{waitUntil:"networkidle"});
   await page.locator('[data-ui-problem="wage"]').click();
   await page.locator("#home.chatting").waitFor();await page.locator(".ui-chat-stepper").waitFor();
@@ -89,7 +98,10 @@ async function captureConversation(browser){
 
 let browser;
 try{
-  await ready();browser=await chromium.launch({headless:true});
+  await ready();
+  const servedHome=await (await fetch(`${BASE}/`)).text();
+  validateInlineClassicScriptsFromHtml(servedHome,"served-home");
+  browser=await chromium.launch({headless:true});
   await captureHome(browser,"desktop",{width:1536,height:960});
   await captureHome(browser,"mobile",{width:390,height:844});
   await captureCase(browser,"desktop",{width:1365,height:900});
