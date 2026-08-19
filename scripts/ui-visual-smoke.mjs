@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import vm from "node:vm";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
 
@@ -7,6 +8,21 @@ const PORT=Number(process.env.E2E_PORT||32239);
 const BASE=`http://127.0.0.1:${PORT}`;
 const OUT=process.env.UI_SCREENSHOT_DIR||"artifacts/ui-visual";
 fs.mkdirSync(OUT,{recursive:true});
+
+function validateInlineClassicScripts(filePath){
+  const html=fs.readFileSync(filePath,"utf8");
+  const pattern=/<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  let match;let index=0;
+  while((match=pattern.exec(html))){
+    const attrs=match[1]||"";const code=match[2]||"";index+=1;
+    if(/\bsrc\s*=/.test(attrs))continue;
+    const type=(attrs.match(/\btype\s*=\s*["']([^"']+)["']/i)||[])[1]||"text/javascript";
+    if(!/^(?:text|application)\/javascript$/i.test(type))continue;
+    try{new vm.Script(code,{filename:`${filePath}:inline-script-${index}`});}
+    catch(error){throw new Error(`Inline script syntax check failed for ${filePath} script ${index}:\n${error.stack||error.message}`);}
+  }
+}
+validateInlineClassicScripts("index.html");
 
 const server=spawn(process.execPath,["server.js"],{
   env:{...process.env,PORT:String(PORT),DB_PATH:":memory:",NODE_ENV:"test",SITE_URL:BASE},
