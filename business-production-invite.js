@@ -31,8 +31,11 @@
       if (!path) throw new Error("invitation_delivery_missing");
       const absolute = new URL(path, location.origin).href;
       c$("advisor-invite-link").value = absolute;
-      if (box) box.hidden = false;
+      // Keep the link box hidden while the canonical invitation list refreshes.
+      // Its visible state is also the UI completion signal used by the browser journey.
+      if (box) box.hidden = true;
       const refreshed = await loadCollaboration({ quiet: true });
+      if (box) box.hidden = false;
       if (!refreshed) collabFlash("초대는 생성됐지만 목록 새로고침에 실패했습니다. 아래 1회용 링크는 안전한 채널로 전달해 주세요.", "error");
       else collabFlash("문서 검토 권한을 포함한 초대를 만들었습니다. 아래 링크를 전문가에게 전달해 주세요.");
     } catch (error) {
