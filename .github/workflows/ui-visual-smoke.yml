@@ -8,16 +8,21 @@ on:
       - "product-ui.js"
       - "business*.html"
       - "business*.js"
+      - "business*.css"
       - "advisor*.html"
       - "advisor*.js"
+      - "advisor*.css"
       - "*-intake.html"
       - "*-intake.css"
+      - "case-detail.js"
+      - "case-detail.css"
       - "case-workspace-core.css"
       - "assets/brand/**"
       - "lib/application.js"
       - "lib/product-home.js"
       - "lib/user-facing-page.js"
       - "scripts/ui-visual-smoke.mjs"
+      - "scripts/predeploy-detail-browser-smoke.mjs"
       - ".github/workflows/ui-visual-smoke.yml"
 
 permissions:
@@ -50,6 +55,8 @@ jobs:
         run: npx playwright install chromium
       - name: Render and validate representative UI
         run: node scripts/ui-visual-smoke.mjs
+      - name: Validate final detail states
+        run: node scripts/predeploy-detail-browser-smoke.mjs
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
