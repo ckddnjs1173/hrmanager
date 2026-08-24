@@ -17,8 +17,14 @@ test("HTTP security middleware preserves baseline headers and HSTS behavior", ()
   assert.equal(nextCalled, true);
   assert.equal(headers["X-Content-Type-Options"], "nosniff");
   assert.equal(headers["X-Frame-Options"], "SAMEORIGIN");
+  assert.equal(headers["X-Permitted-Cross-Domain-Policies"], "none");
   assert.equal(headers["Referrer-Policy"], "strict-origin-when-cross-origin");
+  assert.equal(headers["Cross-Origin-Opener-Policy"], "same-origin");
+  assert.equal(headers["Origin-Agent-Cluster"], "?1");
+  assert.match(headers["Permissions-Policy"], /payment=\(\)/);
   assert.match(headers["Content-Security-Policy"], /default-src 'self'/);
+  assert.match(headers["Content-Security-Policy"], /form-action 'self'/);
+  assert.match(headers["Content-Security-Policy"], /manifest-src 'self'/);
   assert.match(headers["Strict-Transport-Security"], /max-age=15552000/);
 });
 
@@ -37,6 +43,7 @@ test("application composition owns all extracted route domains and operational p
     "createCaseRouter", "createAiRouter", "createExpertRouter", "createDocumentRouter",
     "createPublicOperationRouter", "createAdminRouter", "createPartnerRouter", "createSecureSummaryRouter",
     "createSessionSecurity", "createRateLimiter", "createHttpSecurityMiddleware", "createProductHomeHandler",
+    "createPublicStaticGuard", "createRobotsHandler", "createSitemapHandler", "createArticlePageHandler",
     "getRuntimeReadiness",
   ]) assert.match(application, new RegExp(contract), `application composition missing ${contract}`);
   assert.match(application, /app\.get\("\/api\/health"/);

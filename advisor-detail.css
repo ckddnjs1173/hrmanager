@@ -1,0 +1,11 @@
+#advisor-shell :where(button,a,input,select,textarea):focus-visible{outline:3px solid rgba(91,75,255,.28);outline-offset:2px}
+#advisor-shell :where(button,input,select,textarea):disabled{cursor:not-allowed;opacity:.62}
+#advisor-shell .error{min-height:20px;overflow-wrap:anywhere}
+#advisor-shell .empty,#advisor-shell .review-empty{line-height:1.6}
+#advisor-shell h1[tabindex="-1"]{outline:none}
+#advisor-loading[aria-busy="true"] .advisor-card::after{content:"";display:block;width:18px;height:18px;margin:18px auto 0;border:2px solid #5b4bff;border-right-color:transparent;border-radius:50%;animation:advisor-detail-spin .75s linear infinite}
+#advisor-shell :where(.primary,.secondary,.grant-item,a){min-height:42px}
+#advisor-shell textarea{resize:vertical}
+@keyframes advisor-detail-spin{to{transform:rotate(360deg)}}
+@media(max-width:520px){#advisor-shell :where(.primary,.secondary,.grant-item,a){min-height:44px}#advisor-shell :where(input,select,textarea){font-size:16px;max-width:100%}.preview-actions,.advisor-doc-review-actions{display:grid;grid-template-columns:1fr}.preview-actions>* ,.advisor-doc-review-actions>*{width:100%}}
+@media(prefers-reduced-motion:reduce){#advisor-loading[aria-busy="true"] .advisor-card::after{animation-duration:1.5s}}

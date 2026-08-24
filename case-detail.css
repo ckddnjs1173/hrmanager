@@ -1,0 +1,12 @@
+.case-detail-status{margin:0 0 16px;padding:12px 14px;border:1px solid #d7dce3;border-radius:12px;background:#f8fafc;color:#334155;font-size:13px;font-weight:700;line-height:1.55}
+.case-detail-status[data-kind="error"]{border-color:#fecaca;background:#fef2f2;color:#991b1b}
+.case-detail-status[hidden]{display:none!important}
+.case-app[aria-busy="true"]{min-height:180px}
+.case-app :where(button,a,input,select,textarea):focus-visible{outline:3px solid rgba(91,75,255,.28);outline-offset:2px}
+.case-app :where(button,[role="button"],a.case-action,a.primary,a.secondary){min-height:42px}
+.case-app :where(button,input,select,textarea):disabled{cursor:not-allowed;opacity:.6}
+.case-app :where(.error,.case-error,[data-error]){overflow-wrap:anywhere}
+.case-app :where(.empty,.review-empty){line-height:1.6}
+.case-app h1[tabindex="-1"],.case-app h2[tabindex="-1"]{outline:none}
+@media(max-width:520px){.case-detail-status{margin-bottom:12px}.case-app :where(button,[role="button"],a.case-action,a.primary,a.secondary){min-height:44px}.case-app :where(input,select,textarea){font-size:16px;max-width:100%}.case-app{min-width:0;overflow-wrap:anywhere}}
+@media(prefers-reduced-motion:reduce){.case-app *{scroll-behavior:auto!important}}
