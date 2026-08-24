@@ -1,363 +1,416 @@
-# 인사야 1.0 구현 현황 — FINAL RC
+# 인사야 구현 현황 — PREDEPLOY RC
 
-> **Source of Truth:** 현재 구현·CI·운영 검증 상태
-> **기준일:** 2026-08-16
-> **Production:** https://insaya.onrender.com/
-> **마지막 배포 검증 완료 main:** `65c50f5de89260f8db33cf27f0e64fde0f211325`
-> **검증 run:** `31921056734`
-> **현재 판정:** Code/Product RC
+> **Source of Truth:** 현재 저장소 구현·검증·운영 준비 상태  
+> **기준일:** 2026-08-25  
+> **Production:** https://insaya.onrender.com/  
+> **현재 판정:** 제품/코드 기능은 predeploy RC. Production SaaS 활성화와 GA 승인은 별도 운영 검증이 필요함.
 
 ---
 
 ## 1. 현재 결론
 
-인사야 1.0의 제품 코드 범위는 완료됐다.
+인사야는 더 이상 Worker용 1.0 Core Case만 있는 구조가 아니다.
+
+현재 소스는 아래 네 영역을 공통 Case/Legal 기반 위에서 제공한다.
 
 ```text
-✅ 임금체불 Case
-✅ 해고·권고사직 Case
-✅ 퇴직금·퇴직연금 Case
-✅ 근로시간·연장/야간/휴일수당 Case
-✅ 연차유급휴가·미사용수당 Case
-
-✅ Case Registry
-✅ Legal Registry
-✅ 공통 Case client / workspace
-✅ 서버 domain router 분리
-✅ application/bootstrap 분리
-✅ session / rate-limit / HTTP security 분리
-✅ runtime readiness
-✅ SQLite online backup / restore-check
-✅ Content Source 점진 분리 시작
+1. Worker Core 5 노동문제 해결
+2. Business 노동 Compliance SaaS
+3. External Advisor Case/문서 협업
+4. Internal Legal Change Governance
 ```
 
-Core 5는 아래 해결 흐름을 실제 코드로 제공한다.
-
-```text
-사건 생성
-→ 사실 구조화
-→ 적용범위/법률 규칙
-→ 금액 또는 핵심 판단
-→ 증거
-→ 다음 행동
-→ 공식 근거
-→ 문서
-→ 공식기관 절차
-→ Case Report
-→ 삭제
-```
-
-**새 Core Case 추가는 1.0 목표가 아니다.**
-
-GA의 남은 핵심 차단조건은 **durable user-data persistence와 실제 복구 rehearsal**이다.
+현재 단계의 핵심 과제는 새 기능 추가가 아니라 **배포 전 제품 마감 + production 운영 조건 검증**이다.
 
 ---
 
-## 2. 검증 상태
+## 2. 제품 영역별 상태
 
-### PR
-
-```text
-check
-├─ npm ci
-├─ Node regression
-├─ build
-└─ release:check
-
-browser-e2e
-├─ actual Chromium
-├─ Core Case journeys
-└─ 390×844 mobile
-```
-
-### main
-
-```text
-merge
-→ check
-→ Chromium
-→ Render auto deploy
-→ build-info exact SHA
-→ /api/readiness
-→ PII 없는 synthetic Core 5 Cases
-→ legal/money/document/report 검증
-→ synthetic Case 삭제
-```
-
-마지막 배포 검증 완료 기준:
-
-```text
-main SHA: 65c50f5de89260f8db33cf27f0e64fde0f211325
-CI run:   31921056734
-
-check             ✅ success
-browser-e2e       ✅ success
-production-smoke  ✅ success
-```
-
-현재 `fix/1.0-rc-finalization`은 배포 전 후보 브랜치이며 `main`에 병합되지 않는 한 Production에 영향이 없다.
+| 영역 | 상태 | 비고 |
+|---|---|---|
+| Worker Core 5 | ✅ | 임금체불·해고·퇴직금·근로시간·연차 |
+| Case Engine | ✅ | 구조화 facts, opaque token, report/document/action |
+| Legal Registry / deterministic rules | ✅ | 기준일·공식 근거·fixture 중심 |
+| Business Auth | ✅ | magic-link, production email adapter |
+| Organization / Membership / RBAC | ✅ | tenant 경계 및 역할 권한 |
+| Business Onboarding | ✅ | 회사 초기 설정 |
+| Risk / Action | ✅ | 위험 및 다음 조치 |
+| Compliance Calendar | ✅ | 기한/일정 |
+| Notification | ✅ | Business 알림 |
+| Monthly Compliance Close | ✅ | 월 단위 마감 workflow |
+| Business Case | ✅ | 상태·event·협업 기준 resource |
+| External Advisor ShareGrant | ✅ | 회사 Membership 없이 Case 단위 공유 |
+| Advisor Collaboration | ✅ | 초대·수락·목록·의견·철회 |
+| Encrypted Document Workflow | ✅ | 문서 버전·암호화·검토·다운로드 감사 |
+| Legal Change Governance | ✅ | 후보→사람검토→proposal→fixture→ready |
+| Legal auto activation | ⛔ | 의도적으로 금지 |
+| UI Design System | ✅ | Pretendard local, violet primary, responsive |
+| Predeploy Security/SEO hardening | ✅/검증중 | PR detail pass에서 최종 회귀 검증 |
+| Production PostgreSQL 실전환 | ⬜ | 운영 환경 작업 |
+| Production email domain 검증 | ⬜ | SPF/DKIM/provider 검증 필요 |
+| restart/redeploy persistence | ⬜ | 실제 Render 운영 검증 필요 |
+| exact-SHA production smoke | ⬜ | 최종 main 배포 후 수행 |
+| SaaS public activation | ⬜ | 위 조건 완료 후에만 활성화 |
 
 ---
 
-## 3. Core 5 Cases
+## 3. Worker Core 5
 
-| Case | UI | 주요 도메인 | 운영 검증 |
-|---|---|---|---|
-| 임금체불 | `/wage-intake` | `lib/wage-*`, `lib/legal-rules.js` | ✅ |
-| 해고·권고사직 | `/dismissal-intake` | `lib/dismissal-*` | ✅ |
-| 퇴직금·퇴직연금 | `/retirement-intake` | `lib/retirement-*` | ✅ |
-| 근로시간·수당 | `/worktime-intake` | `lib/worktime-*` | ✅ |
-| 연차 | `/annual-leave-intake` | `lib/annual-leave-*` | ✅ |
+### 지원 Case
 
-`lib/case-domain-registry.js`가 위 5개 domain의 canonical 등록 계층이며 `lib/case-routes.js`가 registry를 순회해 API를 연결한다.
+- 임금체불 — `/wage-intake`
+- 해고·권고사직 — `/dismissal-intake`
+- 퇴직금·퇴직연금 — `/retirement-intake`
+- 근로시간·연장/야간/휴일수당 — `/worktime-intake`
+- 연차유급휴가·미사용수당 — `/annual-leave-intake`
+
+공통 구조:
+
+```text
+Case 생성
+→ Facts
+→ Legal/Rule
+→ Money 또는 핵심 판단
+→ Evidence
+→ Next Action
+→ Sources
+→ Documents
+→ Official Procedure
+→ Report
+→ Delete
+```
+
+### 배포 전 공통 UX 하드닝
+
+Core 5는 `case-detail.js` / `case-detail.css` 공통 레이어를 사용한다.
+
+- loading state ARIA
+- 동적 error/empty state ARIA
+- API 401/403/404/429/5xx 사용자 안내
+- offline/online 안내
+- raw backend error code 노출 완화
+- keyboard focus-visible
+- 390px 모바일 입력/터치 영역
+- reduced motion
+
+도메인별 계산/법률 로직을 복제하지 않고 공통 UX 계층만 추가한다.
 
 ---
 
-## 4. Case / Legal 공통 기반 — 완료
+## 4. Business Compliance SaaS
 
-### Case
-
-- 구조화된 SQLite Case repository
-- opaque access token
-- token 원문 DB 미저장
-- browser `sessionStorage` only
-- `x-case-token` / Bearer
-- token expiry / revoke
-- retention lifecycle
-- shared protected transport: `case-client-core.js`
-- shared resource/document shell: `case-workspace-core.css`
-
-### Legal
-
-`lib/legal-registry.js`가 Core 5의 공식 source contract를 조회·검증한다.
-
-원칙:
+현재 구현된 주요 계층:
 
 ```text
-Known facts
-→ deterministic rule / calculator
-→ assessment / amount / assumptions / sources / warnings
-→ UI·AI explanation
+User
+→ Auth
+→ Organization
+→ Membership / RBAC
+→ Onboarding
+→ Employee Lite / company facts
+→ Risk
+→ Action
+→ Calendar
+→ Notification
+→ Compliance Close
+→ Business Case
+→ Document / Advisor Collaboration
 ```
 
-모르는 사실은 임의 추정하지 않는다.
+### 권한 원칙
 
-Legacy 계산기·가이드에 남은 중복 법률 copy는 GA blocker가 아닌 후속 single-source migration이다.
+- 조직 데이터는 `organization_id` 경계를 넘지 않는다.
+- Business 협업 관리 권한은 정해진 RBAC를 통과해야 한다.
+- 외부 Advisor를 회사 Membership으로 자동 승격하지 않는다.
+- Worker B2C 사건과 Employer tenant 데이터는 자동 연결하지 않는다.
+
+### Business predeploy detail
+
+`business-detail.js` / `business-detail.css`에서 다음을 보강했다.
+
+- pending/중복작업 시각 상태
+- 사용자 친화 API 오류 문구
+- session expiry 안내
+- bootstrap failure state
+- ARIA live/focus
+- prompt 기반 사유 입력을 dialog 기반 입력으로 교체
+- 모바일 pending/error layout
 
 ---
 
-## 5. Server 구조 — 완료
+## 5. External Advisor Collaboration
+
+공유 구조:
 
 ```text
-server.js
-└─ lib/application.js
-   ├─ /api/health
-   ├─ /api/readiness
-   ├─ /api/cases/*
-   ├─ AI
-   ├─ documents
-   ├─ experts
-   ├─ public operations
-   ├─ admin
-   ├─ partner
-   └─ secure summary
+Business Case
+→ invitation
+→ Advisor 본인 global User 확인
+→ ShareGrant ACCEPTED
+→ 허용 permission만 사용
+→ Case / comment / document / review
+→ 회사 revoke 또는 expiry
+→ 다음 요청 즉시 거부
 ```
 
-도메인 router:
+보안 불변조건:
 
-```text
-lib/case-routes.js
-lib/ai-routes.js
-lib/document-routes.js
-lib/expert-routes.js
-lib/public-operation-routes.js
-lib/admin-routes.js
-lib/partner-routes.js
-lib/secure-summary-routes.js
-```
+- cross-tenant Case 공유 차단
+- Advisor에게 내부 Membership 자동생성 금지
+- Advisor 본인만 초대 수락 가능
+- 만료/철회 즉시 접근 차단
+- Case 실제 `organization_id`로 소유권 검증
+- 다운로드/검토마다 권한 재검증
 
-공통 infra:
+### Advisor predeploy detail
 
-```text
-lib/session-security.js
-lib/rate-limit.js
-lib/http-security.js
-lib/retention-scheduler.js
-lib/branded-page.js
-```
+`advisor-detail.js` / `advisor-detail.css` 공통 보강:
 
-`server.js`는 env load, application 생성, retention scheduler, listen만 담당한다.
+- loading/empty/error ARIA
+- invitation expired/revoked 사용자 안내
+- ShareGrant expired/revoked 사용자 안내
+- 401/403/429/5xx/network error 안내
+- visible view heading focus
+- disabled/focus/touch target/mobile 처리
 
 ---
 
-## 6. Runtime Readiness — 강화 완료 후보
+## 6. 문서 보안
 
-Canonical endpoint:
-
-```text
-GET /api/readiness
-```
-
-호환 alias:
+현재 Business Case 문서 workflow:
 
 ```text
-GET /api/cases/readiness
+회사 업로드
+→ 형식/크기/signature 검사
+→ encrypted binary store
+→ VERIFIED + CLEAN
+→ 검토 요청
+→ Advisor download
+→ APPROVED 또는 CHANGES_REQUESTED
+→ 회사 새 version
+→ 재검토
 ```
 
-Readiness는 두 상태를 구분한다.
+주요 제약:
 
-### 서비스 자체 가동 가능
+- AES-256-GCM 암호화 저장
+- PostgreSQL에 문서 평문 원본 직접 저장 금지
+- 허용 형식: PDF/DOCX/HWP/HWPX
+- 서버에서 SHA-256/size 재계산
+- PDF active-content 기본 방어
+- Advisor 권한 철회 후 다음 다운로드 차단
+- 다운로드 audit event
+- `DOCUMENT_STORAGE_SECRET` 임의 변경 금지
 
-무료/ephemeral 저장 환경에서도 DB·Case Registry·Legal Registry가 정상이라면:
-
-```text
-ready = true
-```
-
-### 민감 Case 장기 저장 가능
-
-다음이 모두 충족돼야 한다.
-
-```text
-명시적 file DB path
-+ in-memory DB 아님
-+ restart/redeploy survival test 완료
-+ PERSISTENT_STORAGE=1
-```
-
-그때만:
-
-```text
-readyForSensitiveCaseStorage = true
-```
-
-`REQUIRE_PERSISTENT_DB=1` 환경에서는 위 조건이 충족되지 않으면 readiness가 fail-closed한다.
-
-`DB_PATH=:memory:`는 어떤 플래그 조합에서도 durable storage로 인정하지 않는다.
-
-Readiness 응답은 실제 DB filesystem path나 secret을 노출하지 않는다.
+현재 active-content 검사는 전문 백신/악성코드 스캐너와 동일하다고 표시하지 않는다.
 
 ---
 
-## 7. Backup / Restore — 코드 준비 완료
+## 7. Legal Change Governance
+
+법령변경은 자동으로 runtime 판정에 반영하지 않는다.
+
+```text
+official source candidate
+→ snapshot/content hash
+→ human review
+→ rule proposal
+→ fixture validation
+→ READY_FOR_IMPLEMENTATION
+```
+
+금지:
+
+- AI 자동 승인
+- human review bypass
+- fixture 없는 rule 승격
+- 변경 감지 결과의 runtime ACTIVE 자동 적용
+
+Legal Source Monitor Scheduler는 production에서 명시적으로 켜기 전까지 OFF/fail-closed 상태를 유지한다.
+
+---
+
+## 8. Production Auth / Email
+
+Production SaaS는 이메일 전달 계층을 사용한다.
+
+구현:
+
+- Business magic-link email
+- Organization member invitation email
+- External Advisor invitation email
+- raw token production JSON 비노출
+- fragment 기반 token 전달
+- `/business-login.html`에서 fragment 즉시 제거
+- invitation email 실패 시 생성된 invitation revoke
+- return target allowlist
+
+Business Login detail pass에서는 backend 내부 error code를 그대로 화면에 출력하지 않고 한국어 사용자 안내로 변환한다.
+
+---
+
+## 9. HTTP / Static / SEO hardening
+
+현재 predeploy detail pass의 서버 하드닝:
+
+### Static
+
+저장소 root가 browser asset과 server source를 함께 포함하는 현재 구조에서 `express.static` 전에 guard를 둔다.
+
+차단 예:
+
+- `server.js`
+- `package.json`, lockfile
+- `.env*`
+- `lib/`
+- `db/`
+- `scripts/`
+- `tests/`, `test/`
+- `docs/`
+- SQL/SQLite/DB/backup/log 계열
+
+의도적으로 공개하는 `data/nomusa.json`은 허용한다.
+
+장기적으로는 public asset을 별도 `public/` root로 분리하는 것이 권장 Technical Debt다.
+
+### HTTP
+
+- CSP
+- HSTS(secure request)
+- X-Content-Type-Options
+- X-Frame-Options
+- Referrer-Policy
+- Permissions-Policy
+- Cross-Origin-Opener-Policy
+- Origin-Agent-Cluster
+- X-Permitted-Cross-Domain-Policies
+- form-action 제한
+
+### Cache
+
+- health/readiness/404/error: `no-store`
+- HTML: revalidate
+- image/font: 장기 cache + stale-while-revalidate
+- 기타 public asset: 짧은 cache/revalidate
+
+### SEO
+
+- `SITE_URL` 기준 canonical
+- OG/JSON-LD origin 보정
+- article origin 보정
+- robots/sitemap dynamic origin
+
+---
+
+## 10. 검증 체계
+
+로컬 필수:
 
 ```bash
-npm run db:backup
-npm run db:restore-check -- --source <backup.db>
+npm ci
+npm run check
+npm run content:check
+npm run deployment:check
+npm run release:check
 ```
 
-검증:
+CI 영역:
 
-- `PRAGMA integrity_check`
-- `PRAGMA foreign_key_check`
-- required application tables
-- overwrite protection
-- separate-target restore verification
+- CI / Node regression / build / release gate
+- PostgreSQL runtime E2E
+- Worker/public Chromium
+- Business Workspace Chromium
+- Advisor Collaboration CI
+- Business Case Document CI
+- Legal Admin CI
+- Compliance Close CI
+- UI Visual Smoke
 
-실제 Production restore rehearsal은 durable storage 선택 후 수행해야 한다.
+Predeploy detail pass에는 static exposure, SEO origin, malformed cookie/session, Core 5/Advisor/Business Login detail contract 회귀 테스트가 추가되어 있다.
 
 ---
 
-## 8. Content Source — 진행 중, GA 비차단
+## 11. Production에서 아직 완료하지 않은 것
 
-첫 external source:
+다음은 코드만으로 완료 처리할 수 없다.
+
+### PostgreSQL
+
+- production DB 생성
+- `DATABASE_URL`
+- migration 실행
+- 필요한 기존 데이터 import/validate/cutover
+- restart/redeploy 생존 확인
+
+### Secrets
+
+- `SAAS_SESSION_SECRET`
+- `DOCUMENT_STORAGE_SECRET`
+- `ADMIN_TOKEN`
+- AI provider key
+- 기타 운영 secret
+
+### Email
+
+- Resend 실제 계정/키
+- 발신 도메인 검증
+- SPF/DKIM
+- 실제 magic-link 발송
+- 회사 구성원 초대
+- Advisor 초대
+
+### Smoke
+
+- final main exact SHA 확인
+- `/api/health`
+- `/api/readiness`
+- Core 5 synthetic case
+- Business/Advisor HTTP/assets
+- magic-link 1건
+- Advisor 초대/수락/철회 1건
+- synthetic cleanup
+
+---
+
+## 12. 배포 승인 기준
+
+배포 승인 조건은 `docs/PREDEPLOY_CHECKLIST.md`를 canonical runbook으로 사용한다.
+
+최소 조건:
 
 ```text
-content/home-navigation.js
+final main SHA fixed
++ release:check green
++ all required CI green
++ PostgreSQL migration/cutover green
++ secrets configured
++ email domain verified
++ restart/redeploy persistence verified
++ production smoke green
++ rollback point recorded
 ```
 
-`lib/product-home.js`가 `/`와 `/index.html`을 제공할 때 legacy inline navigation copy를 external source binding으로 치환한다.
+위 조건 이전에는 `SAAS_ENABLED=1`을 production 공개 완료로 간주하지 않는다.
 
-남은 migration:
+---
+
+## 13. 다음 작업 원칙
+
+Predeploy RC 동안 금지:
+
+- 새 Core Case 추가
+- ATS/급여/풀 근태 등 별도 대형 제품 확장
+- Legal 자동승인/자동활성화
+- production 유료 인프라 자동 활성화
+
+우선순위:
 
 ```text
-TOPICS
-→ ARTICLES
-→ legacy legal copy
-→ calculator metadata
-→ SEO/UI shared source
+detail QA
+→ CI/Visual green
+→ source-of-truth 정합성
+→ main merge
+→ production infrastructure
+→ exact-SHA smoke
+→ SaaS activation decision
 ```
-
-대형 `index.html` rewrite는 1.0 GA 조건이 아니다.
-
----
-
-## 9. 기존 제품 기능
-
-| 영역 | 상태 |
-|---|---|
-| AI 노무 상담 / 요약 | 🟢 유지 |
-| Legacy 계산기 | 🟢 유지, single-source 후속 |
-| 문서센터 / 문서팩 | 🟢 유지 |
-| 가이드 / SEO | 🟢 유지 |
-| 노무사 공개 검색 | 🟢 유지 |
-| booking / lead | 🟢 유지 |
-| secure summary | 🟢 router 분리 완료 |
-| Admin | 🟢 router 분리 완료 |
-| Partner | 🟢 router 분리 완료 |
-
----
-
-## 10. GA Blocker — Durable Storage
-
-현재 Render free filesystem은 장기 사용자 데이터 저장소로 간주하지 않는다.
-
-RC → GA 순서:
-
-```text
-[ ] durable storage 선택
-[ ] durable DB_PATH 설정
-[ ] REQUIRE_PERSISTENT_DB=1
-[ ] marker record 생성
-[ ] restart 후 marker 유지
-[ ] redeploy 후 marker 유지
-[ ] PERSISTENT_STORAGE=1
-[ ] /api/readiness → readyForSensitiveCaseStorage=true
-[ ] db:backup 성공
-[ ] backup을 host 밖 안전 저장소로 이동
-[ ] db:restore-check 성공
-[ ] 실제 restore rehearsal
-[ ] Core 5 production smoke green
-```
-
-Render Persistent Disk + SQLite는 현재 구조에서 변경 폭이 작은 선택지지만 비용이 발생할 수 있다. 외부 DB도 별도 선택지다.
-
-**유료 인프라는 자동 활성화하지 않는다.**
-
----
-
-## 11. 1.0 이후
-
-GA 비차단 후속:
-
-- Legacy Content Source 완전 이동
-- legacy legal/calculator single-source
-- 장기 error/uptime monitoring
-- accessibility audit
-- account-based My Cases
-- multi-device recovery
-- 추가 Core Case
-- employer SaaS
-- labor-consultant SaaS/CRM
-- frontend framework 재평가
-
----
-
-## 12. 최종 판정
-
-```text
-Product scope        ✅
-Core 5 implementation✅
-Deterministic Legal  ✅
-Architecture         ✅
-Security baseline    ✅
-PR/Browser CI        ✅
-Exact-SHA prod smoke ✅
-Backup tooling       ✅
-Durable persistence  ❌ 운영 결정 필요
-Restore rehearsal    ❌ durable storage 이후
-
-=> Insaya 1.0 Code/Product RC
-```
-
-**개발 측 남은 작업은 RC 안전장치를 merge 가능한 상태로 닫는 것이고, GA의 다음 실제 단계는 기능 추가가 아니라 storage 운영 결정이다.**
