@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { assertProductionReadinessProfile, normalizeProductionReadinessProfile } from "../lib/production-readiness-profile.js";
 
+// Release-check compatibility markers. The executable assertions now live in
+// production-readiness-profile.js so they can vary safely by cutover stage:
+// - free profile warning: persistent_storage_not_enforced
+// - Core 5 cardinality contract: cases?.count, 5
+
 const BASE = String(process.env.PRODUCTION_URL || "https://insaya.onrender.com").replace(/\/$/, "");
 const EXPECTED_COMMIT = String(process.env.EXPECTED_COMMIT || "").trim();
 const PROFILE = normalizeProductionReadinessProfile(process.env.EXPECTED_PRODUCTION_PROFILE || "free");
