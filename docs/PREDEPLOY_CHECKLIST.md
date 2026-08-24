@@ -105,22 +105,40 @@ PR과 배포 후보 SHA에서 다음 GitHub Actions가 모두 green이어야 합
 - Business Case Document CI
 - Legal Admin CI
 - Compliance Close CI
+- UI Visual Smoke 및 Core 5 모바일 detail smoke
 
 Chromium 설치 자체가 hosted runner에서 취소된 경우 테스트 실패와 구분하고, 해당 job을 재실행하여 실제 테스트 성공 결과를 확보합니다.
 
 ## 9. Production smoke
 
-배포 직후:
+`main` push의 production smoke는 **배포된 exact SHA 확인이 먼저 성공한 뒤** 보안/SEO smoke와 제품 smoke를 실행합니다.
+
+자동 실행 순서:
+
+```text
+readiness-production-smoke
+→ production-http-security-smoke
+→ production-smoke
+→ annual-leave-production-smoke
+```
+
+배포 직후 확인 항목:
 
 1. `/api/health`
 2. `/api/readiness`
-3. expected commit SHA 확인
-4. 5개 Case domain smoke
-5. annual-leave smoke
-6. synthetic Case 삭제/cleanup 확인
-7. Business/Advisor 페이지 HTTP 200 및 정적 asset 확인
-8. 실제 magic-link 한 건 발송/로그인
-9. 테스트 조직에서 Advisor 초대/철회 한 건 수행
+3. `EXPECTED_COMMIT`과 배포된 build commit SHA 일치
+4. `/package.json`, `/server.js`, `/lib/*`, `/db/*`, `/scripts/*`, `/tests/*` 등 private repository path가 404이고 `no-store`인지 확인
+5. HSTS/CSP/COOP/X-Content-Type-Options/request ID 등 production HTTP security header 확인
+6. home/article canonical, robots.txt, sitemap.xml이 실제 `SITE_URL` origin만 사용하는지 확인
+7. intentional public data(`/data/nomusa.json`)가 계속 접근 가능한지 확인
+8. 5개 Case domain smoke
+9. annual-leave smoke
+10. synthetic Case 삭제/cleanup 확인
+11. Business/Advisor 페이지 HTTP 200 및 정적 asset 확인
+12. 실제 magic-link 한 건 발송/로그인
+13. 테스트 조직에서 Advisor 초대/철회 한 건 수행
+
+자동 smoke는 실제 production 이메일 계정/운영 조직을 임의로 생성하거나 SaaS를 활성화하지 않습니다. 실제 magic-link 및 Advisor 초대 검증은 production 운영 설정이 완료된 뒤 별도 승인 절차로 수행합니다.
 
 ## 10. 롤백
 
@@ -144,4 +162,5 @@ Chromium 설치 자체가 hosted runner에서 취소된 경우 테스트 실패�
 - production email 발신 도메인 검증 완료
 - persistence restart/redeploy 검증 완료
 - production secrets 설정 완료
+- exact-SHA + HTTP security/SEO + 제품 production smoke green
 - smoke/rollback 담당자와 절차 확정
