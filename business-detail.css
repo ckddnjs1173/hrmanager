@@ -1,0 +1,14 @@
+button:disabled,input:disabled,select:disabled,textarea:disabled{cursor:not-allowed;opacity:.62}
+button[aria-busy="true"]{position:relative;pointer-events:none}
+button[aria-busy="true"]::before{content:"";display:inline-block;width:12px;height:12px;margin-right:7px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-1px;animation:insaya-spin .7s linear infinite}
+#loading-view[aria-busy="true"] p::after{content:"";display:inline-block;width:14px;height:14px;margin-left:9px;border:2px solid var(--brand);border-right-color:transparent;border-radius:50%;vertical-align:-2px;animation:insaya-spin .75s linear infinite}
+.detail-error-actions{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:22px}
+.secondary-link{display:inline-flex;padding:11px 15px;border-radius:10px;background:#edf2f0;color:#25463b;text-decoration:none;font-weight:800}
+.action-reason-dialog label{display:grid;gap:8px;margin-top:18px;font-size:13px;font-weight:750;color:#45534e}
+.action-reason-dialog textarea{resize:vertical;min-height:110px}
+.dialog-error{min-height:20px;margin-top:9px;color:#9b2118;font-size:12px;font-weight:700}
+.flash[role="alert"]{box-shadow:0 0 0 1px rgba(155,33,24,.08)}
+:where(button,a,input,select,textarea):focus-visible{outline:3px solid rgba(91,75,255,.28);outline-offset:2px}
+@keyframes insaya-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){button[aria-busy="true"]::before,#loading-view[aria-busy="true"] p::after{animation-duration:1.5s}}
+@media(max-width:520px){.detail-error-actions{display:grid}.detail-error-actions>*{width:100%;justify-content:center}.action-reason-dialog form{padding:22px}}
