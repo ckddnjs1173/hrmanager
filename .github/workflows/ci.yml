@@ -213,5 +213,6 @@ jobs:
           DEPLOY_TIMEOUT_MS: 480000
         run: |
           node scripts/readiness-production-smoke.mjs
+          node scripts/production-http-security-smoke.mjs
           node scripts/production-smoke.mjs
           node scripts/annual-leave-production-smoke.mjs
