@@ -5,10 +5,40 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>인사야 Business 로그인</title>
-  <style>body{margin:0;background:#f6f8fb;color:#101828;font-family:Pretendard,"Noto Sans KR",system-ui,sans-serif}.wrap{min-height:100vh;display:grid;place-items:center;padding:24px}.card{width:min(420px,100%);background:#fff;border:1px solid #e4e7ec;border-radius:18px;padding:26px;box-shadow:0 12px 30px rgba(16,24,40,.06)}.brand{font-weight:900;font-size:20px;margin-bottom:24px}.brand span{color:#2563eb}.eyebrow{font-size:11px;font-weight:800;letter-spacing:.11em;color:#667085}h1{font-size:22px;margin:7px 0 10px}p{color:#667085;line-height:1.6}.error{color:#b42318}.button{display:inline-block;border:0;border-radius:10px;padding:11px 15px;background:#111827;color:#fff;text-decoration:none;font-weight:800}</style>
+  <style>
+    body{margin:0;background:#f7f7fb;color:#17171f;font-family:Pretendard,system-ui,-apple-system,"Segoe UI",sans-serif}
+    .wrap{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box}
+    .card{width:min(430px,100%);box-sizing:border-box;background:#fff;border:1px solid #e8e7ef;border-radius:18px;padding:28px;box-shadow:0 10px 30px rgba(28,25,45,.06)}
+    .brand{font-weight:900;font-size:20px;margin-bottom:26px}.brand span{color:#5b4bff}
+    .eyebrow{font-size:11px;font-weight:850;letter-spacing:.11em;color:#777386}
+    h1{font-size:23px;line-height:1.35;margin:8px 0 10px}p{color:#696577;line-height:1.65;margin:0}
+    .state{display:flex;align-items:flex-start;gap:12px;margin-top:22px;padding:14px;border-radius:12px;background:#f7f6ff;border:1px solid #e4e0ff}
+    .spinner{width:18px;height:18px;margin-top:2px;border:2px solid #5b4bff;border-right-color:transparent;border-radius:50%;animation:spin .75s linear infinite;flex:0 0 auto}
+    .state[data-kind="error"]{background:#fff4f4;border-color:#ffd9d9}.state[data-kind="error"] .spinner{display:none}
+    .state[data-kind="success"]{background:#f1faf6;border-color:#d3eedf}.state[data-kind="success"] .spinner{display:none}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:0;border-radius:10px;padding:0 15px;background:#5b4bff;color:#fff;text-decoration:none;font-weight:800}.button.secondary{background:#efeff5;color:#302d3a}
+    .button:focus-visible{outline:3px solid rgba(91,75,255,.28);outline-offset:2px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:520px){.wrap{padding:16px}.card{padding:22px}.actions{display:grid}.actions .button{width:100%;box-sizing:border-box;min-height:44px}}
+    @media(prefers-reduced-motion:reduce){.spinner{animation-duration:1.5s}}
+  </style>
 </head>
 <body>
-  <main class="wrap"><section class="card"><div class="brand">인사야 <span>Business</span></div><div class="eyebrow">SECURE SIGN IN</div><h1 id="title">로그인 링크를 확인하고 있습니다.</h1><p id="message">잠시 후 Business Workspace로 이동합니다.</p><a id="fallback" class="button" href="/business.html" hidden>Business 로그인으로 돌아가기</a></section></main>
+  <main class="wrap">
+    <section class="card" aria-labelledby="title">
+      <div class="brand">인사야 <span>Business</span></div>
+      <div class="eyebrow">SECURE SIGN IN</div>
+      <h1 id="title" tabindex="-1">로그인 링크를 확인하고 있습니다.</h1>
+      <div id="state" class="state" role="status" aria-live="polite" aria-busy="true">
+        <div class="spinner" aria-hidden="true"></div>
+        <p id="message">잠시 후 안전하게 로그인한 뒤 이동합니다.</p>
+      </div>
+      <div class="actions">
+        <a id="fallback" class="button" href="/business.html" hidden>Business 로그인으로 돌아가기</a>
+        <a id="home" class="button secondary" href="/" hidden>인사야 홈으로</a>
+      </div>
+    </section>
+  </main>
   <script src="/business-login.js" defer></script>
 </body>
 </html>
