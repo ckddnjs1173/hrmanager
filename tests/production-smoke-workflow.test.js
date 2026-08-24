@@ -6,14 +6,19 @@ import { fileURLToPath } from "node:url";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-test("main production smoke waits for exact SHA then runs HTTP security and SEO checks", () => {
+test("production smoke supports exact-SHA push and manual staged profile verification", () => {
   const workflow = fs.readFileSync(path.join(root, ".github/workflows/ci.yml"), "utf8");
   const readiness = workflow.indexOf("node scripts/readiness-production-smoke.mjs");
   const security = workflow.indexOf("node scripts/production-http-security-smoke.mjs");
   const product = workflow.indexOf("node scripts/production-smoke.mjs");
 
-  assert.match(workflow, /if: github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow, /workflow_dispatch:/);
+  for (const profile of ["free", "postgres-verified", "saas-postgres"]) assert.match(workflow, new RegExp(`- ${profile}`));
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow, /github\.event_name == 'push'/);
+  assert.match(workflow, /github\.event_name == 'workflow_dispatch'/);
   assert.match(workflow, /EXPECTED_COMMIT: \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /EXPECTED_PRODUCTION_PROFILE: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.production_profile \|\| vars\.INSAYA_PRODUCTION_PROFILE \|\| 'free' \}\}/);
   assert.ok(readiness >= 0, "exact-SHA readiness smoke must be present");
   assert.ok(security > readiness, "HTTP security smoke must run after exact-SHA readiness succeeds");
   assert.ok(product > security, "product smoke must remain after HTTP security validation");
