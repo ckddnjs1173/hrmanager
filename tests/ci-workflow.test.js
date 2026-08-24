@@ -8,11 +8,13 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const workflow = fs.readFileSync(path.join(ROOT, ".github/workflows/ci.yml"), "utf8");
 
 test("CI runs for stacked pull requests without weakening main-only production smoke", () => {
-  const pullRequestSection = workflow.match(/\n  pull_request:\n([\s\S]*?)\n\npermissions:/)?.[1] || "";
+  const pullRequestSection = workflow.match(/\n  pull_request:\n([\s\S]*?)\n  workflow_dispatch:/)?.[1] || "";
+  const productionSmoke = workflow.match(/\n  production-smoke:\n([\s\S]*)$/)?.[1] || "";
 
   assert.match(pullRequestSection, /types: \[opened, synchronize, reopened, ready_for_review\]/);
   assert.doesNotMatch(pullRequestSection, /branches:/);
   assert.match(workflow, /permissions:\n  contents: read/);
   assert.match(workflow, /cancel-in-progress: true/);
-  assert.match(workflow, /production-smoke:\n    if: github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/);
+  assert.match(productionSmoke, /if: github\.ref == 'refs\/heads\/main' && \(github\.event_name == 'push' \|\| github\.event_name == 'workflow_dispatch'\)/);
+  assert.doesNotMatch(productionSmoke, /pull_request/);
 });
