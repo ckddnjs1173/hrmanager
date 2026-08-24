@@ -5,6 +5,17 @@ on:
     branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      production_profile:
+        description: Expected Render production readiness profile
+        required: true
+        default: free
+        type: choice
+        options:
+          - free
+          - postgres-verified
+          - saas-postgres
 
 permissions:
   contents: read
@@ -195,7 +206,7 @@ jobs:
           node scripts/case-a11y-browser-e2e.mjs
 
   production-smoke:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [browser-e2e, business-browser-e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -210,6 +221,7 @@ jobs:
         env:
           PRODUCTION_URL: https://insaya.onrender.com
           EXPECTED_COMMIT: ${{ github.sha }}
+          EXPECTED_PRODUCTION_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.production_profile || vars.INSAYA_PRODUCTION_PROFILE || 'free' }}
           DEPLOY_TIMEOUT_MS: 480000
         run: |
           node scripts/readiness-production-smoke.mjs
