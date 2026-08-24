@@ -46,7 +46,7 @@ test("Advisor portal receives accessible detail and friendly error hardening", (
   assert.match(css, /min-height:44px/);
 });
 
-test("Business login consumes fragment tokens and never intentionally renders raw backend codes", () => {
+test("Business login consumes fragment tokens and routes backend failures through friendly copy", () => {
   const html = read("business-login.html");
   const script = read("business-login.js");
   assert.match(html, /role="status"/);
@@ -54,7 +54,8 @@ test("Business login consumes fragment tokens and never intentionally renders ra
   assert.match(html, /#5b4bff/i);
   assert.match(script, /history\.replaceState/);
   assert.match(script, /ERROR_COPY/);
-  assert.match(script, /friendly\(error\.message\)/);
+  assert.match(script, /setState\("error","링크를 사용할 수 없습니다\.",friendly\(text\)\)/);
+  assert.match(script, /catch\(error\)\{fail\(error\.message\);\}/);
   assert.doesNotMatch(script, /\(\$\{error\.message\}\)/);
   assert.match(script, /safeReturnTo/);
   assert.match(script, /window\.addEventListener\("offline"/);
