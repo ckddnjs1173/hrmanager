@@ -109,9 +109,62 @@ PR과 배포 후보 SHA에서 다음 GitHub Actions가 모두 green이어야 합
 
 Chromium 설치 자체가 hosted runner에서 취소된 경우 테스트 실패와 구분하고, 해당 job을 재실행하여 실제 테스트 성공 결과를 확보합니다.
 
-## 9. Production smoke
+## 9. Production readiness profile
 
-`main` push의 production smoke는 **배포된 exact SHA 확인이 먼저 성공한 뒤** 보안/SEO smoke와 제품 smoke를 실행합니다.
+Production smoke는 인프라 전환 단계에 맞춰 세 프로필 중 하나를 **명시적으로 기대값으로 사용**합니다.
+
+```text
+free
+→ postgres-verified
+→ saas-postgres
+```
+
+### `free`
+
+현재 공개 베타 기본값입니다.
+
+- SQLite runtime
+- `REQUIRE_PERSISTENT_DB=0`
+- `PERSISTENT_STORAGE=0`
+- `SAAS_ENABLED=0`
+- `readyForSensitiveCaseStorage=false`
+
+이 상태에서 민감 Case 장기 저장 준비가 끝났다고 표시하면 smoke가 실패해야 합니다.
+
+### `postgres-verified`
+
+PostgreSQL migration/cutover 및 restart/redeploy 생존 검증까지 완료했지만 SaaS는 아직 공개하지 않은 단계입니다.
+
+- `STORAGE_DRIVER=postgres`
+- `DATABASE_URL` 설정
+- `REQUIRE_PERSISTENT_DB=1`
+- 실제 생존 검증 후 `PERSISTENT_STORAGE=1`
+- `SAAS_ENABLED=0`
+- `/api/readiness`의 `database.engine=postgres`
+- `readyForSensitiveCaseStorage=true`
+
+이 단계에서 먼저 데이터 계층을 안정화하고 SaaS 로그인/초대 공개는 계속 fail-closed로 유지합니다.
+
+### `saas-postgres`
+
+PostgreSQL 영속성, 보안 secret, HTTPS origin, Resend 발신 설정과 실제 전달 검증까지 끝난 최종 SaaS 운영 단계입니다.
+
+- `postgres-verified` 조건 전부 충족
+- `SAAS_ENABLED=1`
+- `SAAS_AUTH_TOKEN_ECHO=0`
+- `SAAS_SESSION_SECRET`, `DOCUMENT_STORAGE_SECRET` 운영 secret 충족
+- `SITE_URL` HTTPS origin
+- `SAAS_EMAIL_PROVIDER=resend`
+- `RESEND_API_KEY`, `SAAS_EMAIL_FROM` 정상 설정
+- `/api/readiness`의 deployment gate green
+
+GitHub Actions 자동 `main` push 검증은 repository variable `INSAYA_PRODUCTION_PROFILE`을 사용하며, 값이 없으면 안전하게 `free`로 간주합니다. Render 환경만 변경해 재배포한 뒤 확인할 때는 Actions의 **CI → Run workflow**에서 branch `main`을 선택하고 `production_profile` 입력값으로 현재 단계를 지정합니다.
+
+프로필을 실제 인프라보다 먼저 올리면 smoke가 실패해야 하며, 실패를 우회하기 위해 프로필을 낮추지 않습니다.
+
+## 10. Production smoke
+
+`main` push 또는 `main` 대상 수동 production verification은 **배포된 exact SHA 확인이 먼저 성공한 뒤** 보안/SEO smoke와 제품 smoke를 실행합니다.
 
 자동 실행 순서:
 
@@ -127,20 +180,21 @@ readiness-production-smoke
 1. `/api/health`
 2. `/api/readiness`
 3. `EXPECTED_COMMIT`과 배포된 build commit SHA 일치
-4. `/package.json`, `/server.js`, `/lib/*`, `/db/*`, `/scripts/*`, `/tests/*` 등 private repository path가 404이고 `no-store`인지 확인
-5. HSTS/CSP/COOP/X-Content-Type-Options/request ID 등 production HTTP security header 확인
-6. home/article canonical, robots.txt, sitemap.xml이 실제 `SITE_URL` origin만 사용하는지 확인
-7. intentional public data(`/data/nomusa.json`)가 계속 접근 가능한지 확인
-8. 5개 Case domain smoke
-9. annual-leave smoke
-10. synthetic Case 삭제/cleanup 확인
-11. Business/Advisor 페이지 HTTP 200 및 정적 asset 확인
-12. 실제 magic-link 한 건 발송/로그인
-13. 테스트 조직에서 Advisor 초대/철회 한 건 수행
+4. 선택한 production readiness profile과 DB/persistence/SaaS 상태 일치
+5. `/package.json`, `/server.js`, `/lib/*`, `/db/*`, `/scripts/*`, `/tests/*` 등 private repository path가 404이고 `no-store`인지 확인
+6. HSTS/CSP/COOP/X-Content-Type-Options/request ID 등 production HTTP security header 확인
+7. home/article canonical, robots.txt, sitemap.xml이 실제 `SITE_URL` origin만 사용하는지 확인
+8. intentional public data(`/data/nomusa.json`)가 계속 접근 가능한지 확인
+9. 5개 Case domain smoke
+10. annual-leave smoke
+11. synthetic Case 삭제/cleanup 확인
+12. Business/Advisor 페이지 HTTP 200 및 정적 asset 확인
+13. 실제 magic-link 한 건 발송/로그인
+14. 테스트 조직에서 Advisor 초대/철회 한 건 수행
 
 자동 smoke는 실제 production 이메일 계정/운영 조직을 임의로 생성하거나 SaaS를 활성화하지 않습니다. 실제 magic-link 및 Advisor 초대 검증은 production 운영 설정이 완료된 뒤 별도 승인 절차로 수행합니다.
 
-## 10. 롤백
+## 11. 롤백
 
 배포 전 직전 정상 commit SHA와 DB 백업/복구 지점을 기록합니다.
 
@@ -162,5 +216,6 @@ readiness-production-smoke
 - production email 발신 도메인 검증 완료
 - persistence restart/redeploy 검증 완료
 - production secrets 설정 완료
+- 현재 인프라와 production readiness profile 일치
 - exact-SHA + HTTP security/SEO + 제품 production smoke green
 - smoke/rollback 담당자와 절차 확정
