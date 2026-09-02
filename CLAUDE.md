@@ -40,3 +40,31 @@ Worker / Business / Advisor / Legal Governance 4개 영역이 공통 Case 객체
 ## 배포 기준
 npm ci → npm run check → npm run content:check → npm run deployment:check → npm run release:check
 release:check 실패 SHA는 Production 후보 불가.
+
+## 제품 고도화 로드맵 (내부 품질 부채)
+2026-09-03 코드 감사 기준. Predeploy RC의 "새 기능 금지" 원칙과 별개인 기존 코드 정리 트랙 — PostgreSQL cutover 등 P0 운영 작업을 막지 않는 선에서 병행 가능.
+
+**API 응답 표준화**
+- 성공 응답 포맷을 하나로 통일 (현재 ok-wrapper / bare-object / key-wrapper 5종 혼재)
+- 에러 응답에 requestId를 도메인 라우터까지 일괄 포함 (현재 중앙 바운더리만 포함)
+- saas-*-routes.js 5개 파일의 errorCode()/errorStatus() 중복을 공용 모듈로 추출
+- "반환값 검사형"과 "throw/catch형" 중 하나를 표준 관용구로 문서화
+
+**입력 검증 계층**
+- 이메일 검증처럼 3곳 이상 중복된 취약 로직부터 단일 validator 모듈로 통합
+- business-case-contract.js의 normalize 패턴을 Worker Core 5 facts / public-operation 자유 텍스트로 확장
+- 스키마 검증 라이브러리 도입 여부는 별도 결정 사항으로 남김 (현재 미도입)
+
+**디자인 시스템 통합**
+- app.css / case-ui.css / saas-ui.css / product-ui.css 4개 독립 토큰 세트를 단일 계약으로 통합
+- 동일 토큰명(--ink-700 등)의 값 드리프트부터 우선 정리
+- @font-face 중복 3곳 → 1곳
+- app.css의 테이블→카드 반응형 규칙을 공용 컴포넌트로 승격
+
+**접근성 커버리지 확장**
+- admin.html / partner.html / business-close.html에 *-detail.js급 접근성 레이어 추가
+- 탭·모달이 있는 페이지의 키보드 포커스 순서를 명시적으로 검증
+
+**착수 조건**
+- PostgreSQL cutover, production email, exact-SHA smoke 등 기존 P0 항목을 선행
+- 이 트랙은 신규 기능이 아니라 기존 동작의 표면적 정리이므로 Core Case/Legal 로직 자체는 변경하지 않는다
