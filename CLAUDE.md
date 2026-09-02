@@ -66,6 +66,9 @@ release:check 실패 SHA는 Production 후보 불가.
 - admin.html / partner.html / business-close.html에 *-detail.js급 접근성 레이어 추가
 - 탭·모달이 있는 페이지의 키보드 포커스 순서를 명시적으로 검증
 
+**보안 — 정적 파일 노출**
+- **발견된 버그 후보**: CLAUDE.md(및 잠재적으로 다른 루트 마크다운 파일)가 public-static 블랙리스트 방식 때문에 Production에서 공개 다운로드 가능 — 노출 방식을 화이트리스트로 전환하거나 민감 문서를 .claude/ 하위로 이동 검토 필요
+
 **착수 조건**
 - PostgreSQL cutover, production email, exact-SHA smoke 등 기존 P0 항목을 선행
 - 이 트랙은 신규 기능이 아니라 기존 동작의 표면적 정리이므로 Core Case/Legal 로직 자체는 변경하지 않는다
