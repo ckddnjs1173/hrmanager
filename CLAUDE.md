@@ -48,7 +48,7 @@ release:check 실패 SHA는 Production 후보 불가.
 - 성공 응답 포맷을 하나로 통일 (현재 ok-wrapper / bare-object / key-wrapper 5종 혼재)
 - 에러 응답에 requestId를 도메인 라우터까지 일괄 포함 (현재 중앙 바운더리만 포함)
 - [완료 2026-09-03] saas-*-routes.js 5개 파일의 errorCode() 중복 제거 → lib/error-utils.js. errorStatus()는 구조(if-체인)만 createErrorStatusResolver(rules)로 공용화하고, 각 파일의 매핑표는 그대로 유지(동작 100% 보존, npm test 통과 확인)
-- "반환값 검사형"과 "throw/catch형" 중 하나를 표준 관용구로 문서화
+- [완료 2026-09-03] "반환값 검사형"과 "throw/catch형" 중 하나를 표준 관용구로 문서화 → lib/error-utils.js 상단에 문서화(throw/catch형이 기본, {ok,errors} 반환형은 배치 검증 전용 예외). 코드 동작 변경 없음, 기존 파일 마이그레이션 안 함
 - **발견된 버그 후보**: external-advisor-collaboration 서비스가 이메일 설정 여부(saas-email-routes vs saas-advisor-collaboration-routes 라우팅 분기)에 따라 동일 에러 코드에 다른 HTTP status를 반환함 — 별도 버그 수정 작업 필요
 
 **입력 검증 계층**
