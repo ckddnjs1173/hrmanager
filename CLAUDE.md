@@ -52,7 +52,7 @@ release:check 실패 SHA는 Production 후보 불가.
 - **발견된 버그 후보**: external-advisor-collaboration 서비스가 이메일 설정 여부(saas-email-routes vs saas-advisor-collaboration-routes 라우팅 분기)에 따라 동일 에러 코드에 다른 HTTP status를 반환함 — 별도 버그 수정 작업 필요
 
 **입력 검증 계층**
-- 이메일 검증처럼 3곳 이상 중복된 취약 로직부터 단일 validator 모듈로 통합
+- [완료 2026-09-03] 이메일 검증처럼 3곳 이상 중복된 취약 로직부터 단일 validator 모듈로 통합 → lib/validators.js의 isValidEmail(). 5개 파일(saas-auth-repo.js, saas-tenant-repo.js, saas-email-delivery.js, external-advisor-invitation-contract.js, production-deployment-contract.js)의 중복 제거, 검증 강도는 그대로 유지(동작 100% 보존, npm test 통과 확인)
 - business-case-contract.js의 normalize 패턴을 Worker Core 5 facts / public-operation 자유 텍스트로 확장
 - 스키마 검증 라이브러리 도입 여부는 별도 결정 사항으로 남김 (현재 미도입)
 
