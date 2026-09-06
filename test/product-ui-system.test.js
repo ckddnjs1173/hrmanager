@@ -7,6 +7,7 @@ const css=fs.readFileSync(new URL("../assets/brand/product-ui.css",import.meta.u
 const saasCss=fs.readFileSync(new URL("../assets/brand/saas-ui.css",import.meta.url),"utf8");
 const caseCss=fs.readFileSync(new URL("../assets/brand/case-ui.css",import.meta.url),"utf8");
 const ui=fs.readFileSync(new URL("../product-ui.js",import.meta.url),"utf8");
+const home=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 const application=fs.readFileSync(new URL("../lib/application.js",import.meta.url),"utf8");
 
 test("public product uses one local Pretendard-led compact purple system",()=>{
@@ -34,9 +35,10 @@ test("all five worker Case workspaces use the shared compact UI override",()=>{
 });
 
 test("public UI augments real workflows instead of creating synthetic persistent cases",()=>{
-  for(const label of ["임금체불","해고·권고사직","퇴직금","근로시간·수당","직장 내 괴롭힘"])assert.ok(ui.includes(label));
+  for(const label of ["임금체불","해고","퇴직금","근로시간","연차"])assert.ok(home.includes(label));
   for(const label of ["개요","사실","금액","증거","행동","문서","근거"])assert.ok(ui.includes(label));
-  assert.match(ui,/callGlobal\("startCase"/);
+  assert.match(home,/href="\/worker\.html"/);
+  assert.match(home,/내 상황 이야기하기/);
   assert.match(ui,/callGlobal\("nav"/);
   assert.equal(/localStorage|sessionStorage/.test(ui),false);
 });

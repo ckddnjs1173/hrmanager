@@ -44,43 +44,8 @@
     const greeting=document.getElementById("greeting");
     if(!greeting||greeting.dataset.uiV2)return;
     greeting.dataset.uiV2="1";
-    const oldPreview=greeting.querySelector(".hero-demo");if(oldPreview)oldPreview.style.display="none";
-    const eyebrow=greeting.querySelector(".hero-eb");
-    const heading=greeting.querySelector(".hero-h");
-    const lead=greeting.querySelector(".lead");
-    if(eyebrow&&heading&&lead){
-      eyebrow.textContent="AI 노무상담 · 계산 · 증거 · 다음 행동";
-      heading.innerHTML="노동문제, 어디서부터<br>해야 할지 모르겠다면<br>상황부터 정리해 드릴게요.";
-      lead.textContent="AI가 내 상황을 분석하고, 확인해야 할 권리와 예상 금액, 준비할 증거와 다음 행동까지 순서대로 안내합니다.";
-      const copy=document.createElement("div");copy.className="ui-hero-copy";
-      greeting.insertBefore(copy,greeting.firstChild);copy.append(eyebrow,heading,lead);
-      const start=document.createElement("button");start.type="button";start.className="ui-hero-start";start.innerHTML='내 문제 시작하기 <span aria-hidden="true">→</span>';
-      start.addEventListener("click",()=>{const input=document.getElementById("composerInput");input?.scrollIntoView({behavior:"smooth",block:"center"});input?.focus();});
-      copy.append(start);
-    }
-
-    const visual=document.createElement("div");visual.className="ui-hero-visual";visual.setAttribute("aria-hidden","true");
-    visual.innerHTML='<div class="person"></div><div class="phone"></div><span class="ui-float f1">'+icons.facts+'</span><span class="ui-float f2">'+icons.money+'</span><span class="ui-float f3">'+icons.docs+'</span><span class="ui-float f4">'+icons.action+'</span>';
-    greeting.querySelector(".ui-hero-copy")?.after(visual);
-
-    const problems=document.createElement("section");problems.className="ui-problems";problems.setAttribute("aria-label","자주 발생하는 노동문제");
-    const items=[
-      ["wage","임금체불","못 받은 임금을 먼저 확인해요"],
-      ["fire","해고·권고사직","절차와 구제수단을 확인해요"],
-      ["severance","퇴직금","지급요건과 예상액을 확인해요"],
-      ["holiday","근로시간·수당","연장·주휴 등 수당을 확인해요"],
-      ["harass","직장 내 괴롭힘","증거와 대응 순서를 정리해요"],
-    ];
-    problems.innerHTML=`<div class="ui-problems-head"><strong>자주 발생하는 노동문제</strong><span>선택하면 바로 상황 확인을 시작합니다.</span></div><div class="ui-problem-grid">${items.map(([key,title,desc])=>`<button type="button" class="ui-problem" data-ui-problem="${key}"><span class="ic">${icons[key]}</span><b>${title}</b><small>${desc}</small></button>`).join("")}</div>`;
-    visual.after(problems);
-    problems.addEventListener("click",(event)=>{const button=event.target.closest("[data-ui-problem]");if(button)callGlobal("startCase",button.dataset.uiProblem);});
-
-    const label=greeting.querySelector(".he-label");const entries=greeting.querySelector(".home-entry");
-    if(label&&entries){
-      label.textContent="다른 기능 바로가기";
-      const tools=document.createElement("div");tools.className="ui-tools-wrap";tools.style.gridArea="tools";tools.style.width="100%";
-      label.before(tools);tools.append(label,entries);label.style.gridArea="auto";entries.style.gridArea="auto";entries.style.marginTop="8px";
-    }
+    greeting.classList.add('ia-home');
+    greeting.querySelector('.ui-hero-start').addEventListener('click',()=>{const input=document.getElementById('composerInput');input?.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});input?.focus();});
   }
 
   function addStepper(){

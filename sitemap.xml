@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>http://localhost:3000/worker.html</loc><changefreq>monthly</changefreq></url>
+  <url><loc>http://localhost:3000/employer.html</loc><changefreq>monthly</changefreq></url>
+  <url><loc>http://localhost:3000/tools.html</loc><changefreq>monthly</changefreq></url>
   <url><loc>http://localhost:3000/articles/jobscam.html</loc><lastmod>2026-07</lastmod><changefreq>monthly</changefreq></url>
   <url><loc>http://localhost:3000/articles/jobsupport.html</loc><lastmod>2026-07</lastmod><changefreq>monthly</changefreq></url>
   <url><loc>http://localhost:3000/articles/pension.html</loc><lastmod>2026-07</lastmod><changefreq>monthly</changefreq></url>
