@@ -5,4 +5,35 @@
 /* 카테고리 아이콘 배지(로톡 벤치마크): product-ui.css의 .ui-problem .ic 패턴을 재사용. */
 .ia-card-ic{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--accent-soft,#f2f0ff);color:var(--accent,#5b4bff);margin-bottom:10px}
 .ia-card-ic svg{width:18px;height:18px}
-@media(max-width:600px){.ia-page{padding:30px 18px 48px}.ia-grid{grid-template-columns:1fr}.ia-card{padding:20px}.ia-actions a{width:100%;text-align:center}}
+
+/* 카드 위계: 화면당 primary CTA는 하나(.ia-primary)만 두고, 그 외 선택지는
+   동급 카드로 나열하지 않는다. 텍스트 링크(.ia-link-plain)와 압축 리스트
+   (.ia-picklist/.ia-pick), 비클릭 설명 리스트(.ia-desc-list/.ia-desc)로 낮춘다. */
+.ia-actions .ia-link-plain{background:none;border:0;padding:8px 4px;color:var(--ink-500,#65626d);font-weight:600}
+.ia-actions .ia-link-plain:hover{color:var(--accent-ink,#4938ee)}
+.ia-picklist{display:flex;flex-direction:column;border:1px solid var(--line,#e8e7ee);border-radius:14px;overflow:hidden;background:var(--bg,#fff)}
+.ia-pick{display:flex;flex-direction:column;gap:3px;padding:14px 18px;text-decoration:none;color:inherit;border-top:1px solid var(--line,#e8e7ee)}
+.ia-pick:first-child{border-top:0}
+.ia-pick:hover{background:var(--panel,#f8f8fb)}
+.ia-pick b{font-size:14px;font-weight:700;color:var(--ink-900,#18181f)}
+.ia-pick span{font-size:12.5px;color:var(--ink-500,#65626d)}
+.ia-desc-list{display:flex;flex-direction:column;border:1px solid var(--line,#e8e7ee);border-radius:14px;overflow:hidden;background:var(--panel,#f8f8fb)}
+.ia-desc{display:flex;flex-direction:column;gap:3px;padding:13px 18px;border-top:1px solid var(--line,#e8e7ee)}
+.ia-desc:first-child{border-top:0}
+.ia-desc b{font-size:13.5px;font-weight:700;color:var(--ink-700,#36343e)}
+.ia-desc span{font-size:12px;color:var(--ink-500,#65626d)}
+
+/* Stripe 참고: 균일한 카드 그리드 대신 에디토리얼 그리드(비대칭 크기) + 헤드라인 옆 kicker.
+   첫 항목(DOM 순서 기준, 태그 종류 무관)만 전체 폭으로 키워 위계를 준다. */
+.ia-editorial{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.ia-ed-item{display:block;min-width:0;padding:22px;border:1px solid var(--line,#e8e7ee);border-radius:14px;background:var(--bg,#fff);color:inherit;text-decoration:none}
+.ia-ed-item:first-child{grid-column:1/-1;padding:28px}
+.ia-ed-kicker{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--accent,#5b4bff);margin-bottom:10px;text-transform:uppercase}
+.ia-ed-item h2{font-size:18px;margin:0 0 8px}
+.ia-ed-item:first-child h2{font-size:25px}
+.ia-ed-item p{margin:0;font-size:13px;color:#595762}
+.ia-ed-item:hover{border-color:#a59bff}
+
+@media(max-width:700px){.ia-editorial{grid-template-columns:1fr}}
+
+@media(max-width:600px){.ia-page{padding:30px 18px 48px}.ia-grid{grid-template-columns:1fr}.ia-card{padding:20px}.ia-actions a{width:100%;text-align:center}.ia-actions .ia-link-plain{width:auto}}
