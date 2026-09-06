@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { caseRestoreErrorText, isTerminalCaseRestoreError } from "../case-client-core.js";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const read = (file) => readFileSync(path.join(ROOT, file), "utf8");
+const read = (file) => readFileSync(path.join(ROOT, file), "utf8").replace(/\r\n/g, "\n");
 
 test("shared Case access client owns session-only access and protected API transport", () => {
   const core = read("case-client-core.js");

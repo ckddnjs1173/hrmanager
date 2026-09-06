@@ -204,6 +204,7 @@ jobs:
           node scripts/browser-e2e.mjs
           node scripts/annual-leave-browser-e2e.mjs
           node scripts/case-a11y-browser-e2e.mjs
+          node scripts/case-first-browser-smoke.mjs
 
   production-smoke:
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')

@@ -167,7 +167,7 @@ function enhanceExistingButtons() {
 
 function boot() {
   injectStyles();
-  injectHomeEntries();
+  // Detailed Core 5 entry cards now live on /worker.html.
   connectSolveFlow();
   enhanceExistingButtons();
 }

@@ -419,9 +419,11 @@ for (const k of calcKeys) {
 }
 
 // sitemap.xml
-const urls = [`${SITE_URL}/`, ...keys.map((k) => `${SITE_URL}/articles/${k}.html`), ...calcKeys.map((k) => `${SITE_URL}/articles/calc-${k}.html`)];
+const publicEntries = ["worker.html", "employer.html", "tools.html"];
+const urls = [`${SITE_URL}/`, ...publicEntries.map(file => `${SITE_URL}/${file}`), ...keys.map((k) => `${SITE_URL}/articles/${k}.html`), ...calcKeys.map((k) => `${SITE_URL}/articles/calc-${k}.html`)];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${publicEntries.map(file => `  <url><loc>${SITE_URL}/${file}</loc><changefreq>monthly</changefreq></url>`).join("\n")}
 ${keys.map((k) => `  <url><loc>${SITE_URL}/articles/${k}.html</loc><lastmod>${(ART_EXTRA[k] || {}).updated || "2026-06-01"}</lastmod><changefreq>monthly</changefreq></url>`).join("\n")}
 ${calcKeys.map((k) => `  <url><loc>${SITE_URL}/articles/calc-${k}.html</loc><changefreq>monthly</changefreq></url>`).join("\n")}
   <url><loc>${SITE_URL}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>

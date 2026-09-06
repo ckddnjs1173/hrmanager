@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const workflow = fs.readFileSync(path.join(ROOT, ".github/workflows/ci.yml"), "utf8");
+const workflow = fs.readFileSync(path.join(ROOT, ".github/workflows/ci.yml"), "utf8").replace(/\r\n/g, "\n");
 
 test("CI runs for stacked pull requests without weakening main-only production smoke", () => {
   const pullRequestSection = workflow.match(/\n  pull_request:\n([\s\S]*?)\n  workflow_dispatch:/)?.[1] || "";

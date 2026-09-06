@@ -4,6 +4,10 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const CLASSIC_CLIENT_FILES = [
+  "directory-browser.js",
+  "directory-comparison.js",
+  "global-navigation.js",
+  "employer-entry.js",
   "product-ui.js",
   "privacy-delete-client.js",
   "content/home-navigation.js",

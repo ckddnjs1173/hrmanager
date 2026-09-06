@@ -95,3 +95,6 @@ body .wrap>.card:has(#title){border:1px solid var(--ui-line)!important;border-ra
   .advisor-app{display:block!important}.advisor-side{width:100%!important;height:auto!important;position:static!important;border-right:0!important;border-bottom:1px solid var(--ui-line)!important;padding:12px 14px!important}.advisor-user{display:flex!important;align-items:center!important;gap:10px!important}.advisor-user .full{width:auto!important}.advisor-main>header{padding:12px 14px!important}.grant-grid{grid-template-columns:1fr!important;padding:14px!important}.grant-list{display:flex!important;overflow:auto!important;gap:8px!important}.grant-item{min-width:220px!important}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* State visibility must win over responsive layout display rules. */
+#business-app [hidden], #advisor-shell [hidden]{display:none!important}
