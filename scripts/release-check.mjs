@@ -3,6 +3,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const requiredFiles=[
+"worker.html","employer.html","tools.html","employer-entry.js","ia-pages.css",
+"global-navigation.js","global-navigation.css","case-first-home.css",
+"directory-policy.js","directory-browser.js","directory-comparison.js","scripts/case-first-browser-smoke.mjs",
 "server.js","case-client-core.js","case-workspace-core.css","wage-intake.html","wage-intake-client.js","wage-workspace.js","wage-report-ui.js",
 "dismissal-intake.html","dismissal-intake-client.js","dismissal-intake.css",
 "retirement-intake.html","retirement-intake-client.js","retirement-intake.css",

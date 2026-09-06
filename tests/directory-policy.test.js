@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import '../directory-policy.js';
+import {rank, verified, sponsored} from '../directory-policy.js';
 
 test('directory ranks sponsor, verified, region, field then stable name/id without mutation', () => {
   const items = [
@@ -11,11 +11,11 @@ test('directory ranks sponsor, verified, region, field then stable name/id witho
     {id:'field', n:'A', tags:['wage']},
     {id:'region', n:'Z', loc:'Seoul'},
   ];
-  assert.deepEqual(globalThis.INSAYA_DIRECTORY.rank(items, {region:'Seoul',field:'wage'}).map(x=>x.id),
+  assert.deepEqual(rank(items, {region:'Seoul',field:'wage'}).map(x=>x.id),
     ['both','sponsor','verified','ordinary','region','field']);
   assert.equal(items[0].id, 'ordinary');
-  assert.equal(globalThis.INSAYA_DIRECTORY.verified({v:'false'}), false);
-  assert.equal(globalThis.INSAYA_DIRECTORY.sponsored({featured:0}), false);
+  assert.equal(verified({v:'false'}), false);
+  assert.equal(sponsored({featured:0}), false);
 });
 
 test('SQLite public directory applies policy after filter and excludes opted-out entries', async () => {
@@ -32,17 +32,27 @@ test('PostgreSQL adapter uses the same ordering and literal region filter withou
   const originalQuery=pg.Pool.prototype.query;
   const saved={STORAGE_DRIVER:process.env.STORAGE_DRIVER,DATABASE_URL:process.env.DATABASE_URL};
   process.env.STORAGE_DRIVER='postgres';process.env.DATABASE_URL='postgresql://127.0.0.1/unused_directory_fixture';
-  pg.Pool.prototype.query=async function(sql){
+  const queries=[];
+  pg.Pool.prototype.query=async function(sql,args){
+    queries.push({sql,args});
     assert.match(sql,/WHERE opted_out=FALSE/);
-    return {rows:[{doc:{id:'a',n:'A',loc:'서울'},featured:false},
+    if(args.length)assert.match(sql,/AND loc LIKE \$1 ESCAPE '!'/);
+    else assert.doesNotMatch(sql,/AND loc/);
+    const rows=[{doc:{id:'a',n:'A',loc:'서울'},featured:false},
       {doc:{id:'v',n:'Z',loc:'서울',v:true},featured:false},
-      {doc:{id:'s',n:'Z',loc:'서울'},featured:true}]};
+      {doc:{id:'s',n:'Z',loc:'서울'},featured:true}];
+    return {rows:args.length===0||args[0]==='%서울%'?rows:[]};
   };
   let runtime;
   try {
     runtime=await import('../lib/runtime-repo.js?directory-parity');
     assert.deepEqual((await runtime.nomusa.publicList({region:'서울'})).map(x=>x.id),['s','v','a']);
     assert.deepEqual(await runtime.nomusa.publicList({region:'%'}),[]);
+    assert.deepEqual(await runtime.nomusa.publicList({region:'_!\\'}),[]);
+    assert.deepEqual((await runtime.nomusa.publicList()).map(x=>x.id),['s','v','a']);
+    assert.deepEqual(queries.map(q=>q.args),[['%서울%'],['%!%%'],['%!_!!\\%'],[]]);
+    assert.equal(Object.hasOwn(globalThis,'INSAYA_DIRECTORY'),false);
+
   } finally {
     await runtime?.closeRuntimeStorage();pg.Pool.prototype.query=originalQuery;
     for(const [key,value] of Object.entries(saved)){if(value===undefined)delete process.env[key];else process.env[key]=value;}

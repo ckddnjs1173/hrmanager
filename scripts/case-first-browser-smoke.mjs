@@ -10,11 +10,15 @@ let browser;
 try {
   for(let i=0;i<75;i++){try{if((await fetch(base)).ok)break;}catch{}if(server.exitCode!==null)throw Error(output);await new Promise(r=>setTimeout(r,200));}
   browser=await chromium.launch({headless:true,...(process.env.IA_BROWSER_CHANNEL?{channel:process.env.IA_BROWSER_CHANNEL}:{})});
+  for(const internal of ['/admin.html','/admin-legal.html','/partner.html']){
+    const response=await fetch(base+internal);
+    assert.doesNotMatch(await response.text(),/src=["']\/global-navigation\.js["']/);
+  }
   fs.mkdirSync('.shots/case-first',{recursive:true});
   for(const width of [1440,768,390,320]){
     const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce'});
     const page=await context.newPage(), errors=[];page.on('pageerror',e=>errors.push(e.message));
-    for(const route of ['/','/worker.html','/employer.html','/tools.html','/wage-intake','/dismissal-intake','/retirement-intake','/worktime-intake','/annual-leave-intake','/business.html','/business-login.html','/advisor.html','/#calc','/#docs','/#nomu']){
+    for(const route of ['/','/worker.html','/employer.html','/tools.html','/wage-intake','/dismissal-intake','/retirement-intake','/worktime-intake','/annual-leave-intake','/business.html','/business-login.html','/advisor.html','/#calc','/#docs','/#nomu','/articles/wage.html']){
       await page.goto(base+route,{waitUntil:'networkidle'});
       assert.equal(await page.locator('.global-navigation').count(),1,route);
       assert.ok(await page.getByRole('link',{name:'AI 상담',exact:true}).isVisible(),route);
@@ -30,6 +34,7 @@ try {
     assert.deepEqual(errors,[],`${width} JavaScript errors`);await context.close();console.log(`PASS layout/navigation ${width}px`);
   }
   const context=await browser.newContext({viewport:{width:1280,height:900}}),page=await context.newPage();
+  const interactionErrors=[];page.on('pageerror',error=>interactionErrors.push(error.message));
   const fixture=[{id:'ordinary',n:'가노무',loc:'서울',sido:'서울',tags:['임금체불']},{id:'verified',n:'나노무',loc:'서울',sido:'서울',v:true,tags:['임금체불']},{id:'sponsor',n:'다노무',loc:'서울',sido:'서울',featured:true,tags:['부당해고']},{id:'both',n:'라노무',loc:'부산',sido:'부산',featured:true,v:true,tags:[]}];
   await page.route('**/api/nomu',route=>route.fulfill({json:fixture}));
   await page.goto(base+'/#nomu',{waitUntil:'networkidle'});
@@ -65,11 +70,13 @@ try {
   for(const width of [1440,768,390]){
     await page.setViewportSize({width,height:900});await page.goto(base+'/business.html',{waitUntil:'networkidle'});
     assert.ok(await page.locator('#workspace-view').isVisible());
+    assert.ok(await page.locator('#login-view').isHidden());assert.ok(await page.locator('#disabled-view').isHidden());
     for(const view of ['dashboard','risks','actions','calendar','notifications','people','setup']){
       await page.locator(`[data-view="${view}"]`).click();assert.ok(await page.locator(`#view-${view}`).isVisible());
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,`workspace fixture ${width} ${view}`);
     }
     await page.screenshot({path:`.shots/case-first/${width}-workspace-fixture.png`,fullPage:true});
   }
+  assert.deepEqual(interactionErrors,[]);
   await context.close();console.log('PASS directory filters/comparison, AI handoff, Business disabled/login/error presentation');
 } finally {await browser?.close();server.kill('SIGTERM');}

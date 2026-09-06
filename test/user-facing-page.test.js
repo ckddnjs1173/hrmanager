@@ -2,6 +2,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { transformUserFacingHtml } from "../lib/user-facing-page.js";
 
+test("global navigation is opt-in and recognizes existing deferred assets",()=>{
+  const base='<html><head></head><body></body></html>';
+  assert.doesNotMatch(transformUserFacingHtml(base),/global-navigation/);
+  const once=transformUserFacingHtml(base,{globalNavigation:true});
+  const deferred=once.replace('<script src="/global-navigation.js">',"<script defer src='/global-navigation.js'>");
+  const twice=transformUserFacingHtml(deferred,{globalNavigation:true});
+  assert.equal((twice.match(/global-navigation\.js/g)||[]).length,1);
+  assert.equal((twice.match(/global-navigation\.css/g)||[]).length,1);
+});
+
 test("user-facing HTML injection adds assets once in stable locations",()=>{
   const html="<!doctype html><html><head><title>x</title></head><body><main>x</main></body></html>";
   const once=transformUserFacingHtml(html,{styles:["/ui.css"],scripts:["/ui.js"]});

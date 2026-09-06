@@ -1227,7 +1227,7 @@
   }
   @media (prefers-reduced-motion: reduce){ [data-reveal]{opacity:1;transform:none} .skeleton{animation:none} }
 </style>
-<script src="/directory-policy.js"></script>
+<script src="/directory-browser.js"></script>
 <script src="/directory-comparison.js"></script>
 <link rel="stylesheet" href="/case-first-home.css">
 </head>
@@ -5964,7 +5964,7 @@ async function renderNomu(){
     let list=NOMU;
     const host=document.getElementById('nomuList');
     host.setAttribute('aria-busy','true');host.textContent='노무사 목록을 불러오고 있습니다.';
-    try{ const res=await fetch('/api/nomu'); if(!res.ok)throw new Error('unavailable');const d=await res.json();if(!Array.isArray(d))throw new Error('invalid');list=d; }
+    try{ await window.INSAYA_DIRECTORY_READY; const res=await fetch('/api/nomu'); if(!res.ok)throw new Error('unavailable');const d=await res.json();if(!Array.isArray(d))throw new Error('invalid');list=d; }
     catch(e){host.innerHTML='<p role="alert">목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p><button type="button" class="opt" onclick="renderNomu()">다시 불러오기</button>';return;}
     finally{host.setAttribute('aria-busy','false');}
     NOMU_LIST=list.map((x,i)=>({...x, id:x.id||('n'+i)}));

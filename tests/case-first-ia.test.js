@@ -27,3 +27,14 @@ test('home serves Case-first content before enhancement and preserves every Core
   const entry=fs.readFileSync(path.join(root,'worker.html'),'utf8');
   for(const slug of ['wage','dismissal','retirement','worktime','annual-leave'])assert.ok(entry.includes(`href="/${slug}-intake"`));
 });
+
+test('public entries occur once in sitemap and are mandatory release assets',()=>{
+  const sitemap=fs.readFileSync(path.join(root,'sitemap.xml'),'utf8');
+  const urls=[...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match=>match[1]);
+  assert.equal(new Set(urls).size,urls.length);
+  const release=fs.readFileSync(path.join(root,'scripts/release-check.mjs'),'utf8');
+  for(const entry of ['worker.html','employer.html','tools.html']){
+    assert.equal(urls.filter(url=>new URL(url).pathname===`/${entry}`).length,1);
+    assert.ok(release.includes(`"${entry}"`));
+  }
+});
