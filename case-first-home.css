@@ -1,17 +1,30 @@
 body.ui-v2 #greeting.ia-home{display:block!important;text-align:left;padding:28px 0;width:100%;max-width:900px;margin:auto}
-.ia-home-hero{padding:12px 0 30px}.ia-home .hero-h{font-size:clamp(28px,3.4vw,40px)!important;line-height:1.35!important;margin:12px 0!important;max-width:760px!important}.ia-home .lead{margin:16px 0!important}.ia-home .ui-hero-start{margin:8px 0!important}.ia-home-topics{font-size:13px;color:#706e7b;margin-top:16px}
-.ia-home-section{border-top:1px solid var(--line,#e8e7ee);padding-top:24px;margin-top:24px}.ia-home-section h2{font-size:18px;margin:0 0 14px}.ia-home-section p{font-size:14px;color:#595762}.ia-home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ia-home-grid a{display:flex;flex-direction:column;gap:5px;border:1px solid var(--line,#e8e7ee);background:var(--bg,#fff);border-radius:12px;padding:18px;text-decoration:none;color:var(--ink-900,#18181f)}.ia-home-grid a:hover{border-color:#a59bff}.ia-home-grid span{font-size:13px;color:#595762}.ia-home-tools{grid-template-columns:repeat(4,minmax(0,1fr))}.ia-home-tools a{font-size:14px}.ia-expert-link{color:var(--accent-ink,#4938ee);font-weight:700}.ia-home :focus-visible{outline:3px solid var(--accent,#5b4bff);outline-offset:3px}
-.nomu-compare{margin-top:20px;padding:18px;border:1px solid #d9d4ff;border-radius:12px}.nomu-compare-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.nomu-compare article{padding:12px;background:var(--panel,#f8f8fb);overflow-wrap:anywhere}.nomu-compare label{display:block}.nomu-compare-control{display:flex;gap:6px;align-items:center;min-height:44px;font-size:13px}.nomu[aria-busy=true]{opacity:.7}
+.ia-home :focus-visible{outline:3px solid var(--accent,#5b4bff);outline-offset:3px}
+
+/* 홈 구조(토스 벤치마크): 인사말 한 줄 → 원형 아이콘 숏컷 그리드 → 세로 단일 컬럼 피드. */
+.ia-home-greet{font-size:15px;color:var(--ink-500,#65626d);margin:0 0 22px}
+
+.ia-home-shortcuts{display:flex;justify-content:space-between;gap:4px;margin-bottom:28px}
+.ia-home-shortcut{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;min-width:0;text-decoration:none;color:inherit;cursor:pointer;background:none;border:0;font-family:inherit;padding:0}
+.ia-home-shortcut-ic{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent-soft,#f2f0ff);color:var(--accent,#5b4bff);flex-shrink:0;transition:background .14s,color .14s}
+.ia-home-shortcut-ic svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ia-home-shortcut-label{font-size:12px;font-weight:700;color:var(--ink-800,#24232b);white-space:nowrap}
+.ia-home-shortcut:hover .ia-home-shortcut-ic{background:var(--accent,#5b4bff);color:#fff}
+
+.ia-home-feed{display:flex;flex-direction:column;gap:10px}
+.ia-home-feed-card{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--line,#e8e7ee);border-radius:14px;background:var(--bg,#fff);text-decoration:none;color:inherit}
+.ia-home-feed-card:hover{border-color:#a59bff}
+.ia-home-feed-ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft,#f2f0ff);color:var(--accent,#5b4bff);flex-shrink:0}
+.ia-home-feed-ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ia-home-feed-body{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ia-home-feed-body b{font-size:14px;font-weight:750;color:var(--ink-900,#18181f)}
+.ia-home-feed-body span{font-size:12.5px;color:var(--ink-500,#65626d)}
+
 /* 카테고리 아이콘 배지(ia-pages.css .ia-card-ic와 동일 스펙 — index.html은 ia-pages.css를 로드하지
-   않으므로 여기서도 정의). 노무사 찾기 분야별 그리드(로톡 벤치마크). */
+   않으므로 여기서도 정의). tools.html의 도구 카드에서 재사용. */
 .ia-card-ic{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--accent-soft,#f2f0ff);color:var(--accent,#5b4bff);margin-bottom:10px}
 .ia-card-ic svg{width:18px;height:18px}
-.ia-nomu-cats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:16px 0}
-.ia-nomu-cat{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px;border:1px solid var(--line,#e8e7ee);border-radius:12px;background:var(--bg,#fff);font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink-800,#24232b);cursor:pointer;transition:border-color .14s,background .14s}
-.ia-nomu-cat:hover{border-color:#a59bff;background:#fcfbff}
-.ia-nomu-cat.on{border-color:var(--accent,#5b4bff);background:var(--accent-soft,#f2f0ff);color:var(--accent-ink,#4938ee)}
-.ia-nomu-cat .ia-card-ic{margin-bottom:0}
-@media(max-width:700px){.ia-nomu-cats{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:420px){.ia-nomu-cats{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:700px){.ia-home-tools{grid-template-columns:repeat(2,minmax(0,1fr))}.nomu-compare-grid{grid-template-columns:1fr}.card.nomu{flex-wrap:wrap}.ia-home-grid a{padding:14px}}
-@media(max-width:360px){.ia-home-grid{grid-template-columns:1fr}}
+
+.nomu-compare{margin-top:20px;padding:18px;border:1px solid #d9d4ff;border-radius:12px}.nomu-compare-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.nomu-compare article{padding:12px;background:var(--panel,#f8f8fb);overflow-wrap:anywhere}.nomu-compare label{display:block}.nomu-compare-control{display:flex;gap:6px;align-items:center;min-height:44px;font-size:13px}.nomu[aria-busy=true]{opacity:.7}
+
+@media(max-width:420px){.ia-home-shortcut-ic{width:48px;height:48px}.ia-home-shortcut-label{font-size:11px}}

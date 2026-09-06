@@ -45,7 +45,11 @@
     if(!greeting||greeting.dataset.uiV2)return;
     greeting.dataset.uiV2="1";
     greeting.classList.add('ia-home');
-    greeting.querySelector('.ui-hero-start').addEventListener('click',()=>{const input=document.getElementById('composerInput');input?.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});input?.focus();});
+    document.getElementById('homeAiShortcut')?.addEventListener('click',()=>{
+      callGlobal('openComposer');
+      const input=document.getElementById('composerInput');
+      input?.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+    });
   }
 
   function addStepper(){

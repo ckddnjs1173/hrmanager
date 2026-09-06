@@ -37,8 +37,8 @@ test("all five worker Case workspaces use the shared compact UI override",()=>{
 test("public UI augments real workflows instead of creating synthetic persistent cases",()=>{
   for(const label of ["임금체불","해고","퇴직금","근로시간","연차"])assert.ok(home.includes(label));
   for(const label of ["개요","사실","금액","증거","행동","문서","근거"])assert.ok(ui.includes(label));
-  assert.match(home,/href="\/worker\.html"/);
-  assert.match(home,/내 상황 이야기하기/);
+  assert.match(home,/href="\/employer\.html"/);
+  assert.match(home,/AI상담/);
   assert.match(ui,/callGlobal\("nav"/);
   assert.equal(/localStorage|sessionStorage/.test(ui),false);
 });

@@ -77,9 +77,9 @@ async function captureHome(browser,name,viewport){
   const context=await browser.newContext({viewport});const page=await context.newPage();const errors=await errorsFor(context,page);
   await page.goto(`${BASE}/`,{waitUntil:"networkidle"});
   await page.locator("body.ui-v2").waitFor();
-  assert.equal(await page.locator(".ia-home-section").count(),3);
-  assert.equal(await page.locator('.ia-home-grid a[href="/worker.html"]').count(),1);
-  assert.match(await page.locator(".hero-h").innerText(),/인사·노무 문제[\s\S]*어디서부터/);
+  assert.match(await page.locator(".ia-home-greet").innerText(),/안녕하세요/);
+  assert.equal(await page.locator(".ia-home-shortcut").count(),5);
+  assert.equal(await page.locator(".ia-home-feed-card").count(),3);
   const tokens=await page.evaluate(()=>({font:getComputedStyle(document.documentElement).fontSize,primary:getComputedStyle(document.documentElement).getPropertyValue("--ui-primary").trim(),family:getComputedStyle(document.body).fontFamily}));
   assert.equal(tokens.font,"16px");assert.equal(tokens.primary.toLowerCase(),"#5b4bff");assert.match(tokens.family,/Pretendard/);
   const literalImages=await page.evaluate(()=>[...document.images].filter(img=>(img.getAttribute("src")||"").includes("${")).map(img=>img.outerHTML));
@@ -107,7 +107,7 @@ async function captureConversation(browser){
   }));
   const page=await context.newPage();const errors=await errorsFor(context,page);
   await page.goto(`${BASE}/`,{waitUntil:"networkidle"});
-  await page.getByRole("button",{name:"내 상황 이야기하기"}).click();
+  await page.getByRole("button",{name:"AI상담"}).click();
   await page.locator("#composerInput").fill("월급이 밀렸어요.");
   await page.locator("#composerInput").press("Enter");
   await page.locator("#home.chatting").waitFor();await page.locator(".ui-chat-stepper").waitFor();
