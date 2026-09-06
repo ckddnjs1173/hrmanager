@@ -1000,6 +1000,13 @@
   .nomu-search select:focus{border-color:var(--accent);outline:none}
   .nomu-search #nomuQ{flex:1;min-width:200px}
   .nomu-count{font-size:.86rem;color:var(--sub);margin:6px 0 10px;font-weight:600}
+  .nomu-layout{display:grid;grid-template-columns:210px minmax(0,1fr);gap:20px;align-items:start}
+  .nomu-sidebar{position:sticky;top:84px;border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;background:#fff}
+  .nomu-sidebar h2{font-size:.82rem;font-weight:800;color:var(--ink-900);margin:0 0 10px}
+  .nomu-checklist{display:flex;flex-direction:column;gap:1px}
+  .nomu-check{display:flex;align-items:center;gap:9px;padding:7px 4px;font-size:.85rem;color:var(--ink-700);cursor:pointer}
+  .nomu-check input{width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;cursor:pointer}
+  @media(max-width:860px){.nomu-layout{grid-template-columns:1fr}.nomu-sidebar{position:static;padding:14px}.nomu-checklist{flex-direction:row;flex-wrap:wrap;gap:6px 14px}}
   /* 상황별 해결 */
   .solve-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0 16px}
   .solve-card{display:flex;align-items:center;gap:14px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;cursor:pointer;transition:.14s var(--ease);position:relative}
@@ -1307,22 +1314,46 @@
       <!-- ===== HOME = AI 상담 ===== -->
       <section class="screen active" id="home">
         <div class="wrap">
-          <div class="greeting ia-home" id="greeting"><div class="ia-home-hero"><div class="hero-eb">인사·노무 문제 해결</div>
-      <h1 class="hero-h">인사·노무 문제,<br>어디서부터 해야 할지 모르겠다면</h1>
-      <p class="lead">AI가 먼저 상황을 정리해 드립니다.</p>
-      <button type="button" class="ui-hero-start">내 상황 이야기하기 <span aria-hidden="true">→</span></button>
-      <p class="ia-home-topics">임금체불 · 해고 · 퇴직금 · 근로시간 · 연차 등</p></div>
-      <section class="ia-home-section" aria-label="사용자 유형"><h2>나는…</h2><div class="ia-home-grid">
-      <a href="/worker.html"><b>근로자입니다</b><span>내 권리와 문제 해결</span></a>
-      <a href="/employer.html"><b>사업주입니다</b><span>회사 운영과 노무 리스크 관리</span></a></div></section>
-      <section class="ia-home-section" aria-label="바로 필요한 도구"><h2>바로 필요한 도구</h2><div class="ia-home-grid ia-home-tools">
-      <a href="/#calc">계산기</a><a href="/#docs">문서·서식</a><a href="/#report">노동청·공식 절차</a><a href="/tools.html">노동법 가이드</a></div></section>
-      <section class="ia-home-section"><h2>전문가 도움이 필요하다면</h2><p>프로필과 조건을 비교하고 직접 선택하세요.</p><a class="ia-expert-link" href="/#nomu">노무사 찾기·비교 →</a></section>
+          <div class="greeting ia-home" id="greeting">
+      <p class="ia-home-greet">안녕하세요, 무엇을 도와드릴까요?</p>
+
+      <nav class="ia-home-shortcuts" aria-label="바로가기">
+        <button type="button" class="ia-home-shortcut" id="homeAiShortcut">
+          <span class="ia-home-shortcut-ic" data-icon="ai"></span><span class="ia-home-shortcut-label">AI상담</span>
+        </button>
+        <a class="ia-home-shortcut" href="/#calc">
+          <span class="ia-home-shortcut-ic" data-icon="calc"></span><span class="ia-home-shortcut-label">계산기</span>
+        </a>
+        <a class="ia-home-shortcut" href="/#docs">
+          <span class="ia-home-shortcut-ic" data-icon="docs"></span><span class="ia-home-shortcut-label">문서</span>
+        </a>
+        <a class="ia-home-shortcut" href="/#nomu">
+          <span class="ia-home-shortcut-ic" data-icon="nomu"></span><span class="ia-home-shortcut-label">노무사찾기</span>
+        </a>
+        <a class="ia-home-shortcut" href="/employer.html">
+          <span class="ia-home-shortcut-ic" data-icon="employer"></span><span class="ia-home-shortcut-label">사업주</span>
+        </a>
+      </nav>
+
+      <div class="ia-home-feed" aria-label="추천 정보">
+        <a class="ia-home-feed-card" href="/#nomu">
+          <span class="ia-home-feed-ic" data-icon="nomu"></span>
+          <span class="ia-home-feed-body"><b id="homeNomuStat">노무사 1,166명 등록</b><span>근로복지공단 공공데이터 + 직접 등록 기반</span></span>
+        </a>
+        <a class="ia-home-feed-card" href="/#calc">
+          <span class="ia-home-feed-ic" data-icon="calc"></span>
+          <span class="ia-home-feed-body"><b>2026년 최저임금 계산기 갱신</b><span>시급 10,320원 · 전년 대비 2.9% 인상</span></span>
+        </a>
+        <a class="ia-home-feed-card" href="javascript:void(0)" onclick="openArticle('wage')">
+          <span class="ia-home-feed-ic" data-icon="docs"></span>
+          <span class="ia-home-feed-body"><b>추천 가이드 · 임금체불</b><span>밀린 월급·수당, 이렇게 받으세요</span></span>
+        </a>
+      </div>
           </div>
           <div class="prog" id="prog" style="display:none"></div>
           <div id="chatBody" aria-live="polite" aria-busy="false"></div>
 
-          <div class="composer">
+          <div class="composer" hidden>
             <div class="hero-input">
               <input id="composerInput" placeholder="예: 3개월째 월급이 밀렸어요. 받을 수 있나요?"
                      onkeydown="if(event.key==='Enter')onSend()"/>
@@ -1431,21 +1462,22 @@
           <div class="page-eb">노무사 찾기</div>
           <h1>내 주변 노무사</h1>
           <p class="sub">근로복지공단 공공데이터 + 직접 등록 기반 목록입니다. <b>추천이 아닌 정보 제공</b>이며, 직접 비교·선택하세요.</p>
-          <div class="ia-nomu-cats" role="group" aria-label="분야별로 찾기">
-            <button type="button" class="ia-nomu-cat" onclick="setNomuCat(this,'임금체불')"><span class="ia-card-ic" aria-hidden="true" data-icon="money"></span><span>임금체불</span></button>
-            <button type="button" class="ia-nomu-cat" onclick="setNomuCat(this,'부당해고')"><span class="ia-card-ic" aria-hidden="true" data-icon="flag"></span><span>해고·권고사직</span></button>
-            <button type="button" class="ia-nomu-cat" onclick="setNomuCat(this,'퇴직금')"><span class="ia-card-ic" aria-hidden="true" data-icon="shield"></span><span>퇴직금·퇴직연금</span></button>
-            <button type="button" class="ia-nomu-cat" onclick="setNomuCat(this,'근로시간')"><span class="ia-card-ic" aria-hidden="true" data-icon="clock"></span><span>근로시간</span></button>
-            <button type="button" class="ia-nomu-cat" onclick="setNomuCat(this,'연차')"><span class="ia-card-ic" aria-hidden="true" data-icon="sun"></span><span>연차</span></button>
-          </div>
           <div class="nomu-search">
+            <select id="nomuFieldTop" onchange="setNomuFieldFromSelect(this.value)" aria-label="분야 선택"><option value="">전체 분야</option></select>
             <select id="nomuSido" onchange="paintNomu(true)" aria-label="지역 선택"><option value="">전체 지역</option></select>
-            <input id="nomuQ" class="docin" placeholder="이름·사무소·지역 검색" oninput="paintNomu(true)" aria-label="노무사 검색"/>
+            <input id="nomuQ" class="docin" placeholder="이름·사무소로 검색" oninput="paintNomu(true)" aria-label="노무사 검색"/>
           </div>
-          <div class="filters" id="nomuFields"></div>
-          <div class="nomu-count" id="nomuCount"></div>
-          <div id="nomuList"></div>
-          <div style="text-align:center;margin-top:18px"><button class="btn" id="nomuMore" onclick="nomuMore()" style="display:none">더 보기</button></div>
+          <div class="nomu-layout">
+            <aside class="nomu-sidebar" aria-label="분야로 좁히기">
+              <h2>분야</h2>
+              <div class="nomu-checklist" id="nomuFieldChecks"></div>
+            </aside>
+            <div class="nomu-results">
+              <div class="nomu-count" id="nomuCount"></div>
+              <div id="nomuList"></div>
+              <div style="text-align:center;margin-top:18px"><button class="btn" id="nomuMore" onclick="nomuMore()" style="display:none">더 보기</button></div>
+            </div>
+          </div>
           <div class="notice">정보 출처: 근로복지공단 사무대행기관 현황(공공데이터, 연 1회 갱신) + 노무사 직접 등록. <b>노출 순서</b>는 스폰서(광고) → 자격확인 순 (동순위는 이름·식별자 순)이며, 유료 노출은 <b>"스폰서"</b>로 표시됩니다. 지역·분야·검색어는 목록을 좁히는 필터입니다. 필터 안에서도 같은 정렬이 적용됩니다. 사건 결과·승소율과 무관하며 <b>추천이 아닙니다</b>. <b>인사야는 특정 노무사의 선임을 권유하지 않으며 최종 선택은 이용자가 합니다.</b> 상담 성사·수임 여부·수임료 규모에 따라 <b>수수료를 받지 않습니다.</b> 노무사는 요청 시 정보 <b>정정·삭제(옵트아웃)</b>가 가능합니다(문의: ckddnjs0929@gmail.com 또는 <a onclick="openLegal('partner')" style="color:var(--accent-ink);text-decoration:underline">입점약관</a>).</div>
         </div>
       </section>
@@ -2342,7 +2374,7 @@ function renderPricing(){
 
 /* ===== 도구로 바로 이동(상황별 패스용 헬퍼) ===== */
 function gotoCalc(type, vals){ nav('calc'); const btn=[...document.querySelectorAll('#calc .seg button')].find(b=>b.getAttribute('onclick').includes("'"+type+"'")); if(btn) setCalc(type,btn); else { calcType=type; renderCalc(); } if(vals&&Object.keys(vals).length){ applyCalcVals(vals); try{ doCalc(); }catch(e){} } }
-function gotoNomu(field){ nav('nomu'); setTimeout(()=>{ const btn=document.querySelector('#nomuFields .filter[data-field="'+field+'"]'); if(btn) setNomuField(btn,field); },60); }
+function gotoNomu(field){ nav('nomu'); setTimeout(()=>{ setNomuFieldFromSelect(field); },60); }
 
 /* ===== 상황별 원스톱 해결 ===== */
 const SOLVE=[
@@ -2647,10 +2679,13 @@ const RESULTS={
 let convo=[];            // [{role:'user'|'assistant', content}]
 let chatMode=false, actionsShown=false, current={key:'wage'};
 let consultationAudience='worker';
+// 홈 기본 화면(인사말+숏컷+피드)에서는 입력창을 숨겨 두고, AI상담 진입 시에만 연다.
+function openComposer(){ const c=document.querySelector('.composer'); if(c)c.hidden=false; document.getElementById('composerInput')?.focus(); }
 function newChat(){ consultationAudience='worker';convo=[]; chatMode=false; actionsShown=false; current={key:'wage'}; _inlineDone=[];
   document.getElementById('home').classList.remove('chatting');
   document.getElementById('chatBody').innerHTML=''; document.getElementById('prog').style.display='none';
   document.getElementById('composerInput').value=''; document.getElementById('composerInput').placeholder='예: 3개월째 월급이 밀렸어요. 받을 수 있나요?';
+  const c=document.querySelector('.composer'); if(c)c.hidden=true;
   nav('home'); }
 function detect(t){ if(/해고|짤|나가라|나오지/.test(t))return'fire'; if(/퇴직금/.test(t))return'severance';
   if(/주휴/.test(t))return'holiday'; if(/괴롭|폭언|갑질/.test(t))return'harass'; if(/계약서/.test(t))return'contract'; return'wage'; }
@@ -5964,7 +5999,7 @@ const CALC_META={
 /* =================== 노무사 =================== */
 // 노무사 목록은 서버(/api/nomu, 공공데이터 1,166건)에서 로드. 로드 실패 시엔 빈 목록(가짜 데이터 금지).
 const NOMU=[];
-let NOMU_LIST=[], _nomuField='', _nomuShown=12, _nomuInit=false;
+let NOMU_LIST=[], _nomuFields=new Set(), _nomuShown=12, _nomuInit=false;
 const NOMU_FIELDS=['임금체불','부당해고','퇴직금','직장내괴롭힘','기업자문','산재','주휴수당'];
 async function renderNomu(){
   if(!_nomuInit){
@@ -5981,32 +6016,39 @@ async function renderNomu(){
     const sidos=SIDO_ORDER.filter(s=>present.has(s)).concat([...present].filter(s=>!SIDO_ORDER.includes(s)));
     const sel=document.getElementById('nomuSido');
     sel.innerHTML='<option value="">전체 지역</option>'+sidos.map(s=>`<option value="${s}">${s}</option>`).join('');
-    // 분야 칩
-    document.getElementById('nomuFields').innerHTML=
-      `<button class="filter on" data-field="" onclick="setNomuField(this,'')">전체 분야</button>`+
-      NOMU_FIELDS.map(f=>`<button class="filter" data-field="${f}" onclick="setNomuField(this,'${f}')">${f}</button>`).join('');
+    // 분야: 상단 검색바의 단일 선택 셀렉트 + 왼쪽 사이드바의 다중 선택 체크박스가 같은 상태(_nomuFields)를 공유한다.
+    document.getElementById('nomuFieldTop').innerHTML='<option value="">전체 분야</option>'+NOMU_FIELDS.map(f=>`<option value="${f}">${f}</option>`).join('');
+    document.getElementById('nomuFieldChecks').innerHTML=NOMU_FIELDS.map(f=>
+      `<label class="nomu-check"><input type="checkbox" value="${f}" onchange="toggleNomuField('${f}',this.checked)"> ${f}</label>`).join('');
     _nomuInit=true;
   }
   paintNomu(true);
 }
-function setNomuField(btn,f){ _nomuField=f;
-  document.querySelectorAll('#nomuFields .filter').forEach(b=>b.classList.toggle('on',b===btn));
+function syncNomuFieldControls(){
+  const top=document.getElementById('nomuFieldTop');
+  if(top) top.value = _nomuFields.size===1 ? [..._nomuFields][0] : '';
+  document.querySelectorAll('#nomuFieldChecks input').forEach(cb=>{ cb.checked=_nomuFields.has(cb.value); });
+}
+function toggleNomuField(f,checked){
+  if(checked) _nomuFields.add(f); else _nomuFields.delete(f);
+  syncNomuFieldControls();
   paintNomu(true);
 }
-// 분야별 카테고리 아이콘 그리드(로톡 벤치마크) — 기존 setNomuField/paintNomu 필터 로직을 그대로 재사용.
-function setNomuCat(btn,f){
-  document.querySelectorAll('.ia-nomu-cat').forEach(b=>b.classList.toggle('on',b===btn));
-  setNomuField(btn,f);
+function setNomuFieldFromSelect(f){
+  _nomuFields.clear();
+  if(f) _nomuFields.add(f);
+  syncNomuFieldControls();
+  paintNomu(true);
 }
 function nomuFiltered(){
   const sido=(document.getElementById('nomuSido')||{}).value||'';
   const q=((document.getElementById('nomuQ')||{}).value||'').trim().toLowerCase();
   return window.INSAYA_DIRECTORY.rank(NOMU_LIST.filter(x=>{
     if(sido && (x.sido||(x.loc||'').split(' ')[0])!==sido) return false;
-    if(_nomuField && !(x.tags||[]).includes(_nomuField)) return false;
+    if(_nomuFields.size && !(x.tags||[]).some(t=>_nomuFields.has(t))) return false;
     if(q && !((x.n+x.o+x.loc).toLowerCase().includes(q))) return false;
     return true;
-  }), {region:sido, field:_nomuField});
+  }), {region:sido, field:_nomuFields});
 }
 function nomuMore(){ _nomuShown+=12; paintNomu(false); }
 function paintNomu(reset){
@@ -6126,9 +6168,17 @@ function printSummary(){ const w=window.open('','_blank'); if(!w)return;
 /* init + 해시 라우팅 (글마다 고유 URL) */
 hydrateIcons();   // 정적 마크업(상단 도구·하단탭·CTA)의 아이콘 슬롯 채우기
 renderCalc();
+// 홈 피드의 노무사 등록 수는 실제 목록 길이로 갱신(정적 텍스트는 최근 확인한 값의 폴백).
+(async function loadHomeNomuStat(){
+  try{
+    const res=await fetch('/api/nomu'); if(!res.ok)return;
+    const list=await res.json(); if(!Array.isArray(list))return;
+    const el=document.getElementById('homeNomuStat'); if(el)el.textContent=`노무사 ${list.length.toLocaleString('ko-KR')}명 등록`;
+  }catch{}
+})();
 function routeFromHash(){
   const h=location.hash||'';
-  if(h==='#consult' || h==='#consult-employer'){consultationAudience=h==='#consult-employer'?'employer':'worker';nav('home');if(consultationAudience==='employer')setSite('employer');document.getElementById('composerInput').placeholder=consultationAudience==='employer'?'사업주로서 확인하고 싶은 상황을 입력하세요.':'내 상황을 이야기해 주세요.';document.getElementById('composerInput').focus();return;}
+  if(h==='#consult' || h==='#consult-employer'){consultationAudience=h==='#consult-employer'?'employer':'worker';nav('home');if(consultationAudience==='employer')setSite('employer');document.getElementById('composerInput').placeholder=consultationAudience==='employer'?'사업주로서 확인하고 싶은 상황을 입력하세요.':'내 상황을 이야기해 주세요.';openComposer();return;}
   const a=h.match(/^#article=(\w+)$/);
   if(a && ARTICLES[a[1]]){ openArticle(a[1], true); return; }
   const c=h.match(/^#(worker|employer)\/c\/(\w+)$/);

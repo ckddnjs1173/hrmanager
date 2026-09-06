@@ -26,7 +26,7 @@ try {
       const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);
       assert.equal(overflow,false,`${width} ${route} horizontal overflow`);
       if(width<=800){const toggle=page.locator('.global-toggle');await toggle.click();assert.equal(await toggle.getAttribute('aria-expanded'),'true');assert.ok(await page.locator('#global-links').getByRole('link',{name:'노동생활 도구'}).isVisible());await page.keyboard.press('Escape');assert.equal(await toggle.getAttribute('aria-expanded'),'false');assert.ok(await toggle.evaluate(el=>el===document.activeElement));}
-      if(route==='/'){assert.equal(await page.locator('#greeting [data-case-launcher-stack]').count(),0);await page.getByRole('button',{name:'내 상황 이야기하기'}).click();assert.ok(await page.locator('#composerInput').evaluate(el=>el===document.activeElement));}
+      if(route==='/'){assert.equal(await page.locator('#greeting [data-case-launcher-stack]').count(),0);await page.getByRole('button',{name:'AI상담'}).click();assert.ok(await page.locator('#composerInput').evaluate(el=>el===document.activeElement));}
       if(route==='/employer.html'){assert.match(await page.locator('#workspace-status').innerText(),/활성화되지 않았습니다/);assert.ok(await page.locator('#workspace-entry').isHidden());}
       if(route==='/')await page.evaluate(()=>document.querySelector('.content').scrollTop=0);
       if(['/','/worker.html','/employer.html','/tools.html','/#nomu'].includes(route))await page.screenshot({path:`.shots/case-first/${width}-${route.replace(/[^a-z]/gi,'')||'home'}.png`,fullPage:true});
@@ -42,7 +42,7 @@ try {
   await page.locator('#nomuSido').selectOption('서울');
   assert.match(await page.locator('#nomuList .nm').first().innerText(),/다노무/);
   await page.getByRole('checkbox',{name:'다노무 비교'}).check();
-  await page.locator('#nomuFields').getByRole('button',{name:'임금체불',exact:true}).click();
+  await page.getByRole('checkbox',{name:'임금체불',exact:true}).check();
   assert.match(await page.locator('#nomuList .nm').first().innerText(),/나노무/);
   assert.match(await page.locator('#nomu-comparison').innerText(),/다노무/);
   await page.getByRole('checkbox',{name:'나노무 비교'}).check();
@@ -55,7 +55,9 @@ try {
   await page.locator('.chat-expert-handoff').waitFor();assert.match(sent,/사업주입니다/);
   assert.ok(await page.getByRole('button',{name:'상담 가능한 노무사 찾아보기',exact:true}).isVisible());
   assert.ok(await page.getByRole('link',{name:'먼저 직접 해결해보기',exact:true}).isVisible());
-  await page.goto(base+'/#consult',{waitUntil:'networkidle'});await page.reload({waitUntil:'networkidle'});await page.locator('#composerInput').fill('퇴직금을 계산하고 싶어요');await page.locator('#composerInput').press('Enter');
+  // nav('home')은 홈 진입 시 항상 해시를 지운다(깨끗한 URL) — 그래서 reload는 #consult를 다시 태우지 못한다.
+  // 하드 리로드 뒤 #consult 딥링크로 다시 진입하는 흐름을 검증하려면 매번 goto로 해시를 새로 걸어야 한다.
+  await page.reload({waitUntil:'networkidle'});await page.goto(base+'/#consult',{waitUntil:'networkidle'});await page.locator('#composerInput').fill('퇴직금을 계산하고 싶어요');await page.locator('#composerInput').press('Enter');
   await page.locator('.chat-next-actions').waitFor();assert.ok(await page.locator('.chat-expert-handoff').isHidden());
   await page.route('**/api/saas/auth/me',route=>route.fulfill({status:401,json:{error:'unauthorized'}}));await page.goto(base+'/employer.html',{waitUntil:'networkidle'});assert.ok(await page.locator('#workspace-entry').isVisible());
   await page.route('**/api/saas/auth/me',route=>route.fulfill({status:503,json:{error:'unavailable'}}));await page.reload({waitUntil:'networkidle'});assert.ok(await page.locator('#workspace-entry').isHidden());assert.match(await page.locator('#workspace-status').innerText(),/확인하지 못했습니다/);

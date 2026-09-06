@@ -21,8 +21,8 @@ test('public entry pages render canonical links without SaaS authentication',asy
 
 test('home serves Case-first content before enhancement and preserves every Core 5 route',()=>{
   const html=prepareProductHomeHtml(fs.readFileSync(path.join(root,'index.html'),'utf8'));
-  const hero=html.indexOf('내 상황 이야기하기'),worker=html.indexOf('근로자입니다'),tools=html.indexOf('바로 필요한 도구'),expert=html.indexOf('전문가 도움이 필요하다면');
-  assert.ok(hero<worker&&worker<tools&&tools<expert);
+  const greet=html.indexOf('안녕하세요, 무엇을 도와드릴까요?'),shortcuts=html.indexOf('ia-home-shortcuts'),feed=html.indexOf('ia-home-feed');
+  assert.ok(greet>=0&&greet<shortcuts&&shortcuts<feed);
   assert.equal((html.match(/src="\/global-navigation.js"/g)||[]).length,1);
   const entry=fs.readFileSync(path.join(root,'worker.html'),'utf8');
   for(const slug of ['wage','dismissal','retirement','worktime','annual-leave'])assert.ok(entry.includes(`href="/${slug}-intake"`));
