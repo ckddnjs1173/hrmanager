@@ -1,0 +1,38 @@
+name: UI Redesign Token Validation
+
+on:
+  pull_request:
+    branches: [feat/ui-redesign]
+    paths:
+      - retirement-intake.css
+      - worktime-intake.css
+      - annual-leave-intake.css
+      - .github/workflows/ui-redesign-validation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: npm test
+        run: npm test
+      - name: npm run check
+        run: npm run check
+      - name: npm run content:check
+        run: npm run content:check
+      - name: npm run deployment:check
+        run: npm run deployment:check
+      - name: npm run release:check
+        run: npm run release:check
