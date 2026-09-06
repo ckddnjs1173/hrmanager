@@ -1,5 +1,6 @@
 import {
   booleanSelect as boolSelect,
+  caseStatusPillClass,
   controlValue,
   createCaseClientCore,
   escapeHtml as esc,
@@ -97,7 +98,7 @@ function renderWorkspace(result) {
   const money = legal.money || {};
   const averageWage = legal.averageWage || {};
   ROOT.innerHTML = `<div class="retirement-workspace">
-    <section class="retirement-card"><div class="resource-head"><div><span class="case-kicker">${esc(TYPE_LABELS[facts.benefitType] || "퇴직급여")}</span><h2>퇴직금·퇴직연금 사건</h2><p>${esc(facts.employmentStartDate || "?")} ~ ${esc(facts.retirementDate || "?")} · 주 ${esc(facts.averageWeeklyScheduledHours ?? "?")}시간</p></div><span class="retirement-pill">${esc(result.case?.status || "intake")}</span></div><div class="next-action"><b>${esc(result.nextAction?.title || "다음 정보를 확인하세요.")}</b><p>${esc(result.nextAction?.description || "")}</p></div></section>
+    <section class="retirement-card"><div class="resource-head"><div><span class="case-kicker">${esc(TYPE_LABELS[facts.benefitType] || "퇴직급여")}</span><h2>퇴직금·퇴직연금 사건</h2><p>${esc(facts.employmentStartDate || "?")} ~ ${esc(facts.retirementDate || "?")} · 주 ${esc(facts.averageWeeklyScheduledHours ?? "?")}시간</p></div><span class="retirement-pill ${caseStatusPillClass(result.case?.status)}">${esc(result.case?.status || "intake")}</span></div><div class="next-action"><b>${esc(result.nextAction?.title || "다음 정보를 확인하세요.")}</b><p>${esc(result.nextAction?.description || "")}</p></div></section>
     <div class="retirement-grid">
       <section class="retirement-card wide" id="retirement-money"><div class="resource-head"><div><h3>퇴직급여 계산</h3><p>제도 유형과 평균임금/부담금 기준을 분리해 계산합니다.</p></div></div>
         <div class="retirement-summary"><div class="retirement-stat"><span>1일 평균임금</span><b>${esc(won(averageWage.amount))}</b></div><div class="retirement-stat"><span>예상 법정액</span><b>${esc(won(money.statutoryEstimate))}</b></div><div class="retirement-stat"><span>기지급액</span><b>${esc(won(money.paidAmount))}</b></div><div class="retirement-stat"><span>예상 미지급액</span><b>${esc(won(money.outstandingEstimate))}</b></div></div>

@@ -1,4 +1,4 @@
-import { createCaseAccessClient, escapeHtml as esc } from "./case-client-core.js";
+import { caseStatusPillClass, createCaseAccessClient, escapeHtml as esc } from "./case-client-core.js";
 
 const ROOT = document.getElementById("wageApp");
 const STORAGE_KEY = "insaya:wage-case-session";
@@ -318,7 +318,7 @@ function renderWorkspace() {
     <div class="workspace">
       <div class="workspace-top">
         <div><div class="case-step">Case Workspace</div><div class="workspace-title">임금체불 · 진행 중</div><div class="workspace-sub">핵심 사실이 모여 사건 Workspace를 만들었습니다.</div></div>
-        <span class="status-pill">사건 정리 중</span>
+        <span class="status-pill ${caseStatusPillClass(caseData.status)}">사건 정리 중</span>
       </div>
       <div class="workspace-grid">
         <section class="workspace-card" id="facts">

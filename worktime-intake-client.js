@@ -1,5 +1,6 @@
 import {
   booleanSelect as boolSelect,
+  caseStatusPillClass,
   controlValue,
   createCaseClientCore,
   escapeHtml as esc,
@@ -102,7 +103,7 @@ function renderWorkspace(result) {
   const premium = legal.premium || {};
   const fivePlusLabel = legal.fivePlus === true ? "상시 5명 이상" : legal.fivePlus === false ? "상시 4명 이하" : "규모 미확인";
   ROOT.innerHTML = `<div class="worktime-workspace">
-    <section class="worktime-card"><div class="resource-head"><div><span class="case-kicker">근로시간·수당</span><h2>근로시간·연장/야간/휴일수당 사건</h2><p>기준일 ${esc(facts.referenceDate || "?")} · ${esc(fivePlusLabel)}</p></div><span class="worktime-pill">${esc(result.case?.status || "intake")}</span></div><div class="next-action"><b>${esc(result.nextAction?.title || "다음 정보를 확인하세요.")}</b><p>${esc(result.nextAction?.description || "")}</p></div></section>
+    <section class="worktime-card"><div class="resource-head"><div><span class="case-kicker">근로시간·수당</span><h2>근로시간·연장/야간/휴일수당 사건</h2><p>기준일 ${esc(facts.referenceDate || "?")} · ${esc(fivePlusLabel)}</p></div><span class="worktime-pill ${caseStatusPillClass(result.case?.status)}">${esc(result.case?.status || "intake")}</span></div><div class="next-action"><b>${esc(result.nextAction?.title || "다음 정보를 확인하세요.")}</b><p>${esc(result.nextAction?.description || "")}</p></div></section>
     <div class="worktime-grid">
       <section class="worktime-card wide" id="worktime-money"><div class="resource-head"><div><h3>근로시간·수당 계산</h3><p>추가근로의 기본임금 지급 여부와 시간대 중첩을 분리해 계산합니다.</p></div></div>
         <div class="worktime-summary"><div class="worktime-stat"><span>통상시급</span><b>${esc(won(facts.ordinaryHourlyWage))}</b></div><div class="worktime-stat"><span>계산 대상 총액</span><b>${esc(won(premium.grossEstimate))}</b></div><div class="worktime-stat"><span>기지급 수당</span><b>${esc(won(premium.alreadyPaidAmount))}</b></div><div class="worktime-stat"><span>예상 미지급액</span><b>${esc(won(premium.outstandingEstimate))}</b></div></div>
