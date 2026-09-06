@@ -1,5 +1,6 @@
 import {
   booleanSelect as boolOptions,
+  caseStatusPillClass,
   controlValue as valueFromControl,
   createCaseClientCore,
   escapeHtml as esc,
@@ -170,7 +171,7 @@ function proceduresSection(procedures) {
 function renderWorkspace(result) {
   const facts = result.case?.facts || {};
   ROOT.innerHTML = `<div class="dismissal-workspace">
-    <section class="dismissal-card"><div class="resource-head"><div><span class="case-kicker">${esc(TYPE_LABELS[facts.separationType] || "종료 경위 확인")}</span><h2>해고·권고사직 사건</h2><p>${esc(facts.employmentStartDate || "?")} ~ ${esc(facts.effectiveDate || "?")} · 상시근로자 ${esc(facts.workplaceEmployeeCount ?? "?")}명</p></div><span class="assessment-pill">${esc(result.case?.status || "intake")}</span></div><div class="next-action"><b>${esc(result.nextAction?.title || "사건 내용을 확인하세요.")}</b><p>${esc(result.nextAction?.description || "")}</p></div></section>
+    <section class="dismissal-card"><div class="resource-head"><div><span class="case-kicker">${esc(TYPE_LABELS[facts.separationType] || "종료 경위 확인")}</span><h2>해고·권고사직 사건</h2><p>${esc(facts.employmentStartDate || "?")} ~ ${esc(facts.effectiveDate || "?")} · 상시근로자 ${esc(facts.workplaceEmployeeCount ?? "?")}명</p></div><span class="assessment-pill ${caseStatusPillClass(result.case?.status)}">${esc(result.case?.status || "intake")}</span></div><div class="next-action"><b>${esc(result.nextAction?.title || "사건 내용을 확인하세요.")}</b><p>${esc(result.nextAction?.description || "")}</p></div></section>
     <div class="dismissal-grid">
       ${assessmentSection(result)}
       <section class="dismissal-card"><div class="resource-head"><div><h3>종료 경위 보완</h3><p>이 사건 유형에서 필요한 사실만 추가로 받습니다.</p></div></div><form data-conditional-form><div class="conditional-fields">${conditionalFields(facts, result.legal)}</div><div class="case-actions"><button class="btn primary" type="submit">사실 저장·다시 판단</button></div></form></section>

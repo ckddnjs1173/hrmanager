@@ -28,6 +28,22 @@ export function controlValue(control) {
   return control.value;
 }
 
+// Case 상태값(서버 enum: 진행 중 계열 intake/analysis/active, 대기 waiting,
+// 완료 resolved, 보관/삭제됨 archived)을 status pill의 색상 modifier 클래스로 매핑한다.
+// 기본값(빈 문자열)은 accent(진행 중), "ok"는 완료, "warn"은 대기·보관 등 그 외 상태.
+const CASE_STATUS_PILL_MODIFIERS = Object.freeze({
+  intake: "",
+  analysis: "",
+  active: "",
+  waiting: "warn",
+  resolved: "ok",
+  archived: "warn",
+});
+
+export function caseStatusPillClass(status) {
+  return CASE_STATUS_PILL_MODIFIERS[status] ?? "";
+}
+
 export function isTerminalCaseRestoreError(error) {
   return [401, 404, 410].includes(Number(error?.status));
 }
