@@ -1,4 +1,7 @@
 body.ui-v2 #greeting.ia-home{display:block!important;text-align:left;padding:28px 0;width:100%;max-width:900px;margin:auto}
+/* Perplexity 참고: AI상담 진입(#home.chatting) 시에는 인사말/숏컷/피드를 완전히 감춘다.
+   위 규칙이 !important로 항상 block을 강제하므로, 이 상태는 더 높은 특이도로 덮어써야 한다. */
+#home.chatting #greeting.ia-home{display:none!important}
 .ia-home :focus-visible{outline:3px solid var(--accent,#5b4bff);outline-offset:3px}
 
 /* 홈 구조(토스 벤치마크): 인사말 한 줄 → 원형 아이콘 숏컷 그리드 → 세로 단일 컬럼 피드. */
