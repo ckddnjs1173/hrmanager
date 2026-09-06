@@ -55,7 +55,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--ui-primary)!important
 .panel-card{padding:18px!important}.panel-head{margin-bottom:13px!important}.panel-head h2{font-size:15px!important;color:var(--ui-ink)!important;letter-spacing:-.02em!important}
 .risk-card,.action-card{padding:16px!important;margin-bottom:9px!important}.risk-card h3,.action-card h3{font-size:14px!important}
 .calendar-item,.notification-item{padding:13px 14px!important}
-.data-table{font-size:12.5px!important}.data-table th{background:#fafafd!important;color:#85828e!important;font-size:10.5px!important}.data-table td,.data-table th{border-color:var(--ui-line)!important}
+/* .data-table 스타일은 app.css의 공용 .table,.data-table 컴포넌트로 통합(중복 제거, @import로 위에서 로드됨) */
 
 /* Collaboration */
 .collab-safety{background:#faf9ff!important;border:1px solid var(--ui-primary-line)!important;color:#5d5969!important;border-radius:10px!important;font-size:12px!important}
