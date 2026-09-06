@@ -39,30 +39,36 @@
 
 ## 3. Color Tokens
 
-현재 코드의 네이비 계열을 기반으로 정리한다.
+> 갱신 2026-09-06: 2026-08-14 초안은 네이비(#1B3A5B) 계열을 공식 브랜드색으로 제안했으나,
+> 실제 코드(app.css 등 6벌 중 4벌)는 이미 보라(#5B4BFF)로 수렴해 있었다. 이번 토큰 통합
+> 작업(assets/brand/app.css, case-ui.css, saas-ui.css, wage-intake.css, business.css 등)에서
+> 보라를 유일한 accent로 확정하고, 남색(wage-intake.css)·틸그린(business.css) 세트는 제거했다.
+> 아래 값은 app.css 기준이며, 이 문서가 실제 코드의 단일 소스다.
 
 ```text
-brand-700  #0E2038
-brand-600  #142B47
-brand-500  #1B3A5B
-brand-100  #DCE4EF
-brand-050  #EEF2F7
+accent(brand) #5B4BFF   (app.css --blue-500 / --accent)
+accent-hover  #4938EE   (app.css --blue-600 / --accent-ink)
+accent-soft   #F2F0FF   (app.css --blue-50 / --accent-soft)
 
-ink-900    #0B0D12
-ink-700    #2B2F36
-ink-500    #4B5563
-ink-300    #9AA1AD
-line       #E7E9EE
-surface    #F7F8FA
+ink-900    #18181F
+ink-700    #36343E
+ink-500    #65626D
+ink-300    #A19EA9
+line       #E8E7EE
+surface    #F8F8FB
 white      #FFFFFF
 
-success    #15814F
-success-bg #E7F7EF
-warning    #9A6212
-warning-bg #FCF3E3
-danger     #B42318
-danger-bg  #FDEAEA
+success    #16855B
+success-bg #EAF7F1
+warning    #B7791F
+warning-bg #FFF6E8
+danger     #D14343
+danger-bg  #FFF0EF
 ```
+
+완료·승인 의미로 쓰이는 요소(로딩 스피너, "완료" 배지, 진행도 바, 리스크 해소 액션 버튼 등)는
+accent가 아니라 success(--ok) 색을 쓴다 — 예: business.css의 `.action-controls
+button.primary-action`("시작" 버튼), `.status-badge.done`, `.progress-track>span`.
 
 ### Accent 사용 규칙
 
