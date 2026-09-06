@@ -120,7 +120,7 @@
       transition-duration:.01ms!important;scroll-behavior:auto!important}
   }
 
-  .layout{display:grid;grid-template-columns:var(--sidebar) 1fr;height:100vh}
+  .layout{display:grid;grid-template-columns:1fr;height:100vh}
   /* 채팅 사이드바는 'AI 상담'(home) 화면에서만 노출 — 그 외 화면은 전체폭 (데스크톱) */
   @media(min-width:861px){
     body:not([data-chat]) .layout{grid-template-columns:1fr}
@@ -805,6 +805,15 @@
   .seg{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
   .seg-cat{flex-basis:100%;width:100%;font-size:11.5px;font-weight:800;color:var(--sub);letter-spacing:.02em;margin:10px 2px 1px}
   .seg-cat:first-child{margin-top:0}
+  /* 계산기 27종을 카테고리로 접어서(필요할 때만 펼침) 나열 부담을 줄인다. */
+  .calc-cat-group{flex-basis:100%;width:100%;border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
+  .calc-cat-group:first-of-type{border-top:0;padding-top:0;margin-top:0}
+  .calc-cat-group>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .calc-cat-group>summary::-webkit-details-marker{display:none}
+  .calc-cat-group>summary::before{content:"›";display:inline-block;transition:transform .15s var(--ease);font-size:13px;color:var(--ink-300)}
+  .calc-cat-group[open]>summary::before{transform:rotate(90deg)}
+  .calc-cat-group>summary .count{color:var(--ink-300);font-weight:600}
+  .calc-cat-buttons{display:flex;gap:7px;flex-wrap:wrap;padding:6px 0 2px}
   .seg button{background:#fff;border:1px solid var(--line);border-radius:18px;padding:7px 13px;font-size:13px;color:var(--sub)}
   .seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .field{margin-bottom:12px} .field label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
@@ -832,6 +841,8 @@
   .filter.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .nomu{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
   .nomu .av{width:46px;height:46px;border-radius:50%;background:var(--brand-soft);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--brand);flex-shrink:0}
+  .nomu .av svg{width:24px;height:24px}
+  .nomu .av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
   .nomu .nm{font-weight:700;font-size:15px} .nomu .meta{font-size:12.5px;color:var(--sub);margin-top:2px}
   .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
   .tag{font-size:11.5px;background:#f1f3f5;color:var(--sub);padding:3px 8px;border-radius:6px}
@@ -1243,7 +1254,9 @@
 <div class="layout">
 
   <!-- ============ SIDEBAR ============ -->
-  <aside class="sidebar" id="sidebar">
+  <!-- 홈은 토스식(인사말+아이콘 숏컷+피드), AI상담은 Perplexity식(중앙 검색창+추천 pill)
+       구조라 상시 사이드바를 두지 않는다. 기존 새 상담/빠른 시작/이력 마크업은 유지하되 숨김. -->
+  <aside class="sidebar" id="sidebar" hidden>
     <div class="brand">인사<b>야</b> <span class="brand-sub">노무 AI</span></div>
     <button class="new-chat" onclick="newChat()"><span class="tic" data-icon="edit"></span> 새 상담</button>
 
@@ -1265,7 +1278,7 @@
   <!-- ============ MAIN ============ -->
   <div class="main">
     <header class="topnav">
-      <button class="hamb" onclick="openSidebar()">☰</button>
+      <button class="hamb" onclick="openSidebar()" hidden>☰</button>
       <a class="gn-logo" onclick="nav('home')">
         <img src="assets/brand/logo.svg" alt="인사야 · 노무 AI" onload="this.nextElementSibling.style.display='none'" onerror="this.remove()"/>
         <span class="logo-tx">인사<b>야</b></span>
@@ -1418,39 +1431,63 @@
           <p class="sub">간단한 정보만 넣으면 예상 금액이 바로 나옵니다. (법정 기준 근사치)</p>
           <div class="callout law" style="margin:0 0 16px"><div class="ic" data-icon="nomu"></div><div><b>2026년 최저임금 시급 10,320원</b> · 월 환산(209h) 2,156,880원 · 일급 82,560원 기준 <a href="https://www.minimumwage.go.kr" target="_blank" rel="noopener noreferrer" style="color:var(--accent-ink);text-decoration:underline;font-size:.82rem">출처: 최저임금위원회 ↗</a></div></div>
           <div class="seg seg-wrap">
-            <div class="seg-cat">급여·수당</div>
-            <button class="on" onclick="setCalc('net',this)">실수령액</button>
-            <button onclick="setCalc('minwage',this)">최저임금</button>
-            <button onclick="setCalc('ordinary',this)">통상임금</button>
-            <button onclick="setCalc('holiday',this)">주휴수당</button>
-            <button onclick="setCalc('ot',this)">연장·야간·휴일</button>
-            <button onclick="setCalc('convert',this)">시급·월급 환산</button>
-            <button onclick="setCalc('pkgwage',this)">포괄임금 검증</button>
-            <div class="seg-cat">세금·공제</div>
-            <button onclick="setCalc('insur4',this)">4대보험료</button>
-            <button onclick="setCalc('withtax',this)">근로소득 원천세</button>
-            <button onclick="setCalc('daytax',this)">일용직 소득세</button>
-            <button onclick="setCalc('prorate',this)">일할계산</button>
-            <div class="seg-cat">퇴직·해고</div>
-            <button onclick="setCalc('severance',this)">퇴직금</button>
-            <button onclick="setCalc('average',this)">평균임금</button>
-            <button onclick="setCalc('retiretax',this)">퇴직소득세</button>
-            <button onclick="setCalc('dcpension',this)">퇴직연금 DC</button>
-            <button onclick="setCalc('notice',this)">해고예고수당</button>
-            <button onclick="setCalc('delay',this)">체불 지연이자</button>
-            <div class="seg-cat">휴가·근태</div>
-            <button onclick="setCalc('annual',this)">연차수당</button>
-            <button onclick="setCalc('annualdays',this)">연차 발생일수</button>
-            <button onclick="setCalc('attendance',this)">출근율</button>
-            <button onclick="setCalc('usagepromote',this)">연차 사용촉진</button>
-            <div class="seg-cat">실업·모성·산재</div>
-            <button onclick="setCalc('unemploy',this)">실업급여</button>
-            <button onclick="setCalc('matleave',this)">출산·육아휴직급여</button>
-            <button onclick="setCalc('injurypay',this)">산재 휴업급여</button>
-            <div class="seg-cat">사업주 진단</div>
-            <button onclick="setCalc('laborcost',this)">인건비 총비용</button>
-            <button onclick="setCalc('headcount',this)">상시근로자수</button>
-            <button onclick="setCalc('audit',this)">노동법 자율점검</button>
+            <details class="calc-cat-group" open>
+              <summary class="seg-cat">급여·수당 <span class="count">7</span></summary>
+              <div class="calc-cat-buttons">
+                <button class="on" onclick="setCalc('net',this)">실수령액</button>
+                <button onclick="setCalc('minwage',this)">최저임금</button>
+                <button onclick="setCalc('ordinary',this)">통상임금</button>
+                <button onclick="setCalc('holiday',this)">주휴수당</button>
+                <button onclick="setCalc('ot',this)">연장·야간·휴일</button>
+                <button onclick="setCalc('convert',this)">시급·월급 환산</button>
+                <button onclick="setCalc('pkgwage',this)">포괄임금 검증</button>
+              </div>
+            </details>
+            <details class="calc-cat-group">
+              <summary class="seg-cat">세금·공제 <span class="count">4</span></summary>
+              <div class="calc-cat-buttons">
+                <button onclick="setCalc('insur4',this)">4대보험료</button>
+                <button onclick="setCalc('withtax',this)">근로소득 원천세</button>
+                <button onclick="setCalc('daytax',this)">일용직 소득세</button>
+                <button onclick="setCalc('prorate',this)">일할계산</button>
+              </div>
+            </details>
+            <details class="calc-cat-group">
+              <summary class="seg-cat">퇴직·해고 <span class="count">6</span></summary>
+              <div class="calc-cat-buttons">
+                <button onclick="setCalc('severance',this)">퇴직금</button>
+                <button onclick="setCalc('average',this)">평균임금</button>
+                <button onclick="setCalc('retiretax',this)">퇴직소득세</button>
+                <button onclick="setCalc('dcpension',this)">퇴직연금 DC</button>
+                <button onclick="setCalc('notice',this)">해고예고수당</button>
+                <button onclick="setCalc('delay',this)">체불 지연이자</button>
+              </div>
+            </details>
+            <details class="calc-cat-group">
+              <summary class="seg-cat">휴가·근태 <span class="count">4</span></summary>
+              <div class="calc-cat-buttons">
+                <button onclick="setCalc('annual',this)">연차수당</button>
+                <button onclick="setCalc('annualdays',this)">연차 발생일수</button>
+                <button onclick="setCalc('attendance',this)">출근율</button>
+                <button onclick="setCalc('usagepromote',this)">연차 사용촉진</button>
+              </div>
+            </details>
+            <details class="calc-cat-group">
+              <summary class="seg-cat">실업·모성·산재 <span class="count">3</span></summary>
+              <div class="calc-cat-buttons">
+                <button onclick="setCalc('unemploy',this)">실업급여</button>
+                <button onclick="setCalc('matleave',this)">출산·육아휴직급여</button>
+                <button onclick="setCalc('injurypay',this)">산재 휴업급여</button>
+              </div>
+            </details>
+            <details class="calc-cat-group">
+              <summary class="seg-cat">사업주 진단 <span class="count">3</span></summary>
+              <div class="calc-cat-buttons">
+                <button onclick="setCalc('laborcost',this)">인건비 총비용</button>
+                <button onclick="setCalc('headcount',this)">상시근로자수</button>
+                <button onclick="setCalc('audit',this)">노동법 자율점검</button>
+              </div>
+            </details>
           </div>
           <div class="card" id="calcForm"></div>
         </div>
@@ -1469,7 +1506,12 @@
           </div>
           <div class="nomu-layout">
             <aside class="nomu-sidebar" aria-label="분야로 좁히기">
-              <h2>분야</h2>
+              <h2>조건</h2>
+              <div class="nomu-checklist">
+                <label class="nomu-check"><input type="checkbox" id="nomuVerifiedOnly" onchange="paintNomu(true)"> 자격확인만</label>
+                <label class="nomu-check"><input type="checkbox" id="nomuExcludeSponsor" onchange="paintNomu(true)"> 스폰서 제외</label>
+              </div>
+              <h2 style="margin-top:16px">분야</h2>
               <div class="nomu-checklist" id="nomuFieldChecks"></div>
             </aside>
             <div class="nomu-results">
@@ -1545,6 +1587,37 @@
 
       <!-- ===== 공식 절차 허브 ===== -->
       <section class="screen" id="official"><div class="wrap" id="officialBody"></div></section>
+
+      <!-- ===== 사업주: 인원별 의무사항 체크리스트 (신규, 스텁) ===== -->
+      <section class="screen" id="headcount_duties">
+        <div class="wrap">
+          <div class="ia-kicker">사업주</div>
+          <h1>인원별 의무사항 체크리스트</h1>
+          <p class="sub">상시근로자수를 넣으면 해당 구간에서 새로 적용되는 대표 의무사항을 정리해 드립니다. 정확한 상시근로자수 산정은 <a onclick="nav('calc')" style="color:var(--accent-ink);text-decoration:underline">상시근로자수 계산기</a>를 먼저 이용하세요.</p>
+          <div class="card" style="max-width:420px">
+            <div class="field"><label>상시근로자수</label><input id="hdCount" type="number" min="0" placeholder="예: 12"></div>
+            <button class="btn primary" onclick="renderHeadcountDuties()">의무사항 확인</button>
+          </div>
+          <div id="hdResult" style="margin-top:20px"></div>
+        </div>
+      </section>
+
+      <!-- ===== 사업주: 사업지원금 매칭 (신규, 스텁 — 예시 데이터) ===== -->
+      <section class="screen" id="subsidy_match">
+        <div class="wrap">
+          <div class="ia-kicker">사업주</div>
+          <h1>사업지원금 매칭</h1>
+          <p class="sub">업종·인원·지역 조건에 맞을 수 있는 지원금 후보를 찾아봅니다.</p>
+          <div class="card" style="max-width:520px">
+            <div class="field"><label>업종</label><select id="smIndustry"><option value="">선택 안 함</option><option>제조업</option><option>도소매업</option><option>음식점업</option><option>정보통신업</option><option>기타 서비스업</option></select></div>
+            <div class="field"><label>상시인원</label><input id="smCount" type="number" min="0" placeholder="예: 8"></div>
+            <div class="field"><label>지역</label><select id="smRegion"><option value="">선택 안 함</option><option>서울</option><option>경기</option><option>인천</option><option>부산</option><option>기타</option></select></div>
+            <button class="btn primary" onclick="renderSubsidyMatch()">지원금 찾기</button>
+          </div>
+          <div class="notice" style="margin-top:16px">아래 결과는 실제 공고 데이터가 아닌 <b>예시 데이터</b>입니다. 실제 지원 대상·금액·공고 기간은 반드시 각 기관 공고 원문에서 확인하세요.</div>
+          <div id="smResult" style="margin-top:16px"></div>
+        </div>
+      </section>
 
       <!-- ===== 문서센터 ===== -->
       <section class="screen" id="docs">
@@ -1915,7 +1988,34 @@ function nav(id){
   window.dispatchEvent?.(new Event('insaya:navigation'));
 }
 // 해시로 직접 진입 가능한 화면들
-const NAV_ROUTES=['worker','employer','nomu','calc','docs','solve','report','official','pricing','summary'];
+const NAV_ROUTES=['worker','employer','nomu','calc','docs','solve','report','official','pricing','summary','headcount_duties','subsidy_match'];
+
+/* ===== 사업주 신규 기능 스텁 2종 — Worker Core-5 계산/판정 로직과 완전히 분리된 독립 화면 ===== */
+const HEADCOUNT_DUTY_TIERS=[
+  {min:5,label:'상시 5인 이상',items:['연장·야간·휴일근로 가산수당(근로기준법 제56조) 적용','부당해고 등 구제신청 대상(제23·28조)','주 52시간 근로시간 한도 적용']},
+  {min:10,label:'상시 10인 이상',items:['취업규칙 작성·신고 의무(제93조)']},
+  {min:50,label:'상시 50인 이상',items:['장애인 의무고용(장애인고용법, 민간기업 기준)','안전보건관리책임자 등 산업안전보건 체계 강화(산업안전보건법)']},
+];
+function renderHeadcountDuties(){
+  const el=document.getElementById('hdResult');
+  const n=Number((document.getElementById('hdCount')||{}).value||'');
+  if(!Number.isFinite(n)||n<=0){ el.innerHTML='<p class="muted">상시근로자수를 입력하세요.</p>'; return; }
+  const applicable=HEADCOUNT_DUTY_TIERS.filter(t=>n>=t.min);
+  el.innerHTML=(applicable.length?applicable.map(t=>`<div class="card" style="margin-bottom:12px"><b>${t.label} 구간에서 새로 적용</b><ul style="margin:8px 0 0;padding-left:18px">${t.items.map(i=>`<li style="margin-bottom:4px">${i}</li>`).join('')}</ul></div>`).join(''):'<div class="card">입력하신 인원 구간(5인 미만)에서는 이 체크리스트가 다루는 대표 의무사항이 추가로 발생하지 않습니다.</div>')
+    +'<div class="notice">대표적인 의무사항만 정리한 참고용 체크리스트이며, 업종·근로형태·파견/도급 여부에 따라 실제 적용 기준이 달라질 수 있습니다. 정확한 판단은 공인노무사 상담을 권장합니다.</div>';
+}
+
+// 예시 데이터 — 실제 공고 연동 전까지 화면 구조 검증용. 반드시 "예시 데이터"로 고지한다.
+const SUBSIDY_EXAMPLES=[
+  {name:'청년일자리도약장려금(예시)',agency:'고용노동부',desc:'청년을 정규직으로 채용한 중소기업에 인건비 일부를 지원합니다.',amount:'최대 월 60만원 × 12개월(예시 금액)'},
+  {name:'두루누리 사회보험료 지원(예시)',agency:'근로복지공단',desc:'상시 10인 미만 사업장의 4대보험료 일부를 지원합니다.',amount:'보험료의 최대 80%(예시 비율)'},
+  {name:'고용창출장려금(예시)',agency:'고용노동부',desc:'신규 고용 인원에 대해 일정 기간 장려금을 지원합니다.',amount:'1인당 연 최대 720만원(예시 금액)'},
+  {name:'지역 소상공인 인건비 지원(예시)',agency:'지자체',desc:'지역 소재 소상공인의 신규 채용 인건비를 지원합니다.',amount:'지자체별 상이(예시)'},
+];
+function renderSubsidyMatch(){
+  const el=document.getElementById('smResult');
+  el.innerHTML='<div class="ia-grid">'+SUBSIDY_EXAMPLES.map(s=>`<div class="ia-card" style="cursor:default"><span class="badge warn" style="margin-bottom:8px">예시 데이터</span><h3>${s.name}</h3><p>${s.desc}</p><p style="margin-top:6px;font-weight:700;color:var(--accent-ink)">${s.amount}</p><p style="margin-top:4px;color:var(--ink-400,#7d7a86);font-size:.78rem">${s.agency}</p></div>`).join('')+'</div>';
+}
 
 /* =================== 도구 드롭다운 =================== */
 // 드롭다운(도구·근로자·사업주) 공통 제어 — 하나 열면 나머지는 닫힘
@@ -2680,7 +2780,8 @@ let convo=[];            // [{role:'user'|'assistant', content}]
 let chatMode=false, actionsShown=false, current={key:'wage'};
 let consultationAudience='worker';
 // 홈 기본 화면(인사말+숏컷+피드)에서는 입력창을 숨겨 두고, AI상담 진입 시에만 연다.
-function openComposer(){ const c=document.querySelector('.composer'); if(c)c.hidden=false; document.getElementById('composerInput')?.focus(); }
+// Perplexity 참고: AI상담 진입 시 홈의 인사말/숏컷/피드를 감추고 중앙 검색창+추천 pill만 남긴다.
+function openComposer(){ const c=document.querySelector('.composer'); if(c)c.hidden=false; document.getElementById('home')?.classList.add('chatting'); document.getElementById('composerInput')?.focus(); }
 function newChat(){ consultationAudience='worker';convo=[]; chatMode=false; actionsShown=false; current={key:'wage'}; _inlineDone=[];
   document.getElementById('home').classList.remove('chatting');
   document.getElementById('chatBody').innerHTML=''; document.getElementById('prog').style.display='none';
@@ -5337,7 +5438,7 @@ const C26={
   uiUpper:68100,   // 실업급여 1일 상한액 (2026년 인상, 2026.1.1 이직부터)
 };
 let calcType='net', _calcReport={title:'',text:''};
-function setCalc(t,el){ calcType=t; document.querySelectorAll('#calc .seg button').forEach(b=>b.classList.remove('on')); el.classList.add('on'); renderCalc(); }
+function setCalc(t,el){ calcType=t; document.querySelectorAll('#calc .seg button').forEach(b=>b.classList.remove('on')); el.classList.add('on'); el.closest('details')?.setAttribute('open',''); renderCalc(); }
 function renderCalc(){
   const f={
     net:`<h3>월급 실수령액 (4대보험·세금 공제)</h3>
@@ -6043,10 +6144,14 @@ function setNomuFieldFromSelect(f){
 function nomuFiltered(){
   const sido=(document.getElementById('nomuSido')||{}).value||'';
   const q=((document.getElementById('nomuQ')||{}).value||'').trim().toLowerCase();
+  const verifiedOnly=(document.getElementById('nomuVerifiedOnly')||{}).checked;
+  const excludeSponsor=(document.getElementById('nomuExcludeSponsor')||{}).checked;
   return window.INSAYA_DIRECTORY.rank(NOMU_LIST.filter(x=>{
     if(sido && (x.sido||(x.loc||'').split(' ')[0])!==sido) return false;
     if(_nomuFields.size && !(x.tags||[]).some(t=>_nomuFields.has(t))) return false;
     if(q && !((x.n+x.o+x.loc).toLowerCase().includes(q))) return false;
+    if(verifiedOnly && !window.INSAYA_DIRECTORY.verified(x)) return false;
+    if(excludeSponsor && window.INSAYA_DIRECTORY.sponsored(x)) return false;
     return true;
   }), {region:sido, field:_nomuFields});
 }
@@ -6072,7 +6177,8 @@ function paintNomu(reset){
   document.getElementById('nomuMore').style.display = all.length>_nomuShown ? 'inline-flex' : 'none';
   window.paintDirectoryComparison?.(shown);
 }
-function nomuAvatar(x){ return x.photo?`<img src="assets/nomusa/${x.id}.jpg" alt="" onerror="this.replaceWith(document.createTextNode('${(x.n||'?')[0]}'))"/>`:(x.n||'?')[0]; }
+// 로톡 참고: 실사진 없는 항목은 이니셜 대신 인물형 아바타 placeholder(실제 사진처럼 보이게 지어내지 않음).
+function nomuAvatar(x){ return x.photo?`<img src="assets/nomusa/${x.id}.jpg" alt="" onerror="this.replaceWith(document.createRange().createContextualFragment('${ICON.worker.replace(/'/g,"\\'")}'))"/>`:ICON.worker; }
 function stars(score){ const f=Math.round(score); return '★'.repeat(f)+'☆'.repeat(Math.max(0,5-f)); }
 function openNomu(id){
   const x=NOMU_LIST.find(n=>n.id===id); if(!x)return; track('nomu_view', id);
