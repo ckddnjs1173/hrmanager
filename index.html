@@ -2016,7 +2016,7 @@ const SUBSIDY_EXAMPLES=[
 ];
 function renderSubsidyMatch(){
   const el=document.getElementById('smResult');
-  el.innerHTML='<div class="ia-grid">'+SUBSIDY_EXAMPLES.map(s=>`<div class="ia-card" style="cursor:default"><span class="badge warn" style="margin-bottom:8px">예시 데이터</span><h3>${s.name}</h3><p>${s.desc}</p><p style="margin-top:6px;font-weight:700;color:var(--accent-ink)">${s.amount}</p><p style="margin-top:4px;color:var(--ink-400,#7d7a86);font-size:.78rem">${s.agency}</p></div>`).join('')+'</div>';
+  el.innerHTML=SUBSIDY_EXAMPLES.map(s=>`<div class="card" style="margin-bottom:12px"><span class="badge warn" style="margin-bottom:8px">예시 데이터</span><h3 style="margin:4px 0 6px">${s.name}</h3><p>${s.desc}</p><p style="margin-top:6px;font-weight:700;color:var(--accent-ink)">${s.amount}</p><p style="margin-top:4px;color:var(--ink-400,#7d7a86);font-size:.78rem">${s.agency}</p></div>`).join('');
 }
 
 /* =================== 도구 드롭다운 =================== */

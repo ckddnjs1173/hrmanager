@@ -51,3 +51,36 @@
 - **스크린샷**: `.claude/design-refs/2026-09-07/04-case-wage.png`, `.claude/design-refs/2026-09-07/05-case-retirement.png`
 - **시도 횟수**: 2회(코드 리뷰 단계에서 1차 문제 발견 → CSS 수정 → 2개 도메인 스팟체크 스크린샷 통과)
 
+---
+
+## 5. 근로자 랜딩(worker.html) / 사업주 랜딩(employer.html) — 재검증
+
+- **적용 구조**: kicker+h1+lead+primary 버튼 하나(`.ia-primary`, 10px 라운드)+텍스트 링크, 이어서 카드그리드가 아닌 세로 리스트(`.ia-picklist`류, 헤어라인 구분선), employer.html은 "Business Workspace 비활성화" 정직한 안내 그대로 유지.
+- **체크리스트**: 5/5 아니오 → **통과**(이전 세션에 이미 적용된 카드 위계 작업 재확인, 이번 세션 수정 없음).
+  - 버튼/스텝뱃지 라운드 값 재확인: `.ia-actions a{border-radius:10px}`, `.ia-flow li{border-radius:8px}` — 999px 필 없음.
+  - 리스트 항목이 그리드가 아닌 세로 1열 헤어라인 리스트라 "카드그리드" 뼈대와 다름.
+- **스크린샷**: `.claude/design-refs/2026-09-07/06-worker-landing.png`, `.claude/design-refs/2026-09-07/07-employer-landing.png`
+- **시도 횟수**: 1회 통과(재검증만)
+
+---
+
+## 6. 노동생활 도구(tools.html) — Stripe — 재검증 중 위반 발견 → 수정
+
+- **적용 구조**: kicker+h1+lead → 목차형 에디토리얼 리스트(번호+제목+설명, 헤어라인 구분) → 하단 단일 CTA.
+- **1차 시도(재검증)**: 체크리스트 **3번 위반** 발견 — `.ia-card-ic`(보라색 사각형 배지 안 라인아이콘)를 4개 항목에 반복 사용 + 균일 3열 카드그리드(테두리 박스)로, 정확히 "카드그리드" 뼈대(4번)도 동시 위반.
+- **수정**: `ia-pages.css`의 `.ia-editorial`/`.ia-ed-item`을 그리드+카드박스+아이콘배지에서 → flex 세로 목차 리스트(tabular-nums 번호 열 + 헤어라인 구분선, 테두리/배경 없음)로 재작성. `.ia-card-ic` 규칙 자체를 `ia-pages.css`·`case-first-home.css`에서 삭제(사용처 0곳 확인 후 제거). `tools.html` 마크업에서 아이콘 `<span class="ia-card-ic">` 4개 제거.
+- **체크리스트(수정 후)**: 5/5 아니오 → **통과**.
+- **스크린샷**: `.claude/design-refs/2026-09-07/08-tools.png`
+- **시도 횟수**: 2회(1회 위반 발견 → 수정 → 통과)
+
+---
+
+## 7. 신규: 인원별 의무사항 체크리스트(#headcount_duties), 사업지원금 매칭(#subsidy_match)
+
+- **적용 구조**: 단일 입력 폼(`.card`) → 결과는 세로 스택 `.card` 리스트(그리드 아님). subsidy_match는 예시 데이터임을 상단 안내문 + 각 항목명에 "(예시)" 접미사 + `.badge.warn` "예시 데이터" 태그로 이중 명시.
+- **1차 시도 문제(subsidy_match 결과 렌더링)**: `renderSubsidyMatch()`가 `ia-pages.css` 전용 클래스(`.ia-grid`,`.ia-card`)를 사용했는데 index.html은 `ia-pages.css`를 로드하지 않아 그리드/카드 테두리가 전혀 렌더링되지 않는 실제 버그였음(체크리스트 문제라기보다 렌더링 결함) → index.html이 실제로 로드하는 `.card` 클래스(이미 headcount_duties 결과에서 쓰던 것과 동일 패턴)로 교체.
+- **체크리스트**: 5/5 아니오 → **통과**(두 화면 모두).
+  - 아이콘 배지, 블러 장식, 필 버튼 없음. 결과가 카드그리드가 아니라 순차 스택 리스트. 도메인 특화 문구+"예시" 라벨로 템플릿과 구분됨.
+- **스크린샷**: `.claude/design-refs/2026-09-07/09-headcount-duties.png`(입력 폼), `09b-headcount-duties-result.png`(결과), `10-subsidy-match.png`(입력 폼), `10b-subsidy-match-result.png`(결과, 수정 후)
+- **시도 횟수**: headcount_duties 1회 통과 / subsidy_match 2회(렌더링 버그 수정 후 통과)
+
