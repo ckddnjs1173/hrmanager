@@ -152,15 +152,6 @@ body.ui-v2 .msg.ai{background:#f7f7fa;border:1px solid #eeeef2}
 body.ui-v2 .msg.me{background:var(--ui-primary)}
 body.ui-v2 .opt{border-color:var(--ui-primary-line);color:var(--ui-primary-hover);border-radius:9px;font-size:12.5px}
 
-/* Case result navigation — maps current product screens to the reference result workspace. */
-body.ui-v2 .screen.ui-case-screen.active{display:grid;grid-template-columns:170px minmax(0,1fr);max-width:1160px;margin:0 auto;align-items:start;gap:24px;padding:28px 24px 80px}
-body.ui-v2 .screen.ui-case-screen>.wrap{max-width:none;width:100%;padding:0}
-body.ui-v2 .ui-case-rail{position:sticky;top:84px;border:1px solid var(--ui-line);background:#fff;border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:3px}
-body.ui-v2 .ui-case-rail .rail-title{font-size:10px;font-weight:800;color:#aaa8b1;padding:8px 9px 5px;text-transform:uppercase;letter-spacing:.06em}
-body.ui-v2 .ui-case-rail button{display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;border-radius:8px;color:#62606b;font-size:12.5px;font-weight:650;text-align:left}
-body.ui-v2 .ui-case-rail button:hover{background:#f7f6fa;color:var(--ui-ink)}
-body.ui-v2 .ui-case-rail button.on{background:var(--ui-primary-soft);color:var(--ui-primary);font-weight:750}
-body.ui-v2 .ui-case-rail svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 body.ui-v2 #result .card{border-radius:12px;padding:22px}
 body.ui-v2 #result .risk{border-radius:7px;font-size:11px}
 body.ui-v2 .calc-out{background:#faf9ff;border-color:var(--ui-primary-line);border-radius:12px}
@@ -193,11 +184,6 @@ body.ui-v2 .foot-legal{font-size:10.5px;color:#8c8a95}
   body.ui-v2 .navdrop-panel.mega{width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;min-width:0!important}
   body.ui-v2 .navdrop-panel.mega .mega-cols{grid-template-columns:1fr!important;width:100%!important;max-width:100%!important;min-width:0!important}
   body.ui-v2 .navdrop-panel.mega .mega-col,body.ui-v2 .navdrop-panel.mega .navdrop-cat,body.ui-v2 .navdrop-panel.mega a{max-width:100%!important;min-width:0!important}
-  body.ui-v2 .screen.ui-case-screen.active{display:block;padding:0}
-  body.ui-v2 .screen.ui-case-screen>.wrap{padding:24px 16px 78px}
-  body.ui-v2 .ui-case-rail{position:sticky;top:54px;z-index:16;border-width:0 0 1px;border-radius:0;display:flex;flex-direction:row;overflow:auto;padding:7px 12px;background:rgba(255,255,255,.96)}
-  body.ui-v2 .ui-case-rail .rail-title{display:none}
-  body.ui-v2 .ui-case-rail button{width:auto;flex:0 0 auto;padding:8px 10px;white-space:nowrap}
   body.ui-v2 #home .wrap{padding:28px 16px 72px}
   body.ui-v2 .ui-problem-grid{grid-template-columns:repeat(2,1fr)}
   body.ui-v2 .home-entry{grid-template-columns:repeat(2,1fr)}

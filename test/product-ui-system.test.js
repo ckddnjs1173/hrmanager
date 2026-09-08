@@ -16,7 +16,15 @@ test("public product uses one local Pretendard-led compact purple system",()=>{
   assert.match(css,/--font-serif:var\(--font-sans\)/);
   assert.match(css,/border:1px solid var\(--ui-line\)/);
   assert.match(css,/\.ui-problem-grid/);
-  assert.match(css,/\.ui-case-rail/);
+});
+
+test("independent public tool screens do not get a fake shared-case navigation rail",()=>{
+  // result/summary/calc/report/official/docs/solve are 7 separate, independently
+  // reachable public tools (계산기/문서센터/공식 기관/노동청 진정 절차 등), not steps of
+  // one Case wizard. A previous addCaseRails() bolted a "내 사건" 7-tab rail onto all
+  // of them just because their element ids matched a legacy case-flow's screen ids.
+  assert.equal(/ui-case-rail|addCaseRails/.test(ui),false);
+  assert.equal(/\.ui-case-rail/.test(css),false);
 });
 
 test("Business and Advisor share the same local font and primary system",()=>{
@@ -36,10 +44,8 @@ test("all five worker Case workspaces use the shared compact UI override",()=>{
 
 test("public UI augments real workflows instead of creating synthetic persistent cases",()=>{
   for(const label of ["임금체불","해고","퇴직금","근로시간","연차"])assert.ok(home.includes(label));
-  for(const label of ["개요","사실","금액","증거","행동","문서","근거"])assert.ok(ui.includes(label));
   assert.match(home,/href="\/employer\.html"/);
   assert.match(home,/AI상담/);
-  assert.match(ui,/callGlobal\("nav"/);
   assert.equal(/localStorage|sessionStorage/.test(ui),false);
 });
 

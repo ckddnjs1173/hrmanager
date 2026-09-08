@@ -975,21 +975,24 @@
   .docgroup-h .gn{font-weight:800;font-size:1.15rem;color:var(--ink-900)}
   .docgroup-h .gd{font-size:.82rem;color:var(--sub)}
   .std-badge{display:inline-block;font-size:.62rem;font-weight:800;color:var(--accent-ink);background:var(--accent-soft);padding:3px 7px;border-radius:6px;vertical-align:middle;margin-left:4px;letter-spacing:.02em}
-  /* 상황별 문서팩 */
-  .pack-wrap{background:linear-gradient(180deg,var(--accent-soft),transparent);border:1px solid var(--line);border-radius:1.1rem;padding:18px 18px 22px}
-  .pack-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px}
-  .packcard{text-align:left;background:#fff;border:1px solid var(--line);border-radius:1rem;padding:18px;cursor:pointer;transition:.14s;display:flex;flex-direction:column;gap:7px}
-  .packcard:hover{border-color:var(--accent);box-shadow:var(--e2);transform:translateY(-2px)}
-  .packcard .ph{display:flex;align-items:center;justify-content:space-between}
-  .packcard .pe{font-size:1.8rem}
-  .pside{font-size:.66rem;font-weight:800;padding:3px 9px;border-radius:20px}
+  /* 상황별 문서팩 — Stripe 참고: 카드그리드+배경 그라데이션 박스 대신 헤어라인 목록.
+     아이콘도 색 사각형 배지 없이 텍스트와 같은 색으로 인라인 배치한다. */
+  .pack-wrap{padding-top:2px}
+  .pack-grid{display:flex;flex-direction:column;border-top:1px solid var(--line);margin-top:14px}
+  .packcard{text-align:left;background:none;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:20px 4px;cursor:pointer;display:flex;align-items:flex-start;gap:16px;width:100%}
+  .packcard:hover{background:var(--panel,#f8f8fb)}
+  .packcard .pe{flex:0 0 auto;font-size:1.35rem;line-height:1;color:var(--accent-ink);margin-top:2px}
+  .packcard .ph{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .packcard .phead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pside{font-size:.66rem;font-weight:800;padding:3px 7px;border-radius:7px}
   .pside.worker{background:#e9f0ff;color:#1f54c9}.pside.employer{background:#e6f4ec;color:#0b6b46}
-  .packcard .pt{font-weight:800;font-size:1.12rem;color:var(--ink-900)}
+  .packcard .pt{font-weight:800;font-size:1.05rem;color:var(--ink-900)}
   .packcard .psit{font-size:.84rem;color:var(--accent-ink);font-weight:700}
   .packcard .pd{font-size:.86rem;color:var(--sub);line-height:1.55}
-  .pdocs{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
-  .pchip{font-size:.72rem;font-weight:700;color:var(--ink-700);background:var(--ink-50);border:1px solid var(--line);padding:4px 9px;border-radius:20px}
-  .packcard .pgo{margin-top:6px;font-weight:800;font-size:.86rem;color:var(--accent-ink)}
+  .pdocs{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+  .pchip{font-size:.72rem;font-weight:700;color:var(--ink-700);background:var(--ink-50);border:1px solid var(--line);padding:4px 8px;border-radius:6px}
+  .packcard .pgo{flex:0 0 auto;font-weight:800;font-size:.86rem;color:var(--accent-ink);white-space:nowrap;align-self:center}
+  @media(max-width:640px){.packcard{flex-wrap:wrap}.packcard .pgo{margin-left:calc(1.35rem + 16px)}}
   /* 문서팩 작성 화면 */
   .pack-steps{display:flex;flex-direction:column;gap:8px;margin:14px 0}
   .pstep{display:flex;gap:10px;align-items:flex-start;font-size:.95rem;color:var(--ink-800)}
@@ -2236,12 +2239,14 @@ async function renderPacks(){
   packs.sort((a,b)=>order.indexOf(a.site)-order.indexOf(b.site));
   wrap.innerHTML=packs.map(p=>`
     <button class="packcard" onclick="openPack('${p.key}')">
-      <div class="ph"><span class="pe">${EIC(p.em)}</span><span class="pside ${p.site}">${p.site==='employer'?'사업주':'근로자'}</span></div>
-      <div class="pt">${p.title}</div>
-      <div class="psit">${p.situation}</div>
-      <div class="pd">${p.desc}</div>
-      <div class="pdocs">${p.docs.map(d=>`<span class="pchip"><span class="tic">${EIC(d.em)}</span> ${d.title}</span>`).join('')}</div>
-      <div class="pgo">문서팩 만들기 →</div>
+      <span class="pe">${EIC(p.em)}</span>
+      <span class="ph">
+        <span class="phead"><span class="pt">${p.title}</span><span class="pside ${p.site}">${p.site==='employer'?'사업주':'근로자'}</span></span>
+        <span class="psit">${p.situation}</span>
+        <span class="pd">${p.desc}</span>
+        <span class="pdocs">${p.docs.map(d=>`<span class="pchip"><span class="tic">${EIC(d.em)}</span> ${d.title}</span>`).join('')}</span>
+      </span>
+      <span class="pgo">문서팩 만들기 →</span>
     </button>`).join('');
 }
 async function openPack(key){
