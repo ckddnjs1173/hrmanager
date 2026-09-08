@@ -132,3 +132,32 @@
 - **스크린샷**: `.claude/design-refs/2026-09-07/15-article-wage.png`(근로자, 상단), `15e-article-wage-mid2.png`(근로자, 관련글·푸터), `16-article-employer.png`(사업주, 상단)
 - **시도 횟수**: 2회(1회 아이콘배지 위반 발견 → 수정 → 통과, 사업주 버전은 동일 컴포넌트 재확인 1회)
 
+---
+
+## 12. business.html 내부 화면 전체 — 대시보드/리스크/캘린더/직원/회사설정/외부전문가협업 — Linear — 재검증
+
+- **테스트 환경**: 로컬 Docker Postgres(`insaya-design-pg`, `postgres:17-alpine`) + `postgres-migrate.mjs`(21개 마이그레이션) + `STORAGE_DRIVER=postgres SAAS_ENABLED=1 SAAS_AUTH_TOKEN_ECHO=1`(테스트 전용 매직링크 echo, 실제 이메일 발송 없음) `SAAS_SESSION_SECRET`(테스트용 임의 문자열, 실제 secret 아님)로 로컬 서버 기동. 매직링크 발급→검증→조직 생성 API를 직접 호출해 테스트 계정(`design-review@example.com`) 세션 쿠키를 얻고, Playwright 컨텍스트에 쿠키를 주입해 로그인 상태로 렌더링. Production 접근 없음.
+- **데이터 상태**: 새로 만든 빈 조직이라 직원/리스크/캘린더 항목이 전부 0건인 **진짜 빈 상태**(가짜 목업 아님) — 오늘의 "mock을 실제처럼 보여주지 마" 제약과 자연히 일치.
+- **적용 구조**: 좌측 사이드바(아이콘+텍스트, 색배지 없음) + 상단 "설정 N%"/Risk Scan 버튼 + kicker 라벨 패널들(대시보드는 통계 5칸+PRIORITY+SETUP+LATEST RISKS, 리스크/캘린더/직원은 단일 패널, 회사설정은 3열 폼, 외부전문가협업은 2열 폼+목록).
+- **체크리스트**: 6개 화면 모두 5/5 아니오 → **통과**(이전 세션에 이미 적용된 작업 재확인, 이번 세션 코드 수정 없음).
+  - 라운드 값 코드로 재확인: `.primary-button{border-radius:9px}`, `.status-badge{border-radius:7px}` — 999px 필 없음. `.pill`(리스크 심각도)은 배경/테두리 없이 점+텍스트로 이미 전환되어 있음(이전 세션 커밋).
+  - 사이드바 아이콘은 색 사각형 배지 없이 텍스트 옆 인라인 아이콘.
+  - 대시보드~외부전문가협업 전부 "사이드바+kicker 패널" 뼈대로, 헤드라인+리드+버튼+카드그리드 마케팅 스켈레톤과 다름.
+  - 외부 전문가 협업 화면은 CLAUDE.md 불변원칙("External Advisor를 Organization Membership으로 자동 승격 금지")과 일치하는 안내 문구("회사 내부 계정 권한을 주지 않고 특정 Business Case에만 기간 제한 접근권한")가 화면에 그대로 노출되어 있어 정직함.
+- **스크린샷**: `.claude/design-refs/2026-09-07/17-business-dashboard.png`, `18-business-risks.png`, `19-business-calendar.png`, `20-business-people.png`, `21-business-setup.png`, `22-business-collaboration.png`
+- **시도 횟수**: 6개 화면 모두 1회 통과(재검증만, 수정 없음)
+
+---
+
+## 13. advisor.html — Linear + 로톡식 신뢰 요소
+
+- **테스트 방법**: 같은 Postgres 테스트 서버에서 (1) 사업주 계정으로 Business Case 생성 → DRAFT→OPEN 전환 → 외부 노무사 초대 발급(`case.read`/`document.read`/`comment.create` 권한, 30일 만료), (2) 별도 이메일로 노무사 계정 로그인 → 초대 수락(ShareGrant ACTIVE 전환)까지 실제 API 호출로 재현. 실제 이메일 발송 없음(디버그 토큰 echo).
+- **화면 A — SaaS 비활성 상태**(`/advisor.html`, 평소 sqlite 서버): "협업 포털을 사용할 수 없습니다" 정직한 안내 카드. employer.html의 "Business Workspace 비활성화" 패턴과 동일한 정직성 원칙 확인.
+- **화면 B — 활성 ShareGrant 상태**: 좌측 "인사야 Advisor" 사이드바 + "회사 Membership 없이 명시적으로 공유된 Case만 조회합니다" 안내 → 공유 목록(1건) → Case 상세(제목·OPEN 상태·허용 범위·접근 만료일 명시) → 문서 검토(빈 상태)·Case 의견(코멘트 스레드+입력창).
+- **1차 시도 문제**: `advisor.html`이 사이트의 다른 4개 토큰 세트(app.css/case-ui.css/saas-ui.css/product-ui.css)와도 다른 **별도의 5번째 독립 CSS 파일**(`advisor.css`)을 쓰고 있었고, 여기 `.chip`(ACTIVE/OPEN 상태 배지)과 `.advisor-doc-state`(문서 검토 상태 배지)가 `border-radius:999px` — 오늘 다른 곳들(business-ui-copy.css의 `.pill`, case-ui.css의 `.status-pill`, 문서센터 칩)에서 이미 일관되게 정리한 "상태 배지는 필 금지" 원칙에서 이 파일만 누락돼 있었음. `.advisor-card`(로딩/비활성 상태 카드)에도 `box-shadow:0 12px 30px rgba(...)` — Linear 참고의 "그림자 금지" 위반.
+- **수정**: `.chip`/`.advisor-doc-state` 999px→7px, `.advisor-card` 그림자 제거(`box-shadow:none`, radius 18px→14px로 다른 패널과 통일).
+- **판단 보류(참고 사항으로 남김)**: `advisor.css`는 색 토큰(#111827 다크 사이드바, #2563eb 블루)이 사이트 나머지(보라 `--blue:#5b4bff` 등)와 전혀 다른 완전히 독립된 시스템 — 로드맵의 "디자인 시스템 통합" 항목이 명시한 4개 세트에도 안 잡혀있던 **5번째 미감사 세트**였음. 다크 사이드바 자체가 흔한 SaaS 어드민 템플릿 톤에 가깝지만, 전체 재테마는 색상 토큰 전면 교체가 필요한 별도 작업이라 오늘 범위(체크리스트 5개 항목 통과)를 넘어선다고 판단, 명백한 필/그림자 위반만 수정. 최종 보고에 새 로드맵 항목으로 남김.
+- **체크리스트**: 5/5 아니오 → **통과**(수정 후). 아이콘 없음, 그라데이션 없음, 헤드라인+버튼+카드그리드 뼈대 아님(리스트+상세 앱 레이아웃), 권한·만료일을 그대로 노출하는 정직한 문구가 로톡식 신뢰 요소 역할.
+- **스크린샷**: `.claude/design-refs/2026-09-07/23-advisor-noauth.png`(비활성), `24-advisor-portal.png`(활성 ShareGrant)
+- **시도 횟수**: 2회(1회 999px+그림자 위반 발견 → 수정 → 통과)
+
