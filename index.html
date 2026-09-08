@@ -719,8 +719,9 @@
   .cnx-card{flex:0 0 clamp(230px,72vw,268px);scroll-snap-align:center;border:1px solid var(--line);border-radius:var(--r-xl);
     background:#fff;box-shadow:var(--e1);padding:22px 20px;position:relative;min-height:300px;display:flex;flex-direction:column}
   .cnx-idx{position:absolute;top:15px;right:18px;font-family:var(--font-serif);font-weight:700;font-size:12px;color:var(--ink-300)}
-  .cnx-ic{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;margin-bottom:auto;flex:none}
-  .cnx-ic svg{width:24px;height:24px}
+  /* 카드마다 색 사각형 배지+아이콘 반복을 피하고, 배경 없이 큰 라인 아이콘만 둔다. */
+  .cnx-ic{width:30px;height:30px;color:var(--accent);display:grid;place-items:center;margin-bottom:auto;flex:none}
+  .cnx-ic svg{width:30px;height:30px;stroke-width:1.5}
   .cnx-card h3{font-family:var(--font-serif);font-weight:700;font-size:1.18rem;color:var(--ink-900);margin-top:14px;line-height:1.35;letter-spacing:-.01em}
   .cnx-card>p{font-size:.82rem;color:var(--ink-500);margin-top:8px;line-height:1.55}
   .cnx-card.cover{background:linear-gradient(155deg,var(--blue-700),var(--blue-500));border-color:transparent}
