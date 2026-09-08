@@ -1349,17 +1349,19 @@
       </nav>
 
       <div class="ia-home-feed" aria-label="추천 정보">
-        <a class="ia-home-feed-card" href="/#nomu">
-          <span class="ia-home-feed-ic" data-icon="nomu"></span>
-          <span class="ia-home-feed-body"><b id="homeNomuStat">노무사 1,166명 등록</b><span>근로복지공단 공공데이터 + 직접 등록 기반</span></span>
+        <a class="ia-home-feed-stat" href="/#nomu">
+          <b id="homeNomuStat">1,166<span>명</span></b>
+          <span class="ia-home-feed-label">등록된 노무사 · 근로복지공단 공공데이터 + 직접 등록 기반</span>
         </a>
-        <a class="ia-home-feed-card" href="/#calc">
-          <span class="ia-home-feed-ic" data-icon="calc"></span>
-          <span class="ia-home-feed-body"><b>2026년 최저임금 계산기 갱신</b><span>시급 10,320원 · 전년 대비 2.9% 인상</span></span>
+        <a class="ia-home-feed-row" href="/#calc">
+          <span class="ia-home-feed-kicker">계산기 갱신</span>
+          <b>2026년 최저임금 시급 10,320원</b>
+          <span class="ia-home-feed-label">전년 대비 2.9% 인상</span>
         </a>
-        <a class="ia-home-feed-card" href="javascript:void(0)" onclick="openArticle('wage')">
-          <span class="ia-home-feed-ic" data-icon="docs"></span>
-          <span class="ia-home-feed-body"><b>추천 가이드 · 임금체불</b><span>밀린 월급·수당, 이렇게 받으세요</span></span>
+        <a class="ia-home-feed-row" href="javascript:void(0)" onclick="openArticle('wage')">
+          <span class="ia-home-feed-kicker">추천 가이드</span>
+          <b>임금체불, 이렇게 확인하세요</b>
+          <span class="ia-home-feed-label">밀린 월급·수당, 지급 내역부터 정리하는 법</span>
         </a>
       </div>
           </div>
@@ -6279,7 +6281,7 @@ renderCalc();
   try{
     const res=await fetch('/api/nomu'); if(!res.ok)return;
     const list=await res.json(); if(!Array.isArray(list))return;
-    const el=document.getElementById('homeNomuStat'); if(el)el.textContent=`노무사 ${list.length.toLocaleString('ko-KR')}명 등록`;
+    const el=document.getElementById('homeNomuStat'); if(el)el.innerHTML=`${list.length.toLocaleString('ko-KR')}<span>명</span>`;
   }catch{}
 })();
 function routeFromHash(){

@@ -14,14 +14,15 @@ body.ui-v2 #greeting.ia-home{display:block!important;text-align:left;padding:28p
 .ia-home-shortcut-label{font-size:12px;font-weight:700;color:var(--ink-800,#24232b);white-space:nowrap}
 .ia-home-shortcut:hover .ia-home-shortcut-ic{background:var(--accent,#5b4bff);color:#fff}
 
-.ia-home-feed{display:flex;flex-direction:column;gap:10px}
-.ia-home-feed-card{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--line,#e8e7ee);border-radius:14px;background:var(--bg,#fff);text-decoration:none;color:inherit}
-.ia-home-feed-card:hover{border-color:#a59bff}
-.ia-home-feed-ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft,#f2f0ff);color:var(--accent,#5b4bff);flex-shrink:0}
-.ia-home-feed-ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.ia-home-feed-body{display:flex;flex-direction:column;gap:3px;min-width:0}
-.ia-home-feed-body b{font-size:14px;font-weight:750;color:var(--ink-900,#18181f)}
-.ia-home-feed-body span{font-size:12.5px;color:var(--ink-500,#65626d)}
+/* 피드: 아이콘 사각 배지 반복 대신 타이포 위계로 구분(첫 항목은 큰 수치, 나머지는 kicker+헤드라인). */
+.ia-home-feed{display:flex;flex-direction:column;gap:1px;border-top:1px solid var(--line,#e8e7ee)}
+.ia-home-feed-stat,.ia-home-feed-row{display:block;padding:18px 4px;text-decoration:none;color:inherit;border-bottom:1px solid var(--line,#e8e7ee)}
+.ia-home-feed-row:hover b{color:var(--accent,#5b4bff)}
+.ia-home-feed-stat b{display:block;font-size:34px;font-weight:800;letter-spacing:-.02em;color:var(--ink-900,#18181f);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.ia-home-feed-stat b span{font-size:16px;font-weight:700;margin-left:2px}
+.ia-home-feed-kicker{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent,#5b4bff);margin-bottom:6px}
+.ia-home-feed-row b{display:block;font-size:15px;font-weight:700;color:var(--ink-900,#18181f)}
+.ia-home-feed-label{display:block;margin-top:4px;font-size:12.5px;color:var(--ink-500,#65626d)}
 
 /* 카테고리 아이콘 배지(ia-pages.css .ia-card-ic와 동일 스펙 — index.html은 ia-pages.css를 로드하지
    않으므로 여기서도 정의). tools.html의 도구 카드에서 재사용. */
