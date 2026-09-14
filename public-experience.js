@@ -10,6 +10,14 @@
     document.head.append(link);
   }
 
+  function ensureChatExperience() {
+    if (document.querySelector('script[data-public-chat-v3]')) return;
+    const script = document.createElement('script');
+    script.src = '/public-chat-experience.js';
+    script.dataset.publicChatV3 = 'true';
+    document.head.append(script);
+  }
+
   function focusComposer() {
     const input = document.getElementById('composerInput');
     if (!input) return;
@@ -99,6 +107,7 @@
 
   function init() {
     ensureStyles();
+    ensureChatExperience();
     enhanceHome();
     enhanceDirectory();
   }
