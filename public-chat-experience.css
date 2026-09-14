@@ -1,0 +1,324 @@
+/* ============================================================
+   인사야 public chat experience v3
+   Completed AI answers become readable answer cards while the
+   existing streaming, Case, Rule and API behavior stays canonical.
+   ============================================================ */
+
+#home[data-chat-experience-v3="true"].chatting>.wrap{
+  max-width:900px!important;
+  padding-top:20px!important;
+  padding-bottom:28px!important;
+}
+#home[data-chat-experience-v3="true"].chatting #chatBody{
+  gap:18px;
+  padding:6px 4px 18px;
+  scroll-padding-top:22px;
+}
+
+.ia-chat-intro{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:28px;
+  margin:0 0 10px;
+  padding:16px 2px 20px;
+  border-bottom:1px solid #ECEAF2;
+}
+.ia-chat-intro>div{min-width:0}
+.ia-chat-kicker{
+  display:inline-flex;
+  align-items:center;
+  min-height:26px;
+  margin-bottom:8px;
+  padding:5px 9px;
+  border:1px solid #DED9FF;
+  border-radius:999px;
+  background:#F8F7FF;
+  color:#4938EE;
+  font-size:10.5px;
+  font-weight:850;
+  letter-spacing:.01em;
+}
+.ia-chat-intro h2{
+  margin:0;
+  color:#201F27;
+  font-family:var(--font-sans);
+  font-size:clamp(21px,2.6vw,28px);
+  font-weight:850;
+  line-height:1.3;
+  letter-spacing:-.035em;
+}
+.ia-chat-intro p{
+  max-width:320px;
+  margin:0;
+  color:#7B7884;
+  font-size:11.5px;
+  line-height:1.55;
+  text-align:right;
+}
+
+/* User message: compact, quiet, clearly separate from the answer surface. */
+#home.chatting .msg.me{
+  max-width:min(74%,620px);
+  padding:11px 15px;
+  border-radius:15px 15px 5px 15px;
+  background:#29262F;
+  color:#fff;
+  box-shadow:none;
+  font-size:13.5px;
+  line-height:1.55;
+}
+
+/* Completed AI answer: no generic chat bubble, use a readable document card. */
+#home.chatting .msg.ai.ia-answer-card{
+  align-self:stretch;
+  width:100%;
+  max-width:none;
+  padding:0;
+  overflow:hidden;
+  border:1px solid #E8E6EF;
+  border-radius:18px;
+  background:#fff;
+  color:#2B2931;
+  box-shadow:0 10px 34px rgba(28,24,55,.055);
+  white-space:normal;
+}
+.ia-answer-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:52px;
+  padding:12px 16px;
+  border-bottom:1px solid #EFEDF3;
+  background:linear-gradient(180deg,#FCFBFF 0%,#FAFAFC 100%);
+}
+.ia-answer-identity{display:flex;align-items:center;gap:9px}
+.ia-answer-identity b{color:#24222A;font-size:12.5px;font-weight:850}
+.ia-answer-mark{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:29px;
+  height:29px;
+  border-radius:9px;
+  background:#5B4BFF;
+  color:#fff;
+  font-size:11px;
+  font-weight:900;
+}
+.ia-answer-badge{
+  display:inline-flex;
+  align-items:center;
+  min-height:25px;
+  padding:4px 8px;
+  border:1px solid #E3E0EA;
+  border-radius:999px;
+  background:#fff;
+  color:#7A7782;
+  font-size:10px;
+  font-weight:800;
+}
+.ia-answer-body{
+  padding:22px 22px 20px;
+  color:#35333B;
+  font-size:14px;
+  line-height:1.78;
+  word-break:keep-all;
+  overflow-wrap:anywhere;
+}
+.ia-answer-body b{color:#24222A;font-weight:820}
+.ia-answer-body>div[style*="font-weight:700"]{
+  margin:18px 0 7px!important;
+  padding-top:16px;
+  border-top:1px solid #EFEDF3;
+  color:#302B73!important;
+  font-size:13.5px;
+  font-weight:850!important;
+}
+.ia-answer-body>div[style*="font-weight:700"]:first-child{
+  margin-top:0!important;
+  padding-top:0;
+  border-top:0;
+}
+.ia-answer-foot{
+  padding:12px 18px 14px;
+  border-top:1px solid #F0EEF4;
+  background:#FAFAFC;
+  color:#8A8791;
+  font-size:10.5px;
+  line-height:1.55;
+}
+
+/* Streaming state remains simple and visually stable. */
+#home.chatting .typing-m{
+  align-self:flex-start;
+  margin:2px 0;
+  padding:9px 12px;
+  border:1px solid #ECEAF2;
+  border-radius:12px;
+  background:#FAFAFC;
+  color:#74717C;
+  font-size:11.5px;
+}
+
+/* Next actions: one recommended path, supporting tools, quiet utilities. */
+#home.chatting .chat-next-actions.ia-next-actions{
+  align-self:stretch;
+  width:100%;
+  margin:0;
+  padding:20px;
+  border:1px solid #DFDAFF;
+  border-radius:18px;
+  background:linear-gradient(145deg,#FAF9FF 0%,#F6F4FF 100%);
+}
+.ia-next-actions>h3{
+  margin:0;
+  color:#24222A;
+  font-size:17px;
+  font-weight:850;
+  letter-spacing:-.025em;
+}
+.ia-next-intro{
+  max-width:680px;
+  margin:6px 0 16px;
+  color:#74717C;
+  font-size:11.5px;
+  line-height:1.55;
+}
+.ia-next-layout{display:grid;gap:14px}
+.ia-next-primary,
+.ia-next-support{display:grid;gap:7px}
+.ia-next-primary>span,
+.ia-next-support>span{
+  color:#827E8B;
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.02em;
+}
+.ia-next-actions .ia-action-primary{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  min-height:52px;
+  padding:13px 16px;
+  border:1px solid #5B4BFF;
+  border-radius:13px;
+  background:#5B4BFF;
+  color:#fff;
+  font-size:13px;
+  font-weight:850;
+  text-decoration:none;
+  box-shadow:0 8px 22px rgba(91,75,255,.18);
+}
+.ia-next-actions .ia-action-primary::after{content:'→';font-size:16px}
+.ia-next-actions .ia-action-primary:hover{background:#4938EE}
+.ia-next-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.ia-next-actions .ia-action-support{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:7px;
+  min-height:44px;
+  padding:10px 12px;
+  border:1px solid #E4E1EE;
+  border-radius:11px;
+  background:#fff;
+  color:#4D4A55;
+  font-size:11.5px;
+  font-weight:760;
+  text-decoration:none;
+}
+.ia-next-actions .ia-action-support:hover{border-color:#CFC8FF;background:#fff;color:#4938EE}
+.ia-next-actions .ia-action-support .tic{color:#5B4BFF}
+.ia-next-utility{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:6px;
+  padding-top:2px;
+}
+.ia-next-actions .ia-action-utility{
+  min-height:30px;
+  padding:5px 8px;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:#8A8791;
+  font-size:10.5px;
+  font-weight:700;
+}
+.ia-next-actions .ia-action-utility:hover{background:rgba(255,255,255,.72);color:#5C5964}
+
+/* Expert handoff is intentionally distinct from the AI answer. */
+#home.chatting .chat-expert-handoff.ia-expert-handoff:not([hidden]){
+  align-self:stretch;
+  width:100%;
+  margin:0;
+  padding:20px;
+  border:1px solid #E5E2EA;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 6px 24px rgba(28,24,55,.035);
+}
+.ia-expert-kicker{
+  display:inline-flex;
+  margin-bottom:7px;
+  color:#5B4BFF;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.03em;
+}
+.ia-expert-handoff h3{margin:0 0 6px;color:#24222A;font-size:15px;font-weight:850}
+.ia-expert-handoff p{max-width:720px;margin:4px 0;color:#74717C;font-size:11.5px;line-height:1.6}
+.ia-expert-handoff .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.ia-expert-handoff .btn{min-height:40px;border-radius:11px;font-size:11.5px;font-weight:800}
+.ia-expert-handoff .btn.primary{background:#24222A;border-color:#24222A;color:#fff}
+
+#home.chatting .composer{
+  width:100%;
+  max-width:900px;
+  margin:0 auto;
+  padding-top:8px;
+}
+#home.chatting .hero-input{
+  border:1px solid #DDD9E5;
+  border-radius:15px;
+  background:#fff;
+  box-shadow:0 8px 24px rgba(28,24,55,.055);
+}
+#home.chatting .hero-input:focus-within{
+  border-color:#AFA5FF;
+  box-shadow:0 0 0 4px rgba(91,75,255,.07),0 8px 24px rgba(28,24,55,.055);
+}
+
+@media(max-width:760px){
+  #home[data-chat-experience-v3="true"].chatting>.wrap{padding:12px 14px 22px!important}
+  .ia-chat-intro{display:block;padding:12px 0 16px}
+  .ia-chat-intro h2{font-size:21px}
+  .ia-chat-intro p{max-width:none;margin-top:7px;text-align:left}
+  #home.chatting .msg.me{max-width:88%;font-size:13px}
+  .ia-answer-head{padding:11px 13px}
+  .ia-answer-body{padding:18px 16px;font-size:13.5px;line-height:1.72}
+  .ia-answer-foot{padding:11px 14px 13px}
+  #home.chatting .chat-next-actions.ia-next-actions,
+  #home.chatting .chat-expert-handoff.ia-expert-handoff:not([hidden]){padding:17px 15px;border-radius:16px}
+  .ia-next-grid{grid-template-columns:1fr}
+  .ia-next-utility{justify-content:flex-start}
+}
+
+@media(max-width:420px){
+  .ia-answer-badge{display:none}
+  .ia-next-actions .ia-action-primary{font-size:12.5px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .ia-next-actions .ia-action-primary,
+  .ia-next-actions .ia-action-support{transition:none!important}
+}
