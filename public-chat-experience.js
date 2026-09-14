@@ -10,6 +10,12 @@
     document.head.append(link);
   }
 
+  function syncComposerMode(home) {
+    if (!home) return;
+    const head = home.querySelector('.ia-composer-head');
+    if (head) head.hidden = home.classList.contains('chatting');
+  }
+
   function ensureChatIntro() {
     const home = document.getElementById('home');
     const body = document.getElementById('chatBody');
@@ -128,6 +134,7 @@
     const body = document.getElementById('chatBody');
     if (!home || !body || !home.classList.contains('chatting')) return;
 
+    syncComposerMode(home);
     ensureChatIntro();
 
     const actions = body.querySelector('.chat-next-actions:last-of-type');
@@ -144,11 +151,13 @@
     const body = document.getElementById('chatBody');
     if (!home || !body || home.dataset.chatExperienceV3 === 'true') return;
     home.dataset.chatExperienceV3 = 'true';
+    syncComposerMode(home);
 
     const bodyObserver = new MutationObserver(() => enhanceCompletedTurn());
     bodyObserver.observe(body, { childList: true, subtree: true });
 
     const homeObserver = new MutationObserver(() => {
+      syncComposerMode(home);
       if (home.classList.contains('chatting')) ensureChatIntro();
     });
     homeObserver.observe(home, { attributes: true, attributeFilter: ['class'] });
