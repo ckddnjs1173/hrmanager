@@ -55,6 +55,14 @@
     bubble.append(head, body, foot);
   }
 
+  function sanitizeActionNode(node) {
+    const icon = node && node.querySelector ? node.querySelector('.tic') : null;
+    if (icon && icon.textContent.trim() === 'undefined') {
+      icon.textContent = '';
+      icon.setAttribute('aria-hidden', 'true');
+    }
+  }
+
   function groupActionNodes(section) {
     if (!section || section.dataset.actionsV3 === 'true') return;
     const opts = section.querySelector('.opts');
@@ -72,6 +80,7 @@
     else section.prepend(intro);
 
     const nodes = Array.from(opts.children);
+    nodes.forEach(sanitizeActionNode);
     const primary = nodes.find(node => /내 사건으로 직접 해결하기/.test(node.textContent || ''));
     const utility = nodes.filter(node => /답변 신고|새 상담/.test(node.textContent || ''));
     const support = nodes.filter(node => node !== primary && !utility.includes(node));
@@ -129,6 +138,11 @@
     }
   }
 
+  function lastMatch(root, selector) {
+    const matches = root ? root.querySelectorAll(selector) : [];
+    return matches.length ? matches[matches.length - 1] : null;
+  }
+
   function enhanceCompletedTurn() {
     const home = document.getElementById('home');
     const body = document.getElementById('chatBody');
@@ -137,12 +151,12 @@
     syncComposerMode(home);
     ensureChatIntro();
 
-    const actions = body.querySelector('.chat-next-actions:last-of-type');
+    const actions = lastMatch(body, '.chat-next-actions');
     if (!actions) return;
 
     body.querySelectorAll('.msg.ai:not([data-answer-v3="true"])').forEach(enhanceAssistantBubble);
     groupActionNodes(actions);
-    enhanceExpertHandoff(body.querySelector('.chat-expert-handoff:last-of-type'));
+    enhanceExpertHandoff(lastMatch(body, '.chat-expert-handoff'));
   }
 
   function init() {

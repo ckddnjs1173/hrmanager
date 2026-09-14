@@ -60,6 +60,19 @@ async function errorsFor(context,page){
   });
   return errors;
 }
+
+async function waitForFonts(page,label){
+  await page.evaluate(async()=>{
+    if(document.fonts?.ready)await document.fonts.ready;
+  });
+  const fonts=await page.evaluate(()=>({
+    status:document.fonts?.status||"unsupported",
+    pretendard:document.fonts?.check?.('16px "PretendardLocal"','인사야 AI 상담')??true,
+  }));
+  assert.equal(fonts.status,"loaded",`${label} web fonts must finish loading before visual capture`);
+  assert.equal(fonts.pretendard,true,`${label} Pretendard must support Korean UI glyphs`);
+}
+
 async function assertNoOverflow(page,label){
   const report=await page.evaluate(()=>{
     const client=document.documentElement.clientWidth;
@@ -72,11 +85,34 @@ async function assertNoOverflow(page,label){
   });
   assert.ok(report.scroll<=report.client+2,`${label} horizontal overflow: ${report.scroll} > ${report.client}\n${report.offenders.map(item=>`${item.tag}${item.id?`#${item.id}`:""}${item.cls?`.${item.cls}`:""} left=${item.left} right=${item.right} width=${item.width} scrollWidth=${item.scrollWidth}`).join("\n")}`);
 }
+
+async function assertComposerContained(page,label){
+  const geometry=await page.evaluate(()=>{
+    const shell=document.querySelector("#home .hero-input");
+    const input=document.querySelector("#composerInput");
+    const send=shell?.querySelector(".send");
+    if(!shell||!input||!send)return null;
+    const viewport=document.documentElement.clientWidth;
+    const shellRect=shell.getBoundingClientRect();
+    const inputRect=input.getBoundingClientRect();
+    const sendRect=send.getBoundingClientRect();
+    return {viewport,shellLeft:shellRect.left,shellRight:shellRect.right,inputLeft:inputRect.left,inputRight:inputRect.right,sendLeft:sendRect.left,sendRight:sendRect.right};
+  });
+  assert.ok(geometry,`${label} composer geometry missing`);
+  assert.ok(geometry.sendRight<=geometry.viewport+1,`${label} send button clipped by viewport: ${JSON.stringify(geometry)}`);
+  assert.ok(geometry.sendRight<=geometry.shellRight+1,`${label} send button escapes composer: ${JSON.stringify(geometry)}`);
+  assert.ok(geometry.inputLeft>=geometry.shellLeft-1,`${label} input escapes composer left edge: ${JSON.stringify(geometry)}`);
+  assert.ok(geometry.inputRight<=geometry.sendLeft+1,`${label} input overlaps send button: ${JSON.stringify(geometry)}`);
+}
+
 async function snap(page,path){await page.screenshot({path,fullPage:false,animations:"disabled",caret:"hide",timeout:60000});}
+
 async function captureHome(browser,name,viewport){
   const context=await browser.newContext({viewport});const page=await context.newPage();const errors=await errorsFor(context,page);
   await page.goto(`${BASE}/`,{waitUntil:"networkidle"});
   await page.locator("body.ui-v2").waitFor();
+  await page.locator('link[data-phase9-polish="true"]').waitFor({state:"attached"});
+  await waitForFonts(page,`home-${name}`);
   assert.equal(await page.locator(".ia-home-section").count(),3);
   assert.equal(await page.locator('.ia-home-grid a[href="/worker.html"]').count(),1);
   assert.match(await page.locator(".hero-h").innerText(),/인사·노무 문제[\s\S]*어디서부터/);
@@ -84,22 +120,24 @@ async function captureHome(browser,name,viewport){
   assert.equal(tokens.font,"16px");assert.equal(tokens.primary.toLowerCase(),"#5b4bff");assert.match(tokens.family,/Pretendard/);
   const literalImages=await page.evaluate(()=>[...document.images].filter(img=>(img.getAttribute("src")||"").includes("${")).map(img=>img.outerHTML));
   if(literalImages.length)errors.push(`literal-template-images: ${literalImages.join(" | ")}`);
+  await assertComposerContained(page,`home-${name}`);
   await snap(page,`${OUT}/home-${name}.png`);await assertNoOverflow(page,`home-${name}`);
   assert.deepEqual(errors,[],`home-${name} browser errors:\n${errors.join("\n")}`);await context.close();
 }
+
 async function captureCase(browser,name,viewport){
   const context=await browser.newContext({viewport});const page=await context.newPage();const errors=await errorsFor(context,page);
   await page.goto(`${BASE}/wage-intake`,{waitUntil:"networkidle"});
   await page.getByRole("heading",{name:/못 받은 임금을/}).waitFor();
+  await waitForFonts(page,`case-${name}`);
   assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).fontSize),"16px");
   assert.equal((await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue("--blue").trim())).toLowerCase(),"#5b4bff");
   await snap(page,`${OUT}/wage-intake-${name}.png`);await assertNoOverflow(page,`case-${name}`);
   assert.deepEqual(errors,[],`case-${name} browser errors:\n${errors.join("\n")}`);await context.close();
 }
-async function captureConversation(browser){
-  const context=await browser.newContext({viewport:{width:1365,height:900}});
-  // Visual QA must not depend on a live model/provider key. The production `/api/chat`
-  // fail-closed behavior is covered elsewhere; here we exercise only the real browser UI.
+
+async function captureConversation(browser,name,viewport){
+  const context=await browser.newContext({viewport});
   await context.route("**/api/chat",route=>route.fulfill({
     status:200,
     contentType:"text/plain; charset=utf-8",
@@ -110,9 +148,20 @@ async function captureConversation(browser){
   await page.getByRole("button",{name:"내 상황 이야기하기"}).click();
   await page.locator("#composerInput").fill("월급이 밀렸어요.");
   await page.locator("#composerInput").press("Enter");
-  await page.locator("#home.chatting").waitFor();await page.locator(".ui-chat-stepper").waitFor();
-  assert.ok(await page.locator(".ui-step.on").count()>=1);await snap(page,`${OUT}/conversation-desktop.png`);
-  assert.deepEqual(errors,[],`conversation browser errors:\n${errors.join("\n")}`);await context.close();
+  await page.locator("#home.chatting").waitFor();
+  await page.locator(".ui-chat-stepper").waitFor();
+  await page.locator(".ia-chat-intro").waitFor();
+  await page.locator(".ia-answer-card").waitFor();
+  await page.locator(".ia-next-actions").waitFor();
+  await waitForFonts(page,`conversation-${name}`);
+  assert.ok(await page.locator(".ui-step.on").count()>=1);
+  assert.equal(await page.locator("#greeting").isVisible(),false,`conversation-${name} landing hero must be hidden after chat starts`);
+  const chatText=await page.locator("#chatBody").innerText();
+  assert.equal(chatText.includes("undefined"),false,`conversation-${name} must not expose undefined UI text`);
+  await assertComposerContained(page,`conversation-${name}`);
+  await snap(page,`${OUT}/conversation-${name}.png`);
+  await assertNoOverflow(page,`conversation-${name}`);
+  assert.deepEqual(errors,[],`conversation-${name} browser errors:\n${errors.join("\n")}`);await context.close();
 }
 
 let browser;
@@ -122,9 +171,12 @@ try{
   validateInlineClassicScriptsFromHtml(servedHome,"served-home");
   browser=await chromium.launch({headless:true});
   await captureHome(browser,"desktop",{width:1536,height:960});
+  await captureHome(browser,"tablet",{width:768,height:900});
   await captureHome(browser,"mobile",{width:390,height:844});
   await captureCase(browser,"desktop",{width:1365,height:900});
+  await captureCase(browser,"tablet",{width:768,height:900});
   await captureCase(browser,"mobile",{width:390,height:844});
-  await captureConversation(browser);
+  await captureConversation(browser,"desktop",{width:1365,height:900});
+  await captureConversation(browser,"mobile",{width:390,height:844});
   console.log(`UI visual smoke passed. screenshots=${OUT}`);
 }finally{if(browser)await browser.close();server.kill("SIGTERM");}
