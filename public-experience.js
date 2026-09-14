@@ -1,13 +1,18 @@
 (() => {
   const prefersReducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  function ensureStyles() {
-    if (document.querySelector('link[data-public-experience-v2]')) return;
+  function ensureStylesheet(href, datasetKey) {
+    if (document.querySelector(`link[${datasetKey}]`)) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/public-experience.css';
-    link.dataset.publicExperienceV2 = 'true';
+    link.href = href;
+    link.setAttribute(datasetKey, 'true');
     document.head.append(link);
+  }
+
+  function ensureStyles() {
+    ensureStylesheet('/public-experience.css', 'data-public-experience-v2');
+    ensureStylesheet('/phase9-polish.css', 'data-phase9-polish');
   }
 
   function ensureChatExperience() {
