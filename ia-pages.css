@@ -1,8 +1,191 @@
-/* @font-face는 app.css 한 곳에서만 선언한다(중복 제거). worker.html/employer.html/tools.html은
-   app.css를 <link>로 함께 로드하므로 아래 var()들은 실제로 app.css 값을 참조한다(폴백은 기존 값). */
-*{box-sizing:border-box}.ia-body{margin:0;color:var(--ink-900,#18181f);background:#fafafb;font-family:Pretendard,system-ui,sans-serif;line-height:1.65}
-.ia-page{max-width:1080px;margin:auto;padding:56px 24px 80px}.ia-page h1{font-size:clamp(28px,4vw,44px);line-height:1.3;letter-spacing:-.04em;margin:8px 0 18px}.ia-page h2{font-size:23px;margin:0 0 16px}.ia-page h3{font-size:18px;margin:0 0 8px}.ia-page p{color:#595762;max-width:760px}.ia-page section{margin-top:40px}.ia-kicker{font-size:13px;font-weight:750;color:var(--accent,#5b4bff)}.ia-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.ia-card{display:block;padding:24px;border:1px solid var(--line,#e8e7ee);border-radius:16px;background:var(--bg,#fff);color:inherit;text-decoration:none}.ia-card p{margin:8px 0 0}.ia-card:hover{border-color:#a59bff}.ia-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}.ia-actions a{display:inline-block;text-decoration:none;padding:12px 18px;border-radius:10px;background:var(--bg,#fff);border:1px solid #d9d4ff;color:var(--accent-ink,#4938ee);font-weight:700}.ia-actions .ia-primary{background:var(--accent,#5b4bff);color:var(--bg,#fff)}.ia-state{padding:20px;background:var(--accent-soft,#f2f0ff);border-radius:12px}.ia-state a{color:var(--accent-ink,#4938ee)}.ia-flow{display:flex;flex-wrap:wrap;gap:10px;padding:0;list-style-position:inside}.ia-flow li{padding:10px;background:var(--accent-soft,#f2f0ff);border-radius:8px}.ia-page [hidden]{display:none!important}
-/* 카테고리 아이콘 배지(로톡 벤치마크): product-ui.css의 .ui-problem .ic 패턴을 재사용. */
-.ia-card-ic{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--accent-soft,#f2f0ff);color:var(--accent,#5b4bff);margin-bottom:10px}
+/* ============================================================
+   인사야 public IA pages — Worker / Employer / Tools
+   공통 app.css token을 사용하고 public landing presentation만 담당한다.
+   ============================================================ */
+*{box-sizing:border-box}
+.ia-body{
+  margin:0;
+  color:var(--ink-900,#18181F);
+  background:
+    radial-gradient(50% 34% at 88% 0%,rgba(91,75,255,.06),transparent 65%),
+    #fff;
+  font-family:var(--font-sans,Pretendard,system-ui,sans-serif);
+  line-height:1.65;
+}
+.ia-page{
+  width:min(100%,1160px);
+  margin:auto;
+  padding:clamp(48px,7vw,84px) 24px 96px;
+}
+.ia-page>h1{
+  max-width:850px;
+  margin:12px 0 20px;
+  color:var(--ink-900,#18181F);
+  font-size:clamp(38px,5.2vw,58px);
+  font-weight:850;
+  line-height:1.16;
+  letter-spacing:-.055em;
+}
+.ia-page>p{
+  max-width:760px;
+  margin:0;
+  color:var(--ink-500,#65626D);
+  font-size:17px;
+  line-height:1.75;
+}
+.ia-page h2{
+  margin:0 0 18px;
+  color:var(--ink-900,#18181F);
+  font-size:clamp(22px,2.4vw,28px);
+  font-weight:830;
+  letter-spacing:-.035em;
+}
+.ia-page h3{
+  margin:0;
+  color:var(--ink-900,#18181F);
+  font-size:18px;
+  font-weight:800;
+  letter-spacing:-.025em;
+}
+.ia-page p{color:var(--ink-500,#65626D)}
+.ia-page section{margin-top:72px}
+.ia-kicker{
+  display:inline-flex;
+  align-items:center;
+  min-height:30px;
+  padding:6px 11px;
+  border:1px solid var(--blue-100,#E4E0FF);
+  border-radius:999px;
+  background:var(--accent-soft,#F2F0FF);
+  color:var(--accent-ink,#4938EE);
+  font-size:12.5px;
+  font-weight:800;
+  letter-spacing:-.01em;
+}
+
+.ia-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.ia-actions a{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:46px;
+  padding:11px 17px;
+  border:1px solid var(--line,#E8E7EE);
+  border-radius:12px;
+  background:#fff;
+  color:var(--ink-700,#36343E);
+  font-size:14px;
+  font-weight:780;
+  text-decoration:none;
+  box-shadow:0 2px 10px rgba(28,24,55,.025);
+  transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease;
+}
+.ia-actions a:hover{
+  border-color:#CEC8FF;
+  background:#FCFBFF;
+  box-shadow:0 8px 22px rgba(45,35,120,.06);
+  transform:translateY(-1px);
+}
+.ia-actions .ia-primary{
+  border-color:var(--accent,#5B4BFF);
+  background:var(--accent,#5B4BFF);
+  color:#fff;
+  box-shadow:0 8px 20px rgba(91,75,255,.18);
+}
+.ia-actions .ia-primary:hover{border-color:var(--accent-ink,#4938EE);background:var(--accent-ink,#4938EE)}
+
+.ia-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.ia-card{
+  position:relative;
+  display:block;
+  min-height:168px;
+  padding:26px;
+  overflow:hidden;
+  border:1px solid var(--line,#E8E7EE);
+  border-radius:20px;
+  background:#fff;
+  color:inherit;
+  text-decoration:none;
+  box-shadow:0 4px 18px rgba(28,24,55,.03);
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.ia-card::after{
+  content:"→";
+  position:absolute;
+  right:22px;
+  top:20px;
+  color:var(--ink-300,#A19EA9);
+  font-size:20px;
+  font-weight:700;
+  transition:transform .18s ease,color .18s ease;
+}
+.ia-card p{max-width:88%;margin:10px 0 0;color:var(--ink-500,#65626D);font-size:14px;line-height:1.65}
+.ia-card:hover{
+  border-color:#CEC8FF;
+  background:#FCFBFF;
+  box-shadow:0 14px 34px rgba(45,35,120,.075);
+  transform:translateY(-2px);
+}
+.ia-card:hover::after{color:var(--accent,#5B4BFF);transform:translateX(3px)}
+
+.ia-state{
+  padding:24px;
+  border:1px solid #E2DEFF;
+  border-radius:18px;
+  background:linear-gradient(135deg,#FAF9FF 0%,#F4F2FF 100%);
+}
+.ia-state a{color:var(--accent-ink,#4938EE)}
+
+.ia-flow{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:10px;
+  margin:18px 0 0;
+  padding:0;
+  list-style:none;
+  counter-reset:ia-flow;
+}
+.ia-flow li{
+  position:relative;
+  min-height:104px;
+  padding:46px 16px 15px;
+  border:1px solid var(--line,#E8E7EE);
+  border-radius:16px;
+  background:#fff;
+  color:var(--ink-700,#36343E);
+  font-size:13.5px;
+  font-weight:720;
+  line-height:1.5;
+  counter-increment:ia-flow;
+}
+.ia-flow li::before{
+  content:counter(ia-flow,decimal-leading-zero);
+  position:absolute;
+  left:15px;
+  top:14px;
+  color:var(--accent,#5B4BFF);
+  font-size:12px;
+  font-weight:850;
+}
+.ia-page [hidden]{display:none!important}
+
+.ia-card-ic{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:var(--accent-soft,#F2F0FF);color:var(--accent,#5B4BFF);margin-bottom:12px}
 .ia-card-ic svg{width:18px;height:18px}
-@media(max-width:600px){.ia-page{padding:30px 18px 48px}.ia-grid{grid-template-columns:1fr}.ia-card{padding:20px}.ia-actions a{width:100%;text-align:center}}
+
+@media(max-width:860px){
+  .ia-page{padding-top:48px}
+  .ia-flow{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:600px){
+  .ia-page{padding:38px 18px 64px}
+  .ia-page>h1{font-size:clamp(34px,10vw,46px)}
+  .ia-page>p{font-size:16px}
+  .ia-page section{margin-top:52px}
+  .ia-grid{grid-template-columns:1fr}
+  .ia-card{min-height:148px;padding:22px}
+  .ia-actions{gap:10px}
+  .ia-actions a{width:100%}
+  .ia-flow{grid-template-columns:1fr 1fr}
+}
+@media(max-width:380px){.ia-flow{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.ia-card,.ia-card::after,.ia-actions a{transition:none!important;transform:none!important}}
