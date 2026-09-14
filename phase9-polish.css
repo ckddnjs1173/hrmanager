@@ -1,0 +1,20 @@
+/* Phase 9 visual polish — targeted regression fixes only. */
+
+/* The v2 home shell forces #greeting visible. Chat state must remain canonical:
+   once a conversation starts, the landing hero disappears and the answer workspace leads. */
+body.ui-v2 #home.chatting #greeting.ia-home{
+  display:none!important;
+}
+
+/* Flex inputs default to min-width:auto. On narrow viewports a long placeholder can
+   reserve intrinsic width and push the send control outside the composer. */
+#home .hero-input input{
+  min-width:0;
+}
+
+@media(max-width:860px){
+  /* Leave breathing room above the fixed bottom navigation, including device safe area. */
+  #home.chatting .composer{
+    padding-bottom:max(10px,env(safe-area-inset-bottom));
+  }
+}
