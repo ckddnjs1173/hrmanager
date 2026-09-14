@@ -148,10 +148,16 @@ async function captureConversation(browser,name,viewport){
   await page.getByRole("button",{name:"내 상황 이야기하기"}).click();
   await page.locator("#composerInput").fill("월급이 밀렸어요.");
   await page.locator("#composerInput").press("Enter");
-  await page.locator("#home.chatting").waitFor();await page.locator(".ui-chat-stepper").waitFor();
+  await page.locator("#home.chatting").waitFor();
+  await page.locator(".ui-chat-stepper").waitFor();
+  await page.locator(".ia-chat-intro").waitFor();
+  await page.locator(".ia-answer-card").waitFor();
+  await page.locator(".ia-next-actions").waitFor();
   await waitForFonts(page,`conversation-${name}`);
   assert.ok(await page.locator(".ui-step.on").count()>=1);
   assert.equal(await page.locator("#greeting").isVisible(),false,`conversation-${name} landing hero must be hidden after chat starts`);
+  const chatText=await page.locator("#chatBody").innerText();
+  assert.equal(chatText.includes("undefined"),false,`conversation-${name} must not expose undefined UI text`);
   await assertComposerContained(page,`conversation-${name}`);
   await snap(page,`${OUT}/conversation-${name}.png`);
   await assertNoOverflow(page,`conversation-${name}`);
