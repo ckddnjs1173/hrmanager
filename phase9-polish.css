@@ -12,6 +12,12 @@ body.ui-v2 #home.chatting #greeting.ia-home{
   min-width:0;
 }
 
+/* Utility actions do not need decorative glyphs. The legacy icon registry has no
+   canonical "chat" glyph, so hiding the slot prevents a literal `undefined` leak. */
+#home .ia-action-utility .tic{
+  display:none;
+}
+
 @media(max-width:860px){
   /* Leave breathing room above the fixed bottom navigation, including device safe area. */
   #home.chatting .composer{
