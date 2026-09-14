@@ -68,6 +68,7 @@
 
 .employer-preview{
   position:relative;
+  overflow:hidden;
   padding:24px;
   border:1px solid rgba(91,75,255,.13);
   border-radius:28px;
