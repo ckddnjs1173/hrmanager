@@ -55,6 +55,14 @@
     bubble.append(head, body, foot);
   }
 
+  function sanitizeActionNode(node) {
+    const icon = node && node.querySelector ? node.querySelector('.tic') : null;
+    if (icon && icon.textContent.trim() === 'undefined') {
+      icon.textContent = '';
+      icon.setAttribute('aria-hidden', 'true');
+    }
+  }
+
   function groupActionNodes(section) {
     if (!section || section.dataset.actionsV3 === 'true') return;
     const opts = section.querySelector('.opts');
@@ -72,6 +80,7 @@
     else section.prepend(intro);
 
     const nodes = Array.from(opts.children);
+    nodes.forEach(sanitizeActionNode);
     const primary = nodes.find(node => /내 사건으로 직접 해결하기/.test(node.textContent || ''));
     const utility = nodes.filter(node => /답변 신고|새 상담/.test(node.textContent || ''));
     const support = nodes.filter(node => node !== primary && !utility.includes(node));
