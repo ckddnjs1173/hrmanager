@@ -1,6 +1,15 @@
 (() => {
   const prefersReducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  function ensureStyles() {
+    if (document.querySelector('link[data-public-experience-v2]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/public-experience.css';
+    link.dataset.publicExperienceV2 = 'true';
+    document.head.append(link);
+  }
+
   function focusComposer() {
     const input = document.getElementById('composerInput');
     if (!input) return;
@@ -89,6 +98,7 @@
   }
 
   function init() {
+    ensureStyles();
     enhanceHome();
     enhanceDirectory();
   }
