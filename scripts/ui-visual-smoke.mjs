@@ -111,7 +111,7 @@ async function captureHome(browser,name,viewport){
   const context=await browser.newContext({viewport});const page=await context.newPage();const errors=await errorsFor(context,page);
   await page.goto(`${BASE}/`,{waitUntil:"networkidle"});
   await page.locator("body.ui-v2").waitFor();
-  await page.locator('link[data-phase9-polish="true"]').waitFor();
+  await page.locator('link[data-phase9-polish="true"]').waitFor({state:"attached"});
   await waitForFonts(page,`home-${name}`);
   assert.equal(await page.locator(".ia-home-section").count(),3);
   assert.equal(await page.locator('.ia-home-grid a[href="/worker.html"]').count(),1);
