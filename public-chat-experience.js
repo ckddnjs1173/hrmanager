@@ -138,6 +138,11 @@
     }
   }
 
+  function lastMatch(root, selector) {
+    const matches = root ? root.querySelectorAll(selector) : [];
+    return matches.length ? matches[matches.length - 1] : null;
+  }
+
   function enhanceCompletedTurn() {
     const home = document.getElementById('home');
     const body = document.getElementById('chatBody');
@@ -146,12 +151,12 @@
     syncComposerMode(home);
     ensureChatIntro();
 
-    const actions = body.querySelector('.chat-next-actions:last-of-type');
+    const actions = lastMatch(body, '.chat-next-actions');
     if (!actions) return;
 
     body.querySelectorAll('.msg.ai:not([data-answer-v3="true"])').forEach(enhanceAssistantBubble);
     groupActionNodes(actions);
-    enhanceExpertHandoff(body.querySelector('.chat-expert-handoff:last-of-type'));
+    enhanceExpertHandoff(lastMatch(body, '.chat-expert-handoff'));
   }
 
   function init() {
