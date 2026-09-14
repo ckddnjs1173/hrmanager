@@ -3,3 +3,6 @@ window.INSAYA_DIRECTORY_READY = import('./directory-policy.js').then(policy => {
   window.INSAYA_DIRECTORY = Object.freeze({rank:policy.rank,sponsored:policy.sponsored,verified:policy.verified});
   return window.INSAYA_DIRECTORY;
 });
+
+// Public landing/directory layout enhancements are progressive: existing inline handlers remain canonical.
+import('./public-experience.js').catch(() => {});
